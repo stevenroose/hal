@@ -6,6 +6,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("script")
 		.about("manipulate scripts")
 		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
+		.setting(clap::AppSettings::DisableHelpSubcommand)
 		.subcommand(decode::subcommand())
 }
 

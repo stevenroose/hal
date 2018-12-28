@@ -16,9 +16,9 @@ use std::panic;
 use std::process;
 
 mod address;
+mod bip32;
 mod script;
 mod tx;
-mod bip32;
 
 fn setup_logger(lvl: log::LevelFilter) {
 	fern::Dispatch::new()
@@ -50,6 +50,7 @@ fn main() {
 		.about("hal - the Bitcoin companion")
 		.setting(clap::AppSettings::VersionlessSubcommands)
 		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
+		.setting(clap::AppSettings::DisableHelpSubcommand)
 		.setting(clap::AppSettings::AllArgsOverrideSelf)
 		.subcommand(address::subcommand())
 		.subcommand(tx::subcommand())

@@ -1,7 +1,9 @@
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("encode").about("encode a raw transaction from JSON").arg(
+	clap::SubCommand::with_name("encode")
+		.about("encode a raw transaction from JSON")
+		.arg(
 		clap::Arg::with_name("tx-info")
 			.help("the transaction info in JSON")
 			.takes_value(true)

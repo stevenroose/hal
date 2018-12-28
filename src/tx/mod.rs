@@ -7,6 +7,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("tx")
 		.about("manipulate transactions")
 		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
+		.setting(clap::AppSettings::DisableHelpSubcommand)
 		.subcommand(decode::subcommand())
 		.subcommand(encode::subcommand())
 }
