@@ -12,6 +12,7 @@ extern crate serde;
 pub mod address;
 pub mod bip32;
 pub mod lightning;
+pub mod psbt;
 pub mod tx;
 
 use bitcoin::Network;
