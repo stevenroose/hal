@@ -12,7 +12,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 }
 
 /// Check both ways to specify the outpoint and panic if conflicting.
-fn outpoint_from_input_info(input: &hal::InputInfo) -> bitcoin::OutPoint {
+fn outpoint_from_input_info(input: &hal::tx::InputInfo) -> bitcoin::OutPoint {
 	let op1 = input.prevout.as_ref().map(|ref op| op.parse().expect("invalid prevout format"));
 	let op2 = match input.txid {
 		Some(txid) => match input.vout {
@@ -38,7 +38,7 @@ fn outpoint_from_input_info(input: &hal::InputInfo) -> bitcoin::OutPoint {
 	}
 }
 
-fn encode_script_sig(ss: hal::InputScriptInfo) -> bitcoin::Script {
+fn encode_script_sig(ss: hal::tx::InputScriptInfo) -> bitcoin::Script {
 	if let Some(hex) = ss.hex {
 		if ss.asm.is_some() {
 			warn!("Field \"asm\" of input is ignored.");
@@ -52,7 +52,7 @@ fn encode_script_sig(ss: hal::InputScriptInfo) -> bitcoin::Script {
 	}
 }
 
-fn encode_input(input: hal::InputInfo) -> bitcoin::TxIn {
+fn encode_input(input: hal::tx::InputInfo) -> bitcoin::TxIn {
 	bitcoin::TxIn {
 		previous_output: outpoint_from_input_info(&input),
 		script_sig: encode_script_sig(
@@ -69,7 +69,7 @@ fn encode_input(input: hal::InputInfo) -> bitcoin::TxIn {
 }
 
 fn encode_script_pubkey(
-	spk: hal::OutputScriptInfo,
+	spk: hal::tx::OutputScriptInfo,
 	used_network: &mut Option<bitcoin::Network>,
 ) -> bitcoin::Script {
 	if spk.type_.is_some() {
@@ -104,7 +104,7 @@ fn encode_script_pubkey(
 	}
 }
 
-fn encode_output(output: hal::OutputInfo) -> bitcoin::TxOut {
+fn encode_output(output: hal::tx::OutputInfo) -> bitcoin::TxOut {
 	// Keep track of which network has been used in addresses and error if two different networks
 	// are used.
 	let mut used_network = None;
@@ -120,7 +120,7 @@ fn encode_output(output: hal::OutputInfo) -> bitcoin::TxOut {
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let json_tx = matches.value_of("tx-info").expect("no JSON tx info provided");
-	let info: hal::TransactionInfo = serde_json::from_str(json_tx).expect("invalid JSON");
+	let info: hal::tx::TransactionInfo = serde_json::from_str(json_tx).expect("invalid JSON");
 
 	// Fields that are ignored.
 	if info.txid.is_some() {

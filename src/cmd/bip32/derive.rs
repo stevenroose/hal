@@ -48,26 +48,6 @@ fn parse_derivation_path(path: &str) -> Vec<bip32::ChildNumber> {
     parts.map(parse_child_number).collect()
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
-pub struct DerivationInfo {
-	pub network: bitcoin::Network,
-	pub master_fingerprint: hal::HexBytes,
-	pub path: String,
-	pub chain_code: hal::HexBytes,
-	pub identifier: hal::HexBytes,
-	pub fingerprint: hal::HexBytes,
-	pub public_key: hal::HexBytes,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub secret_key: Option<String>,
-	pub parent_fingerprint: hal::HexBytes,
-	#[serde(rename = "address-p2pkh")]
-	pub address_p2pkh: bitcoin::Address,
-	#[serde(rename = "address-p2wpkh")]
-	pub address_p2wpkh: bitcoin::Address,
-	#[serde(rename = "address-p2shwpkh")]
-	pub address_p2shwpkh: bitcoin::Address,
-}
-
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let path_str = matches.value_of("derivation-path").unwrap();
 	//let path = bip32::parse_derivation_path(path_str).expect("error parsing derivation path");
@@ -100,7 +80,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		}
 	};
 
-	let info = DerivationInfo {
+	let info = hal::bip32::DerivationInfo {
 		network: derived.network,
 		master_fingerprint: master_fingerprint[..].into(),
 		path: path_str.to_owned(),

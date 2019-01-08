@@ -29,6 +29,6 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let raw_tx = hex::decode(hex_tx).expect("could not decode raw tx");
 	let tx: Transaction = consensus::encode::deserialize(&raw_tx).expect("invalid tx format");
 
-	let info = hal::TransactionInfo::create(&tx, matches.is_present("testnet"));
+	let info = hal::tx::TransactionInfo::create(&tx, matches.is_present("testnet"));
 	serde_json::to_writer_pretty(::std::io::stdout(), &info).unwrap();
 }

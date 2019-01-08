@@ -6,8 +6,6 @@ extern crate clap;
 extern crate fern;
 extern crate hex;
 extern crate secp256k1;
-#[macro_use]
-extern crate serde_derive;
 extern crate serde_json;
 
 extern crate hal;
@@ -15,10 +13,7 @@ extern crate hal;
 use std::panic;
 use std::process;
 
-mod address;
-mod bip32;
-mod script;
-mod tx;
+mod cmd;
 
 fn setup_logger(lvl: log::LevelFilter) {
 	fern::Dispatch::new()
@@ -52,10 +47,10 @@ fn main() {
 		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
 		.setting(clap::AppSettings::DisableHelpSubcommand)
 		.setting(clap::AppSettings::AllArgsOverrideSelf)
-		.subcommand(address::subcommand())
-		.subcommand(tx::subcommand())
-		.subcommand(script::subcommand())
-		.subcommand(bip32::subcommand())
+		.subcommand(cmd::address::subcommand())
+		.subcommand(cmd::tx::subcommand())
+		.subcommand(cmd::script::subcommand())
+		.subcommand(cmd::bip32::subcommand())
 		.arg(
 			clap::Arg::with_name("verbose")
 				.short("v")
@@ -73,10 +68,10 @@ fn main() {
 
 	// Execute commands.
 	match matches.subcommand() {
-		("address", Some(ref m)) => address::execute(&m),
-		("bip32", Some(ref m)) => bip32::execute(&m),
-		("script", Some(ref m)) => script::execute(&m),
-		("tx", Some(ref m)) => tx::execute(&m),
+		("address", Some(ref m)) => cmd::address::execute(&m),
+		("bip32", Some(ref m)) => cmd::bip32::execute(&m),
+		("script", Some(ref m)) => cmd::script::execute(&m),
+		("tx", Some(ref m)) => cmd::tx::execute(&m),
 		(c, _) => println!("command {} unknown", c),
 	};
 }

@@ -14,9 +14,9 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let address: Address = address_str.parse().expect("invalid address format");
 	let script_pk = address.script_pubkey();
 
-	let mut info = hal::AddressInfo {
+	let mut info = hal::address::AddressInfo {
 		network: address.network,
-		script_pub_key: hal::OutputScriptInfo {
+		script_pub_key: hal::tx::OutputScriptInfo {
 			hex: Some(script_pk.to_bytes().into()),
 			asm: Some(format!("{:?}", script_pk)), //TODO(stevenroose) asm
 			address: None,
