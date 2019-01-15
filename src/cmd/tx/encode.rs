@@ -1,14 +1,23 @@
+use std::io::Write;
+
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("encode")
 		.about("encode a raw transaction from JSON")
 		.arg(
-		clap::Arg::with_name("tx-info")
-			.help("the transaction info in JSON")
-			.takes_value(true)
-			.required(true),
-	)
+			clap::Arg::with_name("tx-info")
+				.help("the transaction info in JSON")
+				.takes_value(true)
+				.required(true),
+		)
+		.arg(
+			clap::Arg::with_name("raw-stdout")
+				.long("raw")
+				.short("r")
+				.help("output the raw bytes of the result to stdout")
+				.required(false),
+		)
 }
 
 /// Check both ways to specify the outpoint and panic if conflicting.
@@ -60,9 +69,7 @@ fn encode_input(input: hal::tx::InputInfo) -> bitcoin::TxIn {
 		),
 		sequence: input.sequence.expect("Field \"sequence\" is required for inputs."),
 		witness: match input.witness {
-			Some(ref w) => {
-				w.iter().map(|h| h.clone().0).collect()
-			}
+			Some(ref w) => w.iter().map(|h| h.clone().0).collect(),
 			None => Vec::new(),
 		},
 	}
@@ -156,5 +163,10 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 			.collect(),
 	};
 
-	print!("{}", hex::encode(bitcoin::consensus::encode::serialize(&tx)))
+	let tx_bytes = bitcoin::consensus::encode::serialize(&tx);
+	if matches.is_present("raw-stdout") {
+		::std::io::stdout().write_all(&tx_bytes).unwrap();
+	} else {
+		print!("{}", hex::encode(&tx_bytes));
+	}
 }
