@@ -18,8 +18,8 @@ impl From<Vec<u8>> for HexBytes {
 	}
 }
 
-impl From<&[u8]> for HexBytes {
-	fn from(slice: &[u8]) -> HexBytes {
+impl<'a> From<&'a [u8]> for HexBytes {
+	fn from(slice: &'a [u8]) -> HexBytes {
 		HexBytes(slice.to_vec())
 	}
 }
