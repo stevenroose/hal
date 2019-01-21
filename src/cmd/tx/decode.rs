@@ -18,8 +18,9 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 			// This influences the addresses we print.
 			clap::Arg::with_name("testnet")
 				.long("testnet")
+				.short("t")
 				.help("for testnet transaction")
-				.takes_value(true)
+				.takes_value(false)
 				.required(false),
 		)
 }
