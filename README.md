@@ -7,20 +7,26 @@ hal is a command line tool that provides all kinds of Bitcoin-related utilities.
 # Summary of commands:
 
 - address
-	- inspect
+	- inspect: get information about addresses
 
 - bip32
-	- derive
+	- derive: derive keys and addresses from extended keys
 
 - psbt (coming soon)
-	- decode
-	- merge
+	- decode: decode a PSBT to JSON
+	- edit: edit a PSBT inline
+	- merge: merge multiple PSBTs
 
 - script
-	- decode
+	- decode: decode a PSBT to JSON
 
 - tx
-	- decode
-	- encode
+	- decode: decode a transaction to JSON
+	- encode: encode a JSON transaction to binary
 
 More to come!
+
+Ideas:
+- (extended) private key generation
+- optional [Trezor](https://github.com/stevenroose/rust-trezor-api/) and Ledger integration
+- Liquid support
