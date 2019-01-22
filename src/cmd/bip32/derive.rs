@@ -14,6 +14,14 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 				.required(true),
 		)
 		.arg(
+			clap::Arg::with_name("yaml")
+				.long("yaml")
+				.short("y")
+				.help("print output in YAML")
+				.takes_value(false)
+				.required(false),
+		)
+		.arg(
 			clap::Arg::with_name("derivation-path")
 				.help("the derivation path")
 				.takes_value(true)
@@ -94,5 +102,9 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		address_p2wpkh: bitcoin::Address::p2wpkh(&derived.public_key, derived.network),
 		address_p2shwpkh: bitcoin::Address::p2shwpkh(&derived.public_key, derived.network),
 	};
-	serde_json::to_writer_pretty(::std::io::stdout(), &info).unwrap();
+	if matches.is_present("yaml") {
+		serde_yaml::to_writer(::std::io::stdout(), &info).unwrap();
+	} else {
+		serde_json::to_writer_pretty(::std::io::stdout(), &info).unwrap();
+	}
 }
