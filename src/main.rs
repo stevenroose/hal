@@ -45,6 +45,7 @@ fn main() {
 		.about("hal - the Bitcoin companion")
 		.setting(clap::AppSettings::VersionlessSubcommands)
 		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
+		.setting(clap::AppSettings::AllowExternalSubcommands)
 		.setting(clap::AppSettings::DisableHelpSubcommand)
 		.setting(clap::AppSettings::AllArgsOverrideSelf)
 		.subcommand(cmd::address::subcommand())
