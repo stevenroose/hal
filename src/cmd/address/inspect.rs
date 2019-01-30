@@ -1,20 +1,15 @@
 use bitcoin::util::address::Payload;
 use bitcoin::Address;
 use clap;
+
 use hal;
+use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("inspect")
 		.about("inspect addresses")
+		.arg(cmd::arg_yaml())
 		.arg(clap::Arg::with_name("address").help("the address").takes_value(true).required(true))
-		.arg(
-			clap::Arg::with_name("yaml")
-				.long("yaml")
-				.short("y")
-				.help("print output in YAML")
-				.takes_value(false)
-				.required(false),
-		)
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
@@ -65,9 +60,6 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 			}
 		}
 	}
-	if matches.is_present("yaml") {
-		serde_yaml::to_writer(::std::io::stdout(), &info).unwrap();
-	} else {
-		serde_json::to_writer_pretty(::std::io::stdout(), &info).unwrap();
-	}
+
+	cmd::print_output(matches, &info)
 }

@@ -1,35 +1,20 @@
 use bitcoin::consensus;
+use bitcoin::Transaction;
 use clap;
 
 use hal;
-
-use bitcoin::Transaction;
+use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("decode")
 		.about("decode a raw transaction to JSON")
+		.arg(cmd::arg_testnet())
+		.arg(cmd::arg_yaml())
 		.arg(
 			clap::Arg::with_name("raw-tx")
 				.help("the raw transaction in hex")
 				.takes_value(true)
 				.required(true),
-		)
-		.arg(
-			// This influences the addresses we print.
-			clap::Arg::with_name("testnet")
-				.long("testnet")
-				.short("t")
-				.help("for testnet transaction")
-				.takes_value(false)
-				.required(false),
-		)
-		.arg(
-			clap::Arg::with_name("yaml")
-				.long("yaml")
-				.short("y")
-				.help("print output in YAML")
-				.takes_value(false)
-				.required(false),
 		)
 }
 
@@ -38,10 +23,6 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let raw_tx = hex::decode(hex_tx).expect("could not decode raw tx");
 	let tx: Transaction = consensus::encode::deserialize(&raw_tx).expect("invalid tx format");
 
-	let info = hal::tx::TransactionInfo::create(&tx, matches.is_present("testnet"));
-	if matches.is_present("yaml") {
-		serde_yaml::to_writer(::std::io::stdout(), &info).unwrap();
-	} else {
-		serde_json::to_writer_pretty(::std::io::stdout(), &info).unwrap();
-	}
+	let info = hal::GetInfo::get_info(&tx, cmd::network(matches));
+	cmd::print_output(matches, &info)
 }

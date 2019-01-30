@@ -8,11 +8,13 @@ pub struct InputScriptInfo {
 	pub asm: Option<String>,
 }
 
-impl InputScriptInfo {
-	pub fn create(script: &bitcoin::Script) -> InputScriptInfo {
+pub struct InputScript<'a>(pub &'a bitcoin::Script);
+
+impl<'a> ::GetInfo<InputScriptInfo> for InputScript<'a> {
+	fn get_info(&self, _network: ::bitcoin::Network) -> InputScriptInfo {
 		InputScriptInfo {
-			hex: Some(script.to_bytes().into()),
-			asm: Some(format!("{:?}", script)), //TODO(stevenroose) asm
+			hex: Some(self.0.to_bytes().into()),
+			asm: Some(format!("{:?}", self.0)), //TODO(stevenroose) asm
 		}
 	}
 }
@@ -27,6 +29,23 @@ pub struct InputInfo {
 	pub witness: Option<Vec<::HexBytes>>,
 }
 
+impl ::GetInfo<InputInfo> for ::bitcoin::TxIn {
+	fn get_info(&self, network: ::bitcoin::Network) -> InputInfo {
+		InputInfo {
+			prevout: Some(self.previous_output.to_string()),
+			txid: Some(self.previous_output.txid),
+			vout: Some(self.previous_output.vout),
+			sequence: Some(self.sequence),
+			script_sig: Some(InputScript(&self.script_sig).get_info(network)),
+			witness: if self.witness.len() > 0 {
+				Some(self.witness.iter().map(|h| h.clone().into()).collect())
+			} else {
+				None
+			},
+		}
+	}
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct OutputScriptInfo {
 	pub hex: Option<::HexBytes>,
@@ -37,36 +56,32 @@ pub struct OutputScriptInfo {
 	pub address: Option<bitcoin::Address>,
 }
 
-impl OutputScriptInfo {
-	pub fn create(script: &bitcoin::Script, testnet: bool) -> OutputScriptInfo {
+pub struct OutputScript<'a>(pub &'a bitcoin::Script);
+
+impl<'a> ::GetInfo<OutputScriptInfo> for OutputScript<'a> {
+	fn get_info(&self, network: ::bitcoin::Network) -> OutputScriptInfo {
 		OutputScriptInfo {
-			hex: Some(script.to_bytes().into()),
-			asm: Some(format!("{:?}", script)), //TODO(stevenroose) asm
+			hex: Some(self.0.to_bytes().into()),
+			asm: Some(format!("{:?}", self.0)), //TODO(stevenroose) asm
 			type_: Some(
-				if script.is_p2pk() {
+				if self.0.is_p2pk() {
 					"p2pk"
-				} else if script.is_p2pkh() {
+				} else if self.0.is_p2pkh() {
 					"p2pkh"
-				} else if script.is_op_return() {
+				} else if self.0.is_op_return() {
 					"opreturn"
-				} else if script.is_p2sh() {
+				} else if self.0.is_p2sh() {
 					"p2sh"
-				} else if script.is_v0_p2wpkh() {
+				} else if self.0.is_v0_p2wpkh() {
 					"p2wpkh"
-				} else if script.is_v0_p2wsh() {
+				} else if self.0.is_v0_p2wsh() {
 					"p2wsh"
 				} else {
 					"unknown"
 				}
 				.to_owned(),
 			),
-			address: ::address::address_from_script(
-				&script,
-				match testnet {
-					false => bitcoin::Network::Bitcoin,
-					true => bitcoin::Network::Testnet,
-				},
-			),
+			address: ::address::address_from_script(&self.0, network),
 		}
 	}
 }
@@ -77,11 +92,11 @@ pub struct OutputInfo {
 	pub script_pub_key: Option<OutputScriptInfo>,
 }
 
-impl OutputInfo {
-	pub fn create(output: &bitcoin::TxOut, testnet: bool) -> OutputInfo {
+impl ::GetInfo<OutputInfo> for bitcoin::TxOut {
+	fn get_info(&self, network: ::bitcoin::Network) -> OutputInfo {
 		OutputInfo {
-			value: Some(output.value),
-			script_pub_key: Some(OutputScriptInfo::create(&output.script_pubkey, testnet)),
+			value: Some(self.value),
+			script_pub_key: Some(OutputScript(&self.script_pubkey).get_info(network)),
 		}
 	}
 }
@@ -99,36 +114,18 @@ pub struct TransactionInfo {
 	pub outputs: Option<Vec<OutputInfo>>,
 }
 
-impl TransactionInfo {
-	pub fn create(tx: &bitcoin::Transaction, testnet: bool) -> TransactionInfo {
+impl ::GetInfo<TransactionInfo> for bitcoin::Transaction {
+	fn get_info(&self, network: ::bitcoin::Network) -> TransactionInfo {
 		TransactionInfo {
-			txid: Some(tx.txid()),
-			hash: Some(tx.bitcoin_hash()),
-			version: Some(tx.version),
-			locktime: Some(tx.lock_time),
-			size: Some(bitcoin::consensus::encode::serialize(tx).len()),
-			weight: Some(tx.get_weight() as usize),
-			vsize: Some((tx.get_weight() / 4) as usize),
-			inputs: Some(
-				tx.input
-					.iter()
-					.map(|input| InputInfo {
-						prevout: Some(input.previous_output.to_string()),
-						txid: Some(input.previous_output.txid),
-						vout: Some(input.previous_output.vout),
-						sequence: Some(input.sequence),
-						script_sig: Some(InputScriptInfo::create(&input.script_sig)),
-						witness: if input.witness.len() > 0 {
-							Some(input.witness.iter().map(|h| h.clone().into()).collect())
-						} else {
-							None
-						},
-					})
-					.collect(),
-			),
-			outputs: Some(
-				tx.output.iter().map(|output| OutputInfo::create(&output, testnet)).collect(),
-			),
+			txid: Some(self.txid()),
+			hash: Some(self.bitcoin_hash()),
+			version: Some(self.version),
+			locktime: Some(self.lock_time),
+			size: Some(bitcoin::consensus::encode::serialize(self).len()),
+			weight: Some(self.get_weight() as usize),
+			vsize: Some((self.get_weight() / 4) as usize),
+			inputs: Some(self.input.iter().map(|i| i.get_info(network)).collect()),
+			outputs: Some(self.output.iter().map(|o| o.get_info(network)).collect()),
 		}
 	}
 }

@@ -3,48 +3,29 @@ use clap;
 use secp256k1;
 
 use hal;
+use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("create")
 		.about("create addresses")
-		.arg(
+		.arg(cmd::arg_testnet())
+		.arg(cmd::arg_yaml())
+		.args(&[
 			clap::Arg::with_name("pubkey")
 				.long("pubkey")
 				.help("a public key in hex")
 				.takes_value(true)
 				.required(false),
-		)
-		.arg(
 			clap::Arg::with_name("script")
 				.long("script")
 				.help("a script in hex")
 				.takes_value(true)
 				.required(false),
-		)
-		.arg(
-			clap::Arg::with_name("testnet")
-				.long("testnet")
-				.short("t")
-				.help("for testnet usage")
-				.takes_value(false)
-				.required(false),
-		)
-		.arg(
-			clap::Arg::with_name("yaml")
-				.long("yaml")
-				.short("y")
-				.help("print output in YAML")
-				.takes_value(false)
-				.required(false),
-		)
+		])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	let network = if matches.is_present("testnet") {
-		bitcoin::Network::Testnet
-	} else {
-		bitcoin::Network::Bitcoin
-	};
+	let network = cmd::network(matches);
 
 	let created = if let Some(pubkey_hex) = matches.value_of("pubkey") {
 		let pubkey_bytes = hex::decode(pubkey_hex).expect("invalid pubkey hex");
@@ -70,9 +51,5 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		panic!("Can't create addresses without a pubkey");
 	};
 
-	if matches.is_present("yaml") {
-		serde_yaml::to_writer(::std::io::stdout(), &created).unwrap();
-	} else {
-		serde_json::to_writer_pretty(::std::io::stdout(), &created).unwrap();
-	}
+	cmd::print_output(matches, &created)
 }

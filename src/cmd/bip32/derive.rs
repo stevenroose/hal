@@ -4,29 +4,22 @@ use secp256k1;
 
 use std::str::FromStr;
 
+use cmd;
+
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("derive")
 		.about("derive keys from an extended key")
-		.arg(
+		.arg(cmd::arg_yaml())
+		.args(&[
 			clap::Arg::with_name("ext-key")
 				.help("extended public or private key")
 				.takes_value(true)
 				.required(true),
-		)
-		.arg(
-			clap::Arg::with_name("yaml")
-				.long("yaml")
-				.short("y")
-				.help("print output in YAML")
-				.takes_value(false)
-				.required(false),
-		)
-		.arg(
 			clap::Arg::with_name("derivation-path")
 				.help("the derivation path")
 				.takes_value(true)
 				.required(true),
-		)
+		])
 }
 
 //TODO(stevenroose) replace once PR is merged:
@@ -102,9 +95,6 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		address_p2wpkh: bitcoin::Address::p2wpkh(&derived.public_key, derived.network),
 		address_p2shwpkh: bitcoin::Address::p2shwpkh(&derived.public_key, derived.network),
 	};
-	if matches.is_present("yaml") {
-		serde_yaml::to_writer(::std::io::stdout(), &info).unwrap();
-	} else {
-		serde_json::to_writer_pretty(::std::io::stdout(), &info).unwrap();
-	}
+
+	cmd::print_output(matches, &info)
 }

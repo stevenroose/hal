@@ -38,3 +38,9 @@ impl<'de> ::serde::Deserialize<'de> for HexBytes {
 		Ok(HexBytes(hex::decode(hex_str).map_err(D::Error::custom)?))
 	}
 }
+
+/// Get JSON-able objects that describe the type.
+pub trait GetInfo<T: ::serde::Serialize> {
+	/// Get a description of this object given the network of interest.
+	fn get_info(&self, network: ::bitcoin::Network) -> T;
+}
