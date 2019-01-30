@@ -62,3 +62,19 @@ pub fn address_from_script(
 		network: network,
 	})
 }
+
+#[derive(Clone, PartialEq, Eq, Debug, Default, Deserialize, Serialize)]
+pub struct CreatedAddresses {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub p2pkh: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub p2wpkh: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub p2shwpkh: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub p2sh: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub p2wsh: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub p2shwsh: Option<String>,
+}
