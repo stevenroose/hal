@@ -8,6 +8,7 @@ hal is a command line tool that provides all kinds of Bitcoin-related utilities.
 
 - address
 	- inspect: get information about addresses
+	- create: create addresses using public keys or scripts
 
 - bip32
 	- derive: derive keys and addresses from extended keys
