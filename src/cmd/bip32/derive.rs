@@ -1,4 +1,5 @@
 
+use bitcoin::{Address, Privkey};
 use bitcoin::util::bip32;
 use secp256k1;
 
@@ -65,7 +66,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 
 			master_fingerprint = ext_priv.fingerprint(&secp);
 			//TODO(stevenroose) change this after Carl's PR
-			let btcpriv = bitcoin::util::privkey::Privkey::from_secret_key(
+			let btcpriv = Privkey::from_secret_key(
 				derived_priv.secret_key,
 				true,
 				derived_priv.network,
@@ -91,9 +92,9 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		public_key: derived.public_key.serialize()[..].into(),
 		secret_key: secret_key.map(|k| k[..].into()),
 		parent_fingerprint: derived.fingerprint()[..].into(),
-		address_p2pkh: bitcoin::Address::p2pkh(&derived.public_key, derived.network),
-		address_p2wpkh: bitcoin::Address::p2wpkh(&derived.public_key, derived.network),
-		address_p2shwpkh: bitcoin::Address::p2shwpkh(&derived.public_key, derived.network),
+		address_p2pkh: Address::p2pkh(&derived.public_key, derived.network),
+		address_p2wpkh: Address::p2wpkh(&derived.public_key, derived.network),
+		address_p2shwpkh: Address::p2shwpkh(&derived.public_key, derived.network),
 	};
 
 	cmd::print_output(matches, &info)

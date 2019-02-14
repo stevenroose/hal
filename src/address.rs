@@ -1,8 +1,8 @@
-use bitcoin;
+use bitcoin::{Network, Script, Address, util::address::Payload};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct AddressInfo {
-	pub network: bitcoin::Network,
+	pub network: Network,
 	#[serde(rename = "type")]
 	pub type_: Option<String>,
 	pub script_pub_key: ::tx::OutputScriptInfo,
@@ -15,27 +15,27 @@ pub struct AddressInfo {
 }
 
 /// convert Network to bech32 network (this should go away soon)
-fn bech_network(network: bitcoin::Network) -> bitcoin_bech32::constants::Network {
+fn bech_network(network: Network) -> bitcoin_bech32::constants::Network {
 	match network {
-		bitcoin::Network::Bitcoin => bitcoin_bech32::constants::Network::Bitcoin,
-		bitcoin::Network::Testnet => bitcoin_bech32::constants::Network::Testnet,
-		bitcoin::Network::Regtest => bitcoin_bech32::constants::Network::Regtest,
+		Network::Bitcoin => bitcoin_bech32::constants::Network::Bitcoin,
+		Network::Testnet => bitcoin_bech32::constants::Network::Testnet,
+		Network::Regtest => bitcoin_bech32::constants::Network::Regtest,
 	}
 }
 
 /// Retrieve an address from the given script.
 pub fn address_from_script(
-	script: &bitcoin::Script,
-	network: bitcoin::Network,
-) -> Option<bitcoin::util::address::Address> {
-	Some(bitcoin::util::address::Address {
+	script: &Script,
+	network: Network,
+) -> Option<Address> {
+	Some(Address {
 		payload: if script.is_p2sh() {
-			bitcoin::util::address::Payload::ScriptHash(script.as_bytes()[2..22].into())
+			Payload::ScriptHash(script.as_bytes()[2..22].into())
 		} else if script.is_p2pkh() {
-			bitcoin::util::address::Payload::PubkeyHash(script.as_bytes()[3..23].into())
+			Payload::PubkeyHash(script.as_bytes()[3..23].into())
 		} else if script.is_p2pk() {
 			match secp256k1::key::PublicKey::from_slice(&script.as_bytes()[1..(script.len() - 1)]) {
-				Ok(pk) => bitcoin::util::address::Payload::Pubkey(pk),
+				Ok(pk) => Payload::Pubkey(pk),
 				Err(_) => return None,
 			}
 		} else if script.is_v0_p2wsh() {
@@ -44,7 +44,7 @@ pub fn address_from_script(
 				script.as_bytes()[2..34].to_vec(),
 				bech_network(network),
 			) {
-				Ok(prog) => bitcoin::util::address::Payload::WitnessProgram(prog),
+				Ok(prog) => Payload::WitnessProgram(prog),
 				Err(_) => return None,
 			}
 		} else if script.is_v0_p2wpkh() {
@@ -53,7 +53,7 @@ pub fn address_from_script(
 				script.as_bytes()[2..22].to_vec(),
 				bech_network(network),
 			) {
-				Ok(prog) => bitcoin::util::address::Payload::WitnessProgram(prog),
+				Ok(prog) => Payload::WitnessProgram(prog),
 				Err(_) => return None,
 			}
 		} else {

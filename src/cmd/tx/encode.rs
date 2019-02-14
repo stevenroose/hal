@@ -1,5 +1,8 @@
 use std::io::Write;
 
+use bitcoin::{Script, OutPoint, Transaction, TxIn, TxOut, Network};
+use bitcoin::consensus::encode::serialize;
+
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
@@ -19,11 +22,11 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 }
 
 /// Check both ways to specify the outpoint and panic if conflicting.
-fn outpoint_from_input_info(input: &hal::tx::InputInfo) -> bitcoin::OutPoint {
+fn outpoint_from_input_info(input: &hal::tx::InputInfo) -> OutPoint {
 	let op1 = input.prevout.as_ref().map(|ref op| op.parse().expect("invalid prevout format"));
 	let op2 = match input.txid {
 		Some(txid) => match input.vout {
-			Some(vout) => Some(bitcoin::OutPoint {
+			Some(vout) => Some(OutPoint {
 				txid: txid,
 				vout: vout,
 			}),
@@ -45,7 +48,7 @@ fn outpoint_from_input_info(input: &hal::tx::InputInfo) -> bitcoin::OutPoint {
 	}
 }
 
-fn encode_script_sig(ss: hal::tx::InputScriptInfo) -> bitcoin::Script {
+fn encode_script_sig(ss: hal::tx::InputScriptInfo) -> Script {
 	if let Some(hex) = ss.hex {
 		if ss.asm.is_some() {
 			warn!("Field \"asm\" of input is ignored.");
@@ -59,8 +62,8 @@ fn encode_script_sig(ss: hal::tx::InputScriptInfo) -> bitcoin::Script {
 	}
 }
 
-fn encode_input(input: hal::tx::InputInfo) -> bitcoin::TxIn {
-	bitcoin::TxIn {
+fn encode_input(input: hal::tx::InputInfo) -> TxIn {
+	TxIn {
 		previous_output: outpoint_from_input_info(&input),
 		script_sig: encode_script_sig(
 			input.script_sig.expect("Field \"scriptSig\" is required for inputs."),
@@ -75,8 +78,8 @@ fn encode_input(input: hal::tx::InputInfo) -> bitcoin::TxIn {
 
 fn encode_script_pubkey(
 	spk: hal::tx::OutputScriptInfo,
-	used_network: &mut Option<bitcoin::Network>,
-) -> bitcoin::Script {
+	used_network: &mut Option<Network>,
+) -> Script {
 	if spk.type_.is_some() {
 		warn!("Field \"type\" of output is ignored.");
 	}
@@ -109,12 +112,12 @@ fn encode_script_pubkey(
 	}
 }
 
-fn encode_output(output: hal::tx::OutputInfo) -> bitcoin::TxOut {
+fn encode_output(output: hal::tx::OutputInfo) -> TxOut {
 	// Keep track of which network has been used in addresses and error if two different networks
 	// are used.
 	let mut used_network = None;
 
-	bitcoin::TxOut {
+	TxOut {
 		value: output.value.expect("Field \"value\" is required for outputs."),
 		script_pubkey: encode_script_pubkey(
 			output.script_pub_key.expect("Field \"scriptPubKey\" is required for outputs."),
@@ -144,7 +147,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		warn!("Field \"vsize\" is ignored.");
 	}
 
-	let tx = bitcoin::Transaction {
+	let tx = Transaction {
 		version: info.version.expect("Field \"version\" is required."),
 		lock_time: info.locktime.expect("Field \"locktime\" is required."),
 		input: info
@@ -161,7 +164,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 			.collect(),
 	};
 
-	let tx_bytes = bitcoin::consensus::encode::serialize(&tx);
+	let tx_bytes = serialize(&tx);
 	if matches.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&tx_bytes).unwrap();
 	} else {

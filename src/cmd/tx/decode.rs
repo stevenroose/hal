@@ -1,4 +1,4 @@
-use bitcoin::consensus;
+use bitcoin::consensus::encode::deserialize;
 use bitcoin::Transaction;
 use clap;
 
@@ -21,7 +21,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let hex_tx = matches.value_of("raw-tx").expect("no raw tx provided");
 	let raw_tx = hex::decode(hex_tx).expect("could not decode raw tx");
-	let tx: Transaction = consensus::encode::deserialize(&raw_tx).expect("invalid tx format");
+	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
 
 	let info = hal::GetInfo::get_info(&tx, cmd::network(matches));
 	cmd::print_output(matches, &info)

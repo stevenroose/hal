@@ -1,5 +1,6 @@
-use bitcoin;
 
+use bitcoin::{Address, Script, Network, util::hash::Sha256dHash, Transaction, TxIn, TxOut};
+use bitcoin::consensus::encode::serialize;
 use bitcoin::util::hash::BitcoinHash;
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -8,10 +9,10 @@ pub struct InputScriptInfo {
 	pub asm: Option<String>,
 }
 
-pub struct InputScript<'a>(pub &'a bitcoin::Script);
+pub struct InputScript<'a>(pub &'a Script);
 
 impl<'a> ::GetInfo<InputScriptInfo> for InputScript<'a> {
-	fn get_info(&self, _network: ::bitcoin::Network) -> InputScriptInfo {
+	fn get_info(&self, _network: Network) -> InputScriptInfo {
 		InputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
 			asm: Some(format!("{:?}", self.0)), //TODO(stevenroose) asm
@@ -22,15 +23,15 @@ impl<'a> ::GetInfo<InputScriptInfo> for InputScript<'a> {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InputInfo {
 	pub prevout: Option<String>,
-	pub txid: Option<bitcoin::util::hash::Sha256dHash>,
+	pub txid: Option<Sha256dHash>,
 	pub vout: Option<u32>,
 	pub script_sig: Option<InputScriptInfo>,
 	pub sequence: Option<u32>,
 	pub witness: Option<Vec<::HexBytes>>,
 }
 
-impl ::GetInfo<InputInfo> for ::bitcoin::TxIn {
-	fn get_info(&self, network: ::bitcoin::Network) -> InputInfo {
+impl ::GetInfo<InputInfo> for TxIn {
+	fn get_info(&self, network: Network) -> InputInfo {
 		InputInfo {
 			prevout: Some(self.previous_output.to_string()),
 			txid: Some(self.previous_output.txid),
@@ -53,13 +54,13 @@ pub struct OutputScriptInfo {
 	#[serde(skip_serializing_if = "Option::is_none", rename = "type")]
 	pub type_: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub address: Option<bitcoin::Address>,
+	pub address: Option<Address>,
 }
 
-pub struct OutputScript<'a>(pub &'a bitcoin::Script);
+pub struct OutputScript<'a>(pub &'a Script);
 
 impl<'a> ::GetInfo<OutputScriptInfo> for OutputScript<'a> {
-	fn get_info(&self, network: ::bitcoin::Network) -> OutputScriptInfo {
+	fn get_info(&self, network: Network) -> OutputScriptInfo {
 		OutputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
 			asm: Some(format!("{:?}", self.0)), //TODO(stevenroose) asm
@@ -92,8 +93,8 @@ pub struct OutputInfo {
 	pub script_pub_key: Option<OutputScriptInfo>,
 }
 
-impl ::GetInfo<OutputInfo> for bitcoin::TxOut {
-	fn get_info(&self, network: ::bitcoin::Network) -> OutputInfo {
+impl ::GetInfo<OutputInfo> for TxOut {
+	fn get_info(&self, network: Network) -> OutputInfo {
 		OutputInfo {
 			value: Some(self.value),
 			script_pub_key: Some(OutputScript(&self.script_pubkey).get_info(network)),
@@ -103,8 +104,8 @@ impl ::GetInfo<OutputInfo> for bitcoin::TxOut {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct TransactionInfo {
-	pub txid: Option<bitcoin::util::hash::Sha256dHash>,
-	pub hash: Option<bitcoin::util::hash::Sha256dHash>,
+	pub txid: Option<Sha256dHash>,
+	pub hash: Option<Sha256dHash>,
 	pub size: Option<usize>,
 	pub weight: Option<usize>,
 	pub vsize: Option<usize>,
@@ -114,14 +115,14 @@ pub struct TransactionInfo {
 	pub outputs: Option<Vec<OutputInfo>>,
 }
 
-impl ::GetInfo<TransactionInfo> for bitcoin::Transaction {
-	fn get_info(&self, network: ::bitcoin::Network) -> TransactionInfo {
+impl ::GetInfo<TransactionInfo> for Transaction {
+	fn get_info(&self, network: Network) -> TransactionInfo {
 		TransactionInfo {
 			txid: Some(self.txid()),
 			hash: Some(self.bitcoin_hash()),
 			version: Some(self.version),
 			locktime: Some(self.lock_time),
-			size: Some(bitcoin::consensus::encode::serialize(self).len()),
+			size: Some(serialize(self).len()),
 			weight: Some(self.get_weight() as usize),
 			vsize: Some((self.get_weight() / 4) as usize),
 			inputs: Some(self.input.iter().map(|i| i.get_info(network)).collect()),

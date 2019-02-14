@@ -8,6 +8,8 @@ pub mod address;
 pub mod bip32;
 pub mod tx;
 
+use bitcoin::Network;
+
 /// Utility struct to serialize byte strings as hex.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct HexBytes(pub Vec<u8>);
@@ -42,5 +44,5 @@ impl<'de> ::serde::Deserialize<'de> for HexBytes {
 /// Get JSON-able objects that describe the type.
 pub trait GetInfo<T: ::serde::Serialize> {
 	/// Get a description of this object given the network of interest.
-	fn get_info(&self, network: ::bitcoin::Network) -> T;
+	fn get_info(&self, network: Network) -> T;
 }
