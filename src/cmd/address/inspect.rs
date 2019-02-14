@@ -2,8 +2,8 @@ use bitcoin::util::address::Payload;
 use bitcoin::Address;
 use clap;
 
-use hal;
 use cmd;
+use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("inspect")

@@ -1,4 +1,4 @@
-use bitcoin::{Network, Script, Address, util::address::Payload};
+use bitcoin::{util::address::Payload, Address, Network, Script};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct AddressInfo {
@@ -24,10 +24,7 @@ fn bech_network(network: Network) -> bitcoin_bech32::constants::Network {
 }
 
 /// Retrieve an address from the given script.
-pub fn address_from_script(
-	script: &Script,
-	network: Network,
-) -> Option<Address> {
+pub fn address_from_script(script: &Script, network: Network) -> Option<Address> {
 	Some(Address {
 		payload: if script.is_p2sh() {
 			Payload::ScriptHash(script.as_bytes()[2..22].into())

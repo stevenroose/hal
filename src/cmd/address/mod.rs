@@ -2,8 +2,8 @@ use clap;
 
 use cmd;
 
-mod inspect;
 mod create;
+mod inspect;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::new_subcommand("address")

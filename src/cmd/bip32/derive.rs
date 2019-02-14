@@ -1,6 +1,5 @@
-
-use bitcoin::{Address, Privkey};
 use bitcoin::util::bip32;
+use bitcoin::{Address, Privkey};
 use secp256k1;
 
 use std::str::FromStr;
@@ -28,26 +27,26 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 fn parse_child_number(inp: &str) -> bip32::ChildNumber {
 	match inp.chars().last().map_or(false, |l| l == '\'' || l == 'h') {
 		true => bip32::ChildNumber::from_hardened_idx(
-			inp[0..inp.len() - 1].parse().expect("invalid derivation path format")
+			inp[0..inp.len() - 1].parse().expect("invalid derivation path format"),
 		),
 		false => bip32::ChildNumber::from_normal_idx(
-			inp.parse().expect("invalid derivation path format")
+			inp.parse().expect("invalid derivation path format"),
 		),
 	}
 }
 fn parse_derivation_path(path: &str) -> Vec<bip32::ChildNumber> {
-    let mut parts = path.split("/");
-    // First parts must be `m`.
-    if parts.next().unwrap() != "m" {
+	let mut parts = path.split("/");
+	// First parts must be `m`.
+	if parts.next().unwrap() != "m" {
 		panic!("invalid derivation path format");
-    }
+	}
 
-    // Empty parts are a format error.
-    if parts.clone().any(|p| p.len() == 0) {
+	// Empty parts are a format error.
+	if parts.clone().any(|p| p.len() == 0) {
 		panic!("invalid derivation path format");
-    }
+	}
 
-    parts.map(parse_child_number).collect()
+	parts.map(parse_child_number).collect()
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
@@ -66,11 +65,8 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 
 			master_fingerprint = ext_priv.fingerprint(&secp);
 			//TODO(stevenroose) change this after Carl's PR
-			let btcpriv = Privkey::from_secret_key(
-				derived_priv.secret_key,
-				true,
-				derived_priv.network,
-			);
+			let btcpriv =
+				Privkey::from_secret_key(derived_priv.secret_key, true, derived_priv.network);
 			secret_key = Some(btcpriv.to_wif());
 
 			bip32::ExtendedPubKey::from_private(&secp, &derived_priv)

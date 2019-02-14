@@ -2,8 +2,8 @@ use bitcoin::Address;
 use clap;
 use secp256k1;
 
-use hal;
 use cmd;
+use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("create")
@@ -31,7 +31,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		let pubkey_bytes = hex::decode(pubkey_hex).expect("invalid pubkey hex");
 		let pubkey = secp256k1::PublicKey::from_slice(&pubkey_bytes).expect("invalid pubkey");
 
-		hal::address::CreatedAddresses{
+		hal::address::CreatedAddresses {
 			p2pkh: Some(Address::p2pkh(&pubkey, network).to_string()),
 			p2wpkh: Some(Address::p2wpkh(&pubkey, network).to_string()),
 			p2shwpkh: Some(Address::p2shwpkh(&pubkey, network).to_string()),

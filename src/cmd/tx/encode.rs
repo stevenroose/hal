@@ -1,24 +1,22 @@
 use std::io::Write;
 
-use bitcoin::{Script, OutPoint, Transaction, TxIn, TxOut, Network};
 use bitcoin::consensus::encode::serialize;
+use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
 
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("encode")
-		.about("encode a raw transaction from JSON")
-		.args(&[
-			clap::Arg::with_name("tx-info")
-				.help("the transaction info in JSON")
-				.takes_value(true)
-				.required(true),
-			clap::Arg::with_name("raw-stdout")
-				.long("raw")
-				.short("r")
-				.help("output the raw bytes of the result to stdout")
-				.required(false),
-		])
+	clap::SubCommand::with_name("encode").about("encode a raw transaction from JSON").args(&[
+		clap::Arg::with_name("tx-info")
+			.help("the transaction info in JSON")
+			.takes_value(true)
+			.required(true),
+		clap::Arg::with_name("raw-stdout")
+			.long("raw")
+			.short("r")
+			.help("output the raw bytes of the result to stdout")
+			.required(false),
+	])
 }
 
 /// Check both ways to specify the outpoint and panic if conflicting.

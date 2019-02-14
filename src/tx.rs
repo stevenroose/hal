@@ -1,7 +1,6 @@
-
-use bitcoin::{Address, Script, Network, util::hash::Sha256dHash, Transaction, TxIn, TxOut};
 use bitcoin::consensus::encode::serialize;
 use bitcoin::util::hash::BitcoinHash;
+use bitcoin::{util::hash::Sha256dHash, Address, Network, Script, Transaction, TxIn, TxOut};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InputScriptInfo {

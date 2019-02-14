@@ -1,4 +1,3 @@
-
 pub mod address;
 pub mod bip32;
 pub mod script;
@@ -47,5 +46,3 @@ pub fn print_output<'a, T: serde::Serialize>(matches: &clap::ArgMatches<'a>, out
 		serde_json::to_writer_pretty(::std::io::stdout(), &out).unwrap();
 	}
 }
-
-

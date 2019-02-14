@@ -1,5 +1,4 @@
-
-use bitcoin::{Network, Address};
+use bitcoin::{Address, Network};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct DerivationInfo {
