@@ -9,6 +9,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("decode")
 		.about("decode a raw transaction to JSON")
 		.arg(cmd::arg_testnet())
+		.arg(cmd::arg_regtest())
 		.arg(cmd::arg_yaml())
 		.arg(
 			clap::Arg::with_name("raw-tx")

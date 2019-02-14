@@ -23,9 +23,20 @@ pub fn arg_testnet<'a>() -> clap::Arg<'a, 'a> {
 		.required(false)
 }
 
+pub fn arg_regtest<'a>() -> clap::Arg<'a, 'a> {
+	clap::Arg::with_name("regtest")
+		.long("regtest")
+		.short("r")
+		.help("run in regtest mode")
+		.takes_value(false)
+		.required(false)
+}
+
 pub fn network<'a>(matches: &clap::ArgMatches<'a>) -> Network {
 	if matches.is_present("testnet") {
 		Network::Testnet
+	} else if matches.is_present("regtest") {
+		Network::Regtest
 	} else {
 		Network::Bitcoin
 	}
