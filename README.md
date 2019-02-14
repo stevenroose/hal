@@ -13,6 +13,10 @@ hal is a command line tool that provides all kinds of Bitcoin-related utilities.
 - bip32
 	- derive: derive keys and addresses from extended keys
 
+- ln
+	- invoice
+		- decode: decode Lightning invoices
+
 - psbt (coming soon)
 	- decode: decode a PSBT to JSON
 	- edit: edit a PSBT inline

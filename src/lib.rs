@@ -1,11 +1,15 @@
 #[macro_use]
 extern crate serde_derive;
 extern crate bitcoin;
+extern crate bitcoin_bech32;
+extern crate chrono;
 extern crate hex;
+extern crate lightning_invoice;
 extern crate serde;
 
 pub mod address;
 pub mod bip32;
+pub mod lightning;
 pub mod tx;
 
 use bitcoin::Network;
