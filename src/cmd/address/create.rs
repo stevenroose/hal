@@ -8,8 +8,7 @@ use hal;
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("create")
 		.about("create addresses")
-		.arg(cmd::arg_testnet())
-		.arg(cmd::arg_regtest())
+		.args(&cmd::args_networks())
 		.arg(cmd::arg_yaml())
 		.args(&[
 			clap::Arg::with_name("pubkey")

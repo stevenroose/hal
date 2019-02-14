@@ -14,22 +14,20 @@ pub fn new_subcommand<'a>(name: &'static str) -> clap::App<'a, 'a> {
 		.setting(clap::AppSettings::DisableHelpSubcommand)
 }
 
-pub fn arg_testnet<'a>() -> clap::Arg<'a, 'a> {
-	clap::Arg::with_name("testnet")
-		.long("testnet")
-		.short("t")
-		.help("run in testnet mode")
-		.takes_value(false)
-		.required(false)
-}
-
-pub fn arg_regtest<'a>() -> clap::Arg<'a, 'a> {
-	clap::Arg::with_name("regtest")
-		.long("regtest")
-		.short("r")
-		.help("run in regtest mode")
-		.takes_value(false)
-		.required(false)
+pub fn args_networks<'a>() -> Vec<clap::Arg<'a, 'a>> {
+	vec![
+		clap::Arg::with_name("testnet")
+			.long("testnet")
+			.short("t")
+			.help("run in testnet mode")
+			.takes_value(false)
+			.required(false),
+		clap::Arg::with_name("regtest")
+			.long("regtest")
+			.help("run in regtest mode")
+			.takes_value(false)
+			.required(false),
+	]
 }
 
 pub fn network<'a>(matches: &clap::ArgMatches<'a>) -> Network {

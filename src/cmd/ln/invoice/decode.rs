@@ -7,8 +7,7 @@ use hal;
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("decode")
 		.about("decode Lightning invoices")
-		.arg(cmd::arg_testnet())
-		.arg(cmd::arg_regtest())
+		.args(&cmd::args_networks())
 		.arg(cmd::arg_yaml())
 		.arg(
 			clap::Arg::with_name("invoice")
