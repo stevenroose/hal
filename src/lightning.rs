@@ -1,12 +1,43 @@
 use bitcoin::{util::address::Payload, Address, Network};
 use bitcoin_bech32::{constants::Network as B32Network, u5, WitnessProgram};
+use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
 use lightning_invoice::{Currency, Fallback, Invoice, InvoiceDescription, RouteHop};
+
+const WRONG_CID: &'static str = "incorrect short channel ID HRF format";
+
+/// Parse a short channel is in the form of `${blockheight)x$(txindex}x${outputindex}`.
+pub fn parse_short_channel_id(cid: &str) -> u64 {
+	let mut split = cid.split("x");
+	let blocknum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
+	if blocknum & 0xFFFFFF != blocknum {
+		panic!(WRONG_CID);
+	}
+	let txnum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
+	if txnum & 0xFFFFFF != txnum {
+		panic!(WRONG_CID);
+	}
+	let outnum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
+	if outnum & 0xFFFF != outnum {
+		panic!(WRONG_CID);
+	}
+	blocknum << 40 | txnum << 16 | outnum
+}
+
+/// Parse a short channel is in the form of `${blockheight)x$(txindex}x${outputindex}`.
+pub fn fmt_short_channel_id(cid: u64) -> String {
+	let blocknum = cid >> 40;
+	let txnum = cid >> 16 & 0x00FFFFFF;
+	let outnum = cid & 0xFFFF;
+	format!("{}x{}x{}", blocknum, txnum, outnum)
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct RouteHopInfo {
 	pub pubkey: ::HexBytes,
-	pub short_channel_id: ::HexBytes,
+	pub short_channel_id: u64,
+	pub short_channel_id_hex: ::HexBytes,
+	pub short_channel_id_hrf: String,
 	pub fee_base_msat: u32,
 	pub fee_proportional_millionths: u32,
 	pub cltv_expiry_delta: u16,
@@ -14,9 +45,13 @@ pub struct RouteHopInfo {
 
 impl ::GetInfo<RouteHopInfo> for RouteHop {
 	fn get_info(&self, _network: Network) -> RouteHopInfo {
+		let ssid_hex = &self.short_channel_id[..];
+		let ssid = BigEndian::read_u64(&ssid_hex);
 		RouteHopInfo {
 			pubkey: self.pubkey.serialize()[..].into(),
-			short_channel_id: self.short_channel_id[..].into(),
+			short_channel_id: ssid,
+			short_channel_id_hex: ssid_hex.into(),
+			short_channel_id_hrf: fmt_short_channel_id(ssid),
 			fee_base_msat: self.fee_base_msat,
 			fee_proportional_millionths: self.fee_proportional_millionths,
 			cltv_expiry_delta: self.cltv_expiry_delta,
