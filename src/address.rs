@@ -1,4 +1,5 @@
-use bitcoin::{util::address::Payload, Address, Network, Script};
+use bitcoin::{Address, Network, Script};
+use bitcoin_hashes::Hash;
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct AddressInfo {
@@ -25,16 +26,12 @@ fn bech_network(network: Network) -> bitcoin_bech32::constants::Network {
 
 /// Retrieve an address from the given script.
 pub fn address_from_script(script: &Script, network: Network) -> Option<Address> {
+	use bitcoin::util::address::Payload;
 	Some(Address {
 		payload: if script.is_p2sh() {
-			Payload::ScriptHash(script.as_bytes()[2..22].into())
+			Payload::ScriptHash(Hash::from_slice(&script.as_bytes()[2..22]).expect("wrong hash"))
 		} else if script.is_p2pkh() {
-			Payload::PubkeyHash(script.as_bytes()[3..23].into())
-		} else if script.is_p2pk() {
-			match secp256k1::key::PublicKey::from_slice(&script.as_bytes()[1..(script.len() - 1)]) {
-				Ok(pk) => Payload::Pubkey(pk),
-				Err(_) => return None,
-			}
+			Payload::PubkeyHash(Hash::from_slice(&script.as_bytes()[3..23]).expect("wrong hash"))
 		} else if script.is_v0_p2wsh() {
 			match bitcoin_bech32::WitnessProgram::new(
 				bitcoin_bech32::u5::try_from_u8(0).expect("0<32"),

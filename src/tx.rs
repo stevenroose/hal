@@ -1,6 +1,7 @@
 use bitcoin::consensus::encode::serialize;
 use bitcoin::util::hash::BitcoinHash;
-use bitcoin::{util::hash::Sha256dHash, Address, Network, Script, Transaction, TxIn, TxOut};
+use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut};
+use bitcoin_hashes::sha256d;
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InputScriptInfo {
@@ -22,7 +23,7 @@ impl<'a> ::GetInfo<InputScriptInfo> for InputScript<'a> {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InputInfo {
 	pub prevout: Option<String>,
-	pub txid: Option<Sha256dHash>,
+	pub txid: Option<sha256d::Hash>,
 	pub vout: Option<u32>,
 	pub script_sig: Option<InputScriptInfo>,
 	pub sequence: Option<u32>,
@@ -103,8 +104,8 @@ impl ::GetInfo<OutputInfo> for TxOut {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct TransactionInfo {
-	pub txid: Option<Sha256dHash>,
-	pub hash: Option<Sha256dHash>,
+	pub txid: Option<sha256d::Hash>,
+	pub hash: Option<sha256d::Hash>,
 	pub size: Option<usize>,
 	pub weight: Option<usize>,
 	pub vsize: Option<usize>,

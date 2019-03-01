@@ -1,5 +1,6 @@
 extern crate bitcoin;
 extern crate bitcoin_bech32;
+extern crate bitcoin_hashes;
 extern crate lightning_invoice;
 #[macro_use]
 extern crate log;

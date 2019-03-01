@@ -1,5 +1,5 @@
-use bitcoin::util::address::Payload;
 use bitcoin::Address;
+use bitcoin_hashes::Hash;
 use clap;
 
 use cmd;
@@ -31,15 +31,15 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		witness_program_version: None,
 	};
 
+	use bitcoin::util::address::Payload;
 	match address.payload {
-		Payload::Pubkey(_) => unreachable!("address doesn't exist"),
-		Payload::PubkeyHash(ref pkh) => {
+		Payload::PubkeyHash(pkh) => {
 			info.type_ = Some("p2pkh".to_owned());
-			info.pubkey_hash = Some(pkh.to_bytes()[..].into());
+			info.pubkey_hash = Some(pkh.into_inner()[..].into());
 		}
 		Payload::ScriptHash(ref sh) => {
 			info.type_ = Some("p2sh".to_owned());
-			info.script_hash = Some(sh.to_bytes()[..].into());
+			info.script_hash = Some(sh.into_inner()[..].into());
 		}
 		Payload::WitnessProgram(ref wp) => {
 			let version = wp.version().to_u8() as usize;

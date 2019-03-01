@@ -1,5 +1,6 @@
 use bitcoin::{util::address::Payload, Address, Network};
 use bitcoin_bech32::{constants::Network as B32Network, u5, WitnessProgram};
+use bitcoin_hashes::Hash;
 use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
 use lightning_invoice::{Currency, Fallback, Invoice, InvoiceDescription, RouteHop};
@@ -103,8 +104,12 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 					//TODO(stevenroose) see https://github.com/rust-bitcoin/rust-lightning-invoice/issues/24
 					Address {
 						payload: match f {
-							Fallback::PubKeyHash(pkh) => Payload::PubkeyHash(pkh[..].into()),
-							Fallback::ScriptHash(sh) => Payload::ScriptHash(sh[..].into()),
+							Fallback::PubKeyHash(pkh) => {
+								Payload::PubkeyHash(Hash::from_slice(&pkh[..]).expect("wrong hash"))
+							}
+							Fallback::ScriptHash(sh) => {
+								Payload::ScriptHash(Hash::from_slice(&sh[..]).expect("wrong hash"))
+							}
 							Fallback::SegWitProgram {
 								version: v,
 								program: p,
