@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use bitcoin::{Network, SigHashType};
-use bitcoin::util::bip32;
 use bitcoin::util::psbt;
+use bitcoin::{Network, SigHashType};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct PsbtGlobalInfo {
@@ -83,12 +82,15 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 			partial_sigs: {
 				let mut partial_sigs = HashMap::new();
 				for (key, value) in self.partial_sigs.iter() {
-					partial_sigs.insert({
-						//TODO(stevenroose) key.serialize()
-						let mut buf = Vec::new();
-						key.write_into(&mut buf);
-						buf.into()
-					}, value.clone().into());
+					partial_sigs.insert(
+						{
+							//TODO(stevenroose) key.serialize()
+							let mut buf = Vec::new();
+							key.write_into(&mut buf);
+							buf.into()
+						},
+						value.clone().into(),
+					);
 				}
 				partial_sigs
 			},
@@ -104,7 +106,8 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
 				for (key, value) in self.hd_keypaths.iter() {
-					hd_keypaths.insert({
+					hd_keypaths.insert(
+						{
 							//TODO(stevenroose) key.serialize()
 							let mut buf = Vec::new();
 							key.write_into(&mut buf);
@@ -154,7 +157,8 @@ impl ::GetInfo<PsbtOutputInfo> for psbt::Output {
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
 				for (key, value) in self.hd_keypaths.iter() {
-					hd_keypaths.insert({
+					hd_keypaths.insert(
+						{
 							//TODO(stevenroose) key.serialize()
 							let mut buf = Vec::new();
 							key.write_into(&mut buf);
