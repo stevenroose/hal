@@ -1,8 +1,7 @@
-
 use clap;
 
-use bitcoin::util::psbt;
 use bitcoin::consensus::deserialize;
+use bitcoin::util::psbt;
 
 use cmd;
 
@@ -22,8 +21,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let (raw_psbt, _) = super::file_or_raw(matches.value_of("psbt").unwrap());
 
-	let psbt: psbt::PartiallySignedTransaction =
-		deserialize(&raw_psbt).expect("invalid PSBT");
+	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw_psbt).expect("invalid PSBT");
 
 	let info = hal::GetInfo::get_info(&psbt, cmd::network(matches));
 	cmd::print_output(matches, &info)

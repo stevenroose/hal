@@ -4,10 +4,10 @@ extern crate bitcoin_hashes;
 extern crate lightning_invoice;
 #[macro_use]
 extern crate log;
+extern crate base64;
 extern crate clap;
 extern crate fern;
 extern crate hex;
-extern crate base64;
 extern crate secp256k1;
 extern crate serde_json;
 

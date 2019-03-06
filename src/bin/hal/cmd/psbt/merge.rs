@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::Write;
 
-use bitcoin::util::psbt;
 use bitcoin::consensus::deserialize;
 use bitcoin::consensus::serialize;
+use bitcoin::util::psbt;
 
 use clap;
 

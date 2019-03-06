@@ -15,7 +15,7 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "hal"
-path = "src/main.rs"
+path = "src/bin/hal/main.rs"
 
 [dependencies]
 clap = "2.32"

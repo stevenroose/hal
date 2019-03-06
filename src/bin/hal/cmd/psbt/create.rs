@@ -1,4 +1,3 @@
-
 use std::fs::File;
 use std::io::Write;
 
@@ -6,9 +5,9 @@ use base64;
 use clap;
 use hex;
 
-use bitcoin::Transaction;
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::psbt;
+use bitcoin::Transaction;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name("create")
