@@ -3,18 +3,14 @@ use std::io::Write;
 use bitcoin::consensus::encode::serialize;
 use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
 
+use cmd;
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("encode").about("encode a raw transaction from JSON").args(&[
-		clap::Arg::with_name("tx-info")
-			.help("the transaction info in JSON")
-			.takes_value(true)
-			.required(true),
-		clap::Arg::with_name("raw-stdout")
-			.long("raw")
+	cmd::subcommand("encode", "encode a raw transaction from JSON").args(&[
+		cmd::arg("tx-info", "the transaction info in JSON").required(true),
+		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r")
-			.help("output the raw bytes of the result to stdout")
 			.required(false),
 	])
 }

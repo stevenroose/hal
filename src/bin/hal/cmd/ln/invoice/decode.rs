@@ -5,16 +5,9 @@ use cmd;
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("decode")
-		.about("decode Lightning invoices")
-		.args(&cmd::args_networks())
-		.arg(cmd::arg_yaml())
-		.arg(
-			clap::Arg::with_name("invoice")
-				.help("the invoice in bech32")
-				.takes_value(true)
-				.required(true),
-		)
+	cmd::subcommand("decode", "decode Lightning invoices")
+		.args(&cmd::opts_networks())
+		.args(&[cmd::opt_yaml(), cmd::arg("invoice", "the invoice in bech32").required(true)])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

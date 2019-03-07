@@ -16,7 +16,7 @@ extern crate hal;
 use std::panic;
 use std::process;
 
-mod cmd;
+pub mod cmd;
 
 fn setup_logger(lvl: log::LevelFilter) {
 	fern::Dispatch::new()
@@ -25,6 +25,26 @@ fn setup_logger(lvl: log::LevelFilter) {
 		.chain(std::io::stderr())
 		.apply()
 		.expect("error setting up logger");
+}
+
+fn init_app<'a, 'b>() -> clap::App<'a, 'b> {
+	clap::App::new("hal")
+		.version("0.0.0")
+		.author("Steven Roose <steven@stevenroose.org>")
+		.about("hal - the Bitcoin companion")
+		.setting(clap::AppSettings::GlobalVersion)
+		.setting(clap::AppSettings::VersionlessSubcommands)
+		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
+		.setting(clap::AppSettings::AllowExternalSubcommands)
+		.setting(clap::AppSettings::DisableHelpSubcommand)
+		.setting(clap::AppSettings::AllArgsOverrideSelf)
+		.subcommands(cmd::subcommands())
+		.arg(
+			cmd::opt("verbose", "print verbose logging output to stderr")
+				.short("v")
+				.takes_value(false)
+				.global(true),
+		)
 }
 
 fn main() {
@@ -36,35 +56,14 @@ fn main() {
 		} else if let Some(m) = info.payload().downcast_ref::<&str>() {
 			m
 		} else {
-			"No message provided"
+			"No error message provided"
 		};
 		println!("Execution failed: {}", message);
 		process::exit(1);
 	}));
 
-	let matches = clap::App::new("hal")
-		.version("0.0.0")
-		.author("Steven Roose <steven@stevenroose.org>")
-		.about("hal - the Bitcoin companion")
-		.setting(clap::AppSettings::VersionlessSubcommands)
-		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
-		.setting(clap::AppSettings::AllowExternalSubcommands)
-		.setting(clap::AppSettings::DisableHelpSubcommand)
-		.setting(clap::AppSettings::AllArgsOverrideSelf)
-		.subcommand(cmd::address::subcommand())
-		.subcommand(cmd::ln::subcommand())
-		.subcommand(cmd::tx::subcommand())
-		.subcommand(cmd::psbt::subcommand())
-		.subcommand(cmd::script::subcommand())
-		.subcommand(cmd::bip32::subcommand())
-		.arg(
-			clap::Arg::with_name("verbose")
-				.short("v")
-				.takes_value(false)
-				.help("print verbose logging output to stderr")
-				.global(true),
-		)
-		.get_matches();
+	let app = init_app();
+	let matches = app.get_matches();
 
 	// Enable logging in verbose mode.
 	match matches.is_present("verbose") {

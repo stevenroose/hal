@@ -6,16 +6,9 @@ use cmd;
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("decode")
-		.about("decode a raw transaction to JSON")
-		.args(&cmd::args_networks())
-		.arg(cmd::arg_yaml())
-		.arg(
-			clap::Arg::with_name("raw-tx")
-				.help("the raw transaction in hex")
-				.takes_value(true)
-				.required(true),
-		)
+	cmd::subcommand("decode", "decode a raw transaction to JSON")
+		.args(&cmd::opts_networks())
+		.args(&[cmd::opt_yaml(), cmd::arg("raw-tx", "the raw transaction in hex").required(true)])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

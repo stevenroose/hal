@@ -11,148 +11,98 @@ use bitcoin::util::bip32;
 use bitcoin::util::psbt;
 use bitcoin::PublicKey;
 
+use cmd;
+
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("edit")
-		.about("edit a PSBT")
-		.arg(
-			clap::Arg::with_name("psbt")
-				.help("PSBT to edit, either hex or a file reference")
-				.takes_value(true)
-				.required(true),
-		)
-		.arg(
-			clap::Arg::with_name("input-idx")
-				.long("nin")
-				.help("the input index to edit")
-				.display_order(1)
-				.takes_value(true)
-				.required(false),
-		)
-		.arg(
-			clap::Arg::with_name("output-idx")
-				.long("nout")
-				.help("the output index to edit")
-				.display_order(2)
-				.takes_value(true)
-				.required(false),
-		)
-		.arg(
-			clap::Arg::with_name("output")
-				.long("output")
-				.short("o")
-				.help("where to save the resulting PSBT file -- in place if omitted")
-				.display_order(3)
-				.next_line_help(true)
-				.takes_value(true)
-				.required(false),
-		)
-		.arg(
-			clap::Arg::with_name("raw-stdout")
-				.long("raw")
-				.short("r")
-				.help("output the raw bytes of the result to stdout")
-				.required(false),
-		)
-		.args(
-			// values used in inputs and outputs
-			&[
-				clap::Arg::with_name("redeem-script")
-					.long("redeem-script")
-					.help("the redeem script")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				clap::Arg::with_name("witness-script")
-					.long("witness-script")
-					.help("the witness script")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				clap::Arg::with_name("hd-keypaths")
-					.long("hd-keypaths")
-					.help("the HD wallet keypaths `<pubkey>:<master-fingerprint>:<path>,...`")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				clap::Arg::with_name("hd-keypaths-add")
-					.long("hd-keypaths-add")
-					.help("add an HD wallet keypath `<pubkey>:<master-fingerprint>:<path>`")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-			],
-		)
-		.args(
-			// input values
-			&[
-				clap::Arg::with_name("non-witness-utxo")
-					.long("non-witness-utxo")
-					.help("the non-witness UTXO field in hex (full transaction)")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				clap::Arg::with_name("witness-utxo")
-					.long("witness-utxo")
-					.help("the witness UTXO field in hex (only output)")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				clap::Arg::with_name("partial-sigs")
-					.long("partial-sigs")
-					.help("set partial sigs `<pubkey>:<signature>,...`")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				clap::Arg::with_name("partial-sigs-add")
-					.long("partial-sigs-add")
-					.help("add a partial sig pair `<pubkey>:<signature>`")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				clap::Arg::with_name("sighash-type")
-					.long("sighash-type")
-					.help("the sighash type")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				// redeem-script
-				// witness-script
-				// hd-keypaths
-				// hd-keypaths-add
-				clap::Arg::with_name("final-script-sig")
-					.long("final-script-sig")
-					.help("set final script signature")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-				clap::Arg::with_name("final-script-witness")
-					.long("final-script-witness")
-					.help("set final script witness as comma-separated hex values")
-					.display_order(99)
-					.next_line_help(true)
-					.takes_value(true)
-					.required(false),
-			],
-		)
-		.args(
-			// output values
-			&[
-				// redeem-script
-				// witness-script
-				// hd-keypaths
-				// hd-keypaths-add
-			],
-		)
+	cmd::subcommand("edit", "edit a PSBT").args(&[
+		cmd::arg("psbt", "PSBT to edit, either base64/hex or a file path").required(true),
+		cmd::opt("input-idx", "the input index to edit")
+			.display_order(1)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("output-idx", "the output index to edit")
+			.display_order(2)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("output", "where to save the resulting PSBT file -- in place if omitted")
+			.short("o")
+			.display_order(3)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r")
+			.required(false),
+		//
+		// values used in both inputs and outputs
+		cmd::opt("redeem-script", "the redeem script")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("witness-script", "the witness script")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("hd-keypaths", "the HD wallet keypaths `<pubkey>:<master-fp>:<path>,...`")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("hd-keypaths-add", "add an HD wallet keypath `<pubkey>:<master-fp>:<path>`")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		//
+		// input values
+		cmd::opt("non-witness-utxo", "the non-witness UTXO field in hex (full transaction)")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("witness-utxo", "the witness UTXO field in hex (only output)")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("partial-sigs", "set partial sigs `<pubkey>:<signature>,...`")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("partial-sigs-add", "add a partial sig pair `<pubkey>:<signature>`")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("sighash-type", "the sighash type")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		// (omitted) redeem-script
+		// (omitted) witness-script
+		// (omitted) hd-keypaths
+		// (omitted) hd-keypaths-add
+		cmd::opt("final-script-sig", "set final script signature")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		cmd::opt("final-script-witness", "set final script witness as comma-separated hex values")
+			.display_order(99)
+			.next_line_help(true)
+			.takes_value(true)
+			.required(false),
+		//
+		// output values
+		// (omitted) redeem-script
+		// (omitted) witness-script
+		// (omitted) hd-keypaths
+		// (omitted) hd-keypaths-add
+	])
 }
 
 /// Parses a `<pubkey>:<signature>` pair.

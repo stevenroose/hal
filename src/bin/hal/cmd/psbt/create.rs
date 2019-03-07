@@ -9,30 +9,19 @@ use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::psbt;
 use bitcoin::Transaction;
 
+use cmd;
+
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("create")
-		.about("create a PSBT from an unsigned raw transaction")
-		.arg(
-			clap::Arg::with_name("raw-tx")
-				.help("the raw transaction in hex")
-				.takes_value(true)
-				.required(true),
-		)
-		.arg(
-			clap::Arg::with_name("output")
-				.long("output")
-				.short("o")
-				.help("where to save the merged PSBT output")
-				.takes_value(true)
-				.required(false),
-		)
-		.arg(
-			clap::Arg::with_name("raw-stdout")
-				.long("raw")
-				.short("r")
-				.help("output the raw bytes of the result to stdout")
-				.required(false),
-		)
+	cmd::subcommand("create", "create a PSBT from an unsigned raw transaction").args(&[
+		cmd::arg("raw-tx", "the raw transaction in hex").required(true),
+		cmd::opt("output", "where to save the merged PSBT output")
+			.short("o")
+			.takes_value(true)
+			.required(false),
+		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r")
+			.required(false),
+	])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

@@ -6,8 +6,7 @@ mod create;
 mod inspect;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	cmd::new_subcommand("address")
-		.about("work with addresses")
+	cmd::subcommand_group("address", "work with addresses")
 		.subcommand(create::subcommand())
 		.subcommand(inspect::subcommand())
 }

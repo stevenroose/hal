@@ -5,22 +5,11 @@ use cmd;
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("create")
-		.about("create addresses")
-		.args(&cmd::args_networks())
-		.arg(cmd::arg_yaml())
-		.args(&[
-			clap::Arg::with_name("pubkey")
-				.long("pubkey")
-				.help("a public key in hex")
-				.takes_value(true)
-				.required(false),
-			clap::Arg::with_name("script")
-				.long("script")
-				.help("a script in hex")
-				.takes_value(true)
-				.required(false),
-		])
+	cmd::subcommand("create", "create addresses").args(&cmd::opts_networks()).args(&[
+		cmd::opt_yaml(),
+		cmd::opt("pubkey", "a public key in hex").takes_value(true).required(false),
+		cmd::opt("script", "a script in hex").takes_value(true).required(false),
+	])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

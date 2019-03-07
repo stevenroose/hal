@@ -6,10 +6,10 @@ use cmd;
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("inspect")
-		.about("inspect addresses")
-		.arg(cmd::arg_yaml())
-		.arg(clap::Arg::with_name("address").help("the address").takes_value(true).required(true))
+	cmd::subcommand("inspect", "inspect addresses").args(&[
+		cmd::opt_yaml(),
+		cmd::opt("address", "the address").takes_value(true).required(true),
+	])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

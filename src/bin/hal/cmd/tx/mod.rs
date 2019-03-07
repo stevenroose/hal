@@ -6,8 +6,7 @@ mod decode;
 mod encode;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	cmd::new_subcommand("tx")
-		.about("manipulate transactions")
+	cmd::subcommand_group("tx", "manipulate transactions")
 		.subcommand(decode::subcommand())
 		.subcommand(encode::subcommand())
 }

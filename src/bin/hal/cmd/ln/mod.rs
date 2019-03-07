@@ -5,7 +5,7 @@ use cmd;
 mod invoice;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	cmd::new_subcommand("ln").about("everything Lightning").subcommand(invoice::subcommand())
+	cmd::subcommand_group("ln", "everything Lightning").subcommand(invoice::subcommand())
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

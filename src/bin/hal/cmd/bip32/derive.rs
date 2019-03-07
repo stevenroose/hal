@@ -7,19 +7,10 @@ use std::str::FromStr;
 use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("derive")
-		.about("derive keys from an extended key")
-		.arg(cmd::arg_yaml())
-		.args(&[
-			clap::Arg::with_name("ext-key")
-				.help("extended public or private key")
-				.takes_value(true)
-				.required(true),
-			clap::Arg::with_name("derivation-path")
-				.help("the derivation path")
-				.takes_value(true)
-				.required(true),
-		])
+	cmd::subcommand("derive", "derive keys from an extended key").arg(cmd::opt_yaml()).args(&[
+		cmd::opt("ext-key", "extended public or private key").takes_value(true).required(true),
+		cmd::opt("derivation-path", "the derivation path").takes_value(true).required(true),
+	])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

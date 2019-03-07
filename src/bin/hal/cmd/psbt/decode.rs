@@ -6,16 +6,12 @@ use bitcoin::util::psbt;
 use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("decode")
-		.about("decode a PSBT to JSON")
-		.args(&cmd::args_networks())
-		.arg(cmd::arg_yaml())
-		.arg(
-			clap::Arg::with_name("psbt")
-				.help("the PSBT file or raw PSBT in hex")
-				.takes_value(true)
-				.required(true),
-		)
+	cmd::subcommand("decode", "decode a PSBT to JSON").args(&cmd::opts_networks()).args(&[
+		cmd::opt_yaml(),
+		cmd::opt("psbt", "the PSBT file or raw PSBT in base64/hex")
+			.takes_value(true)
+			.required(true),
+	])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

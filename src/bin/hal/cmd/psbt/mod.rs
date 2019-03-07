@@ -5,16 +5,15 @@ use base64;
 use clap;
 use hex;
 
+use cmd;
+
 mod create;
 mod decode;
 mod edit;
 mod merge;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name("psbt")
-		.about("partially signed Bitcoin transactions")
-		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
-		.setting(clap::AppSettings::DisableHelpSubcommand)
+	cmd::subcommand_group("psbt", "partially signed Bitcoin transactions")
 		.subcommand(create::subcommand())
 		.subcommand(decode::subcommand())
 		.subcommand(edit::subcommand())
@@ -42,10 +41,10 @@ pub enum PsbtSource {
 /// the content bytes.
 /// Also returns an enum value indicating which source worked.
 pub fn file_or_raw(flag: &str) -> (Vec<u8>, PsbtSource) {
-	if let Ok(raw) = hex::decode(&flag) {
-		(raw, PsbtSource::Hex)
-	} else if let Ok(raw) = base64::decode(&flag) {
+	if let Ok(raw) = base64::decode(&flag) {
 		(raw, PsbtSource::Base64)
+	} else if let Ok(raw) = hex::decode(&flag) {
+		(raw, PsbtSource::Hex)
 	} else if let Ok(mut file) = File::open(&flag) {
 		let mut buf = Vec::new();
 		file.read_to_end(&mut buf).expect("error reading file");
