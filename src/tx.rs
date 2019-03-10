@@ -15,7 +15,7 @@ impl<'a> ::GetInfo<InputScriptInfo> for InputScript<'a> {
 	fn get_info(&self, _network: Network) -> InputScriptInfo {
 		InputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
-			asm: Some(format!("{:?}", self.0)), //TODO(stevenroose) asm
+			asm: Some(self.0.asm()),
 		}
 	}
 }
@@ -63,7 +63,7 @@ impl<'a> ::GetInfo<OutputScriptInfo> for OutputScript<'a> {
 	fn get_info(&self, network: Network) -> OutputScriptInfo {
 		OutputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
-			asm: Some(format!("{:?}", self.0)), //TODO(stevenroose) asm
+			asm: Some(self.0.asm()),
 			type_: Some(
 				if self.0.is_p2pk() {
 					"p2pk"

@@ -21,7 +21,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		network: address.network,
 		script_pub_key: hal::tx::OutputScriptInfo {
 			hex: Some(script_pk.to_bytes().into()),
-			asm: Some(format!("{:?}", script_pk)), //TODO(stevenroose) asm
+			asm: Some(script_pk.asm()),
 			address: None,
 			type_: None,
 		},

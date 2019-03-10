@@ -14,5 +14,5 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let raw_script = hex::decode(hex_script).expect("could not decode raw script");
 	let script: Script = raw_script.into();
 
-	println!("{}", script); //TODO(stevenroose) asm
+	println!("{}", script.asm());
 }
