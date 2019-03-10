@@ -4,10 +4,10 @@ use bitcoin::consensus::encode::serialize;
 use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
 
 use cmd;
-use hal;
+use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("encode", "encode a raw transaction from JSON").args(&[
+	cmd::subcommand("create", "create a raw transaction from JSON").args(&[
 		cmd::arg("tx-info", "the transaction info in JSON").required(true),
 		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r")
@@ -16,7 +16,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 }
 
 /// Check both ways to specify the outpoint and panic if conflicting.
-fn outpoint_from_input_info(input: &hal::tx::InputInfo) -> OutPoint {
+fn outpoint_from_input_info(input: &InputInfo) -> OutPoint {
 	let op1 = input.prevout.as_ref().map(|ref op| op.parse().expect("invalid prevout format"));
 	let op2 = match input.txid {
 		Some(txid) => match input.vout {
@@ -42,7 +42,7 @@ fn outpoint_from_input_info(input: &hal::tx::InputInfo) -> OutPoint {
 	}
 }
 
-fn encode_script_sig(ss: hal::tx::InputScriptInfo) -> Script {
+fn create_script_sig(ss: InputScriptInfo) -> Script {
 	if let Some(hex) = ss.hex {
 		if ss.asm.is_some() {
 			warn!("Field \"asm\" of input is ignored.");
@@ -56,10 +56,10 @@ fn encode_script_sig(ss: hal::tx::InputScriptInfo) -> Script {
 	}
 }
 
-fn encode_input(input: hal::tx::InputInfo) -> TxIn {
+fn create_input(input: InputInfo) -> TxIn {
 	TxIn {
 		previous_output: outpoint_from_input_info(&input),
-		script_sig: encode_script_sig(
+		script_sig: create_script_sig(
 			input.script_sig.expect("Field \"scriptSig\" is required for inputs."),
 		),
 		sequence: input.sequence.expect("Field \"sequence\" is required for inputs."),
@@ -70,10 +70,7 @@ fn encode_input(input: hal::tx::InputInfo) -> TxIn {
 	}
 }
 
-fn encode_script_pubkey(
-	spk: hal::tx::OutputScriptInfo,
-	used_network: &mut Option<Network>,
-) -> Script {
+fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network>) -> Script {
 	if spk.type_.is_some() {
 		warn!("Field \"type\" of output is ignored.");
 	}
@@ -106,14 +103,14 @@ fn encode_script_pubkey(
 	}
 }
 
-fn encode_output(output: hal::tx::OutputInfo) -> TxOut {
+fn create_output(output: OutputInfo) -> TxOut {
 	// Keep track of which network has been used in addresses and error if two different networks
 	// are used.
 	let mut used_network = None;
 
 	TxOut {
 		value: output.value.expect("Field \"value\" is required for outputs."),
-		script_pubkey: encode_script_pubkey(
+		script_pubkey: create_script_pubkey(
 			output.script_pub_key.expect("Field \"scriptPubKey\" is required for outputs."),
 			&mut used_network,
 		),
@@ -122,7 +119,7 @@ fn encode_output(output: hal::tx::OutputInfo) -> TxOut {
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let json_tx = matches.value_of("tx-info").expect("no JSON tx info provided");
-	let info: hal::tx::TransactionInfo = serde_json::from_str(json_tx).expect("invalid JSON");
+	let info: TransactionInfo = serde_json::from_str(json_tx).expect("invalid JSON");
 
 	// Fields that are ignored.
 	if info.txid.is_some() {
@@ -148,13 +145,13 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 			.inputs
 			.expect("Field \"inputs\" is required.")
 			.into_iter()
-			.map(encode_input)
+			.map(create_input)
 			.collect(),
 		output: info
 			.outputs
 			.expect("Field \"outputs\" is required.")
 			.into_iter()
-			.map(encode_output)
+			.map(create_output)
 			.collect(),
 	};
 

@@ -28,8 +28,8 @@ hal is a command line tool that provides all kinds of Bitcoin-related utilities.
 	- coming soon: script descriptor support
 
 - tx
-	- decode: decode a transaction to JSON
-	- encode: encode a JSON transaction to binary
+	- create: create a binary transaction from JSON
+	- decode: decode a binary transaction to JSON
 
 More to come!
 
