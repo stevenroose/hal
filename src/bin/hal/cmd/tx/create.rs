@@ -59,10 +59,8 @@ fn create_script_sig(ss: InputScriptInfo) -> Script {
 fn create_input(input: InputInfo) -> TxIn {
 	TxIn {
 		previous_output: outpoint_from_input_info(&input),
-		script_sig: create_script_sig(
-			input.script_sig.expect("Field \"scriptSig\" is required for inputs."),
-		),
-		sequence: input.sequence.expect("Field \"sequence\" is required for inputs."),
+		script_sig: input.script_sig.map(create_script_sig).unwrap_or_default(),
+		sequence: input.sequence.unwrap_or_default(),
 		witness: match input.witness {
 			Some(ref w) => w.iter().map(|h| h.clone().0).collect(),
 			None => Vec::new(),
@@ -110,10 +108,10 @@ fn create_output(output: OutputInfo) -> TxOut {
 
 	TxOut {
 		value: output.value.expect("Field \"value\" is required for outputs."),
-		script_pubkey: create_script_pubkey(
-			output.script_pub_key.expect("Field \"scriptPubKey\" is required for outputs."),
-			&mut used_network,
-		),
+		script_pubkey: output
+			.script_pub_key
+			.map(|s| create_script_pubkey(s, &mut used_network))
+			.unwrap_or_default(),
 	}
 }
 
