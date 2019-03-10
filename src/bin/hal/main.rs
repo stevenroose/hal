@@ -40,13 +40,16 @@ fn init_app<'a, 'b>() -> clap::App<'a, 'b> {
 		.version("0.0.0")
 		.author("Steven Roose <steven@stevenroose.org>")
 		.about("hal - the Bitcoin companion")
-		.setting(clap::AppSettings::GlobalVersion)
-		.setting(clap::AppSettings::VersionlessSubcommands)
-		.setting(clap::AppSettings::AllowExternalSubcommands)
-		//TODO(stevenroose) re-enable after https://github.com/clap-rs/clap/pull/1412/
-		//.setting(clap::AppSettings::SubcommandRequiredElseHelp)
-		.setting(clap::AppSettings::DisableHelpSubcommand)
-		.setting(clap::AppSettings::AllArgsOverrideSelf)
+		.settings(&[
+			clap::AppSettings::GlobalVersion,
+			clap::AppSettings::UnifiedHelpMessage,
+			clap::AppSettings::VersionlessSubcommands,
+			clap::AppSettings::AllowExternalSubcommands,
+			clap::AppSettings::DisableHelpSubcommand,
+			clap::AppSettings::AllArgsOverrideSelf,
+			//TODO(stevenroose) re-enable after https://github.com/clap-rs/clap/pull/1412/
+			//clap::AppSettings::SubcommandRequiredElseHelp,
+		])
 		.help_message("print help information")
 		.version_message("print version information")
 		.subcommands(cmd::subcommands())

@@ -33,12 +33,12 @@ pub fn arg<'a>(name: &'static str, help: &'static str) -> clap::Arg<'a, 'a> {
 /// This is not intended for actual commands, but for subcommands that host a bunch of other
 /// subcommands.
 pub fn subcommand_group<'a>(name: &'static str, about: &'static str) -> clap::App<'a, 'a> {
-	clap::SubCommand::with_name(name)
-		.about(about)
-		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
-		//.setting(clap::AppSettings::AllowExternalSubcommands)
-		.setting(clap::AppSettings::DisableHelpSubcommand)
-		.setting(clap::AppSettings::VersionlessSubcommands)
+	clap::SubCommand::with_name(name).about(about).settings(&[
+		clap::AppSettings::SubcommandRequiredElseHelp,
+		clap::AppSettings::DisableHelpSubcommand,
+		clap::AppSettings::VersionlessSubcommands,
+		clap::AppSettings::UnifiedHelpMessage,
+	])
 }
 
 /// Create a new subcommand using the template that sets all the common settings.
