@@ -4,6 +4,13 @@ hal -- the Bitcoin companion
 hal is a command line tool that provides all kinds of Bitcoin-related utilities.
 
 
+# Installation
+
+```
+$ cargo install hal
+```
+
+
 # Summary of commands:
 
 - address
@@ -32,9 +39,16 @@ hal is a command line tool that provides all kinds of Bitcoin-related utilities.
 	- create: create a binary transaction from JSON
 	- decode: decode a binary transaction to JSON
 
-More to come!
 
-Ideas:
+# Extensions
+
+hal allows the use of extensions that can be installed separately.
+
+## Known extensions:
+
+- [hal-elements](https://github.com/stevenroose/hal-elements/): support for Elements sidechains like Liquid
+
+
+## Ideas:
 - (extended) private key generation
 - optional [Trezor](https://github.com/stevenroose/rust-trezor-api/) and Ledger integration
-- Liquid support
