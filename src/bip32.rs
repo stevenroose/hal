@@ -1,4 +1,5 @@
 use bitcoin::{Address, Network};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct DerivationInfo {

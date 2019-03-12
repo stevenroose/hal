@@ -2,6 +2,7 @@ use bitcoin::consensus::encode::serialize;
 use bitcoin::util::hash::BitcoinHash;
 use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut};
 use bitcoin_hashes::sha256d;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InputScriptInfo {

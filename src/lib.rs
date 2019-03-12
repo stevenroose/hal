@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate serde_derive;
 extern crate bitcoin;
 extern crate bitcoin_bech32;
 extern crate bitcoin_hashes;

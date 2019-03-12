@@ -1,5 +1,6 @@
 use bitcoin::{Address, Network, Script};
 use bitcoin_hashes::Hash;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct AddressInfo {
