@@ -10,6 +10,7 @@ use cmd;
 mod create;
 mod decode;
 mod edit;
+mod finalize;
 mod merge;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
@@ -17,6 +18,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(create::subcommand())
 		.subcommand(decode::subcommand())
 		.subcommand(edit::subcommand())
+		.subcommand(finalize::subcommand())
 		.subcommand(merge::subcommand())
 }
 
@@ -25,6 +27,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		("create", Some(ref m)) => create::execute(&m),
 		("decode", Some(ref m)) => decode::execute(&m),
 		("edit", Some(ref m)) => edit::execute(&m),
+		("finalize", Some(ref m)) => finalize::execute(&m),
 		("merge", Some(ref m)) => merge::execute(&m),
 		(c, _) => println!("command {} unknown", c),
 	};

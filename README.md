@@ -21,6 +21,7 @@ hal is a command line tool that provides all kinds of Bitcoin-related utilities.
 	- create: create a PSBT from a raw unsigned transaction
 	- decode: decode a PSBT to JSON
 	- edit: edit a PSBT inline
+	- finalize: finalize a PSBT into a fully signed transaction
 	- merge: merge multiple PSBTs into one
 
 - script
