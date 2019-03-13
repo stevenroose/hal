@@ -50,11 +50,9 @@ fn init_app<'a, 'b>() -> clap::App<'a, 'b> {
 			//TODO(stevenroose) re-enable after https://github.com/clap-rs/clap/pull/1412/
 			//clap::AppSettings::SubcommandRequiredElseHelp,
 		])
-		.help_message("print help information")
-		.version_message("print version information")
 		.subcommands(cmd::subcommands())
 		.arg(
-			cmd::opt("verbose", "print verbose logging output to stderr")
+			cmd::opt("verbose", "Print verbose logging output to stderr")
 				.short("v")
 				.takes_value(false)
 				.global(true),
