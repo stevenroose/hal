@@ -20,6 +20,10 @@ $ cargo install hal
 - bip32
 	- derive: derive keys and addresses from extended keys
 
+- block
+	- create: create a binary block from JSON
+	- decode: decode a binary block to JSON
+
 - ln
 	- invoice
 		- decode: decode Lightning invoices

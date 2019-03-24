@@ -1,5 +1,6 @@
 pub mod address;
 pub mod bip32;
+pub mod block;
 pub mod ln;
 pub mod psbt;
 pub mod script;
@@ -11,6 +12,7 @@ use bitcoin::Network;
 pub fn subcommands<'a>() -> Vec<clap::App<'a, 'a>> {
 	vec![
 		address::subcommand(),
+		block::subcommand(),
 		ln::subcommand(),
 		tx::subcommand(),
 		psbt::subcommand(),

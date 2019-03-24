@@ -162,10 +162,7 @@ fn create_output(output: OutputInfo) -> TxOut {
 	}
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	let json_tx = matches.value_of("tx-info").expect("no JSON tx info provided");
-	let info: TransactionInfo = serde_json::from_str(json_tx).expect("invalid JSON");
-
+pub fn create_transaction(info: TransactionInfo) -> Transaction {
 	// Fields that are ignored.
 	if info.txid.is_some() {
 		warn!("Field \"txid\" is ignored.");
@@ -183,7 +180,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		warn!("Field \"vsize\" is ignored.");
 	}
 
-	let tx = Transaction {
+	Transaction {
 		version: info.version.expect("Field \"version\" is required."),
 		lock_time: info.locktime.expect("Field \"locktime\" is required."),
 		input: info
@@ -198,8 +195,14 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 			.into_iter()
 			.map(create_output)
 			.collect(),
-	};
+	}
+}
 
+pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
+	let json_tx = matches.value_of("tx-info").expect("no JSON tx info provided");
+	let info: TransactionInfo = serde_json::from_str(json_tx).expect("invalid JSON");
+
+	let tx = create_transaction(info);
 	let tx_bytes = serialize(&tx);
 	if matches.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&tx_bytes).unwrap();

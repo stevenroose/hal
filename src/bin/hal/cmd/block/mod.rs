@@ -2,11 +2,11 @@ use clap;
 
 use cmd;
 
-pub mod create;
-pub mod decode;
+mod create;
+mod decode;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand_group("tx", "manipulate transactions")
+	cmd::subcommand_group("block", "manipulate blocks")
 		.subcommand(create::subcommand())
 		.subcommand(decode::subcommand())
 }
