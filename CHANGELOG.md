@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.2.0
+
+- Update rust-bitcoin dependency v0.18.0
+
 # v0.1.2
 
 - Added utility methods to `HexBytes`
