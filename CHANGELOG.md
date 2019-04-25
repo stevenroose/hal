@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.1.2
+
+- Added utility methods to `HexBytes`
+
 # v0.1.1
 
 - Added `block decode` and `block create` commands.
