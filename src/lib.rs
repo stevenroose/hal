@@ -20,6 +20,20 @@ use bitcoin::Network;
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct HexBytes(pub Vec<u8>);
 
+impl HexBytes {
+	pub fn hex(&self) -> String {
+		hex::encode(&self.0)
+	}
+
+	pub fn bytes(&self) -> &[u8] {
+		&self.0
+	}
+
+	pub fn take_bytes(self) -> Vec<u8> {
+		self.0
+	}
+}
+
 impl From<Vec<u8>> for HexBytes {
 	fn from(vec: Vec<u8>) -> HexBytes {
 		HexBytes(vec)
