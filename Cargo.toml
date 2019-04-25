@@ -30,9 +30,9 @@ serde_yaml = "0.8.8"
 base64 = "0.10.1"
 hex = "0.3.2"
 
-bitcoin = { version = "0.17.1", features = [ "serde-decimal" ] }
+bitcoin = { version = "0.18.0", features = [ "serde-decimal" ] }
 bitcoin_hashes = "0.3.0"
-bitcoin-bech32 = "0.8.0"
+bitcoin-bech32 = "0.9.0"
 secp256k1 = "0.12"
 lightning-invoice = "0.2.0"
 
