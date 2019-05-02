@@ -24,6 +24,9 @@ $ cargo install hal
 	- create: create a binary block from JSON
 	- decode: decode a binary block to JSON
 
+- key
+	- generate: generate a random keypair
+
 - ln
 	- invoice
 		- decode: decode Lightning invoices
