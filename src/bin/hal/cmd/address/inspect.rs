@@ -8,7 +8,7 @@ use hal;
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("inspect", "inspect addresses").args(&[
 		cmd::opt_yaml(),
-		cmd::opt("address", "the address").takes_value(true).required(true),
+		cmd::arg("address", "the address").required(true),
 	])
 }
 
