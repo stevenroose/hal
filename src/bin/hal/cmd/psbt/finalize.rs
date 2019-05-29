@@ -9,7 +9,7 @@ use bitcoin::util::psbt;
 use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("fimalize", "finalize a PSBT and print the fully signed tx in hex").args(&[
+	cmd::subcommand("finalize", "finalize a PSBT and print the fully signed tx in hex").args(&[
 		cmd::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(true),
 		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r")

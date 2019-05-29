@@ -6,7 +6,7 @@ use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode hex script")
-		.arg(cmd::opt("hex-script", "script in hex").takes_value(true).required(true))
+		.arg(cmd::arg("hex-script", "script in hex").required(true))
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {

@@ -8,9 +8,7 @@ use cmd;
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode a PSBT to JSON").args(&cmd::opts_networks()).args(&[
 		cmd::opt_yaml(),
-		cmd::opt("psbt", "the PSBT file or raw PSBT in base64/hex")
-			.takes_value(true)
-			.required(true),
+		cmd::arg("psbt", "the PSBT file or raw PSBT in base64/hex").required(true),
 	])
 }
 

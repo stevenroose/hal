@@ -8,8 +8,8 @@ use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("derive", "derive keys from an extended key").arg(cmd::opt_yaml()).args(&[
-		cmd::opt("ext-key", "extended public or private key").takes_value(true).required(true),
-		cmd::opt("derivation-path", "the derivation path").takes_value(true).required(true),
+		cmd::arg("ext-key", "extended public or private key").required(true),
+		cmd::arg("derivation-path", "the derivation path").required(true),
 	])
 }
 
