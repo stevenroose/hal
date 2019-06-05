@@ -38,8 +38,8 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 
 	let info = hal::bip32::DerivationInfo {
 		network: derived.network,
-		master_fingerprint: master_fingerprint[..].into(),
-		path: path_str.to_owned(),
+		master_fingerprint: Some(master_fingerprint[..].into()),
+		path: Some(path_str.to_owned()),
 		chain_code: derived.chain_code.to_bytes()[..].into(),
 		identifier: derived.identifier()[..].into(),
 		fingerprint: derived.fingerprint()[..].into(),

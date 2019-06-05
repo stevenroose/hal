@@ -19,6 +19,7 @@ $ cargo install hal
 
 - bip32
 	- derive: derive keys and addresses from extended keys
+	- inspect: inspect a BIP-32 xpub or xpriv
 
 - block
 	- create: create a binary block from JSON
