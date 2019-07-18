@@ -38,7 +38,7 @@ fn setup_logger(lvl: log::LevelFilter) {
 /// Create the main app object.
 fn init_app<'a, 'b>() -> clap::App<'a, 'b> {
 	clap::App::new("hal")
-		.version("0.0.0")
+		.version(clap::crate_version!())
 		.author("Steven Roose <steven@stevenroose.org>")
 		.about("hal - the Bitcoin companion")
 		.settings(&[
