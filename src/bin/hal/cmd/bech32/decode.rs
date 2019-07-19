@@ -7,7 +7,7 @@ use hal;
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode bech32 format").args(&[
 		cmd::opt_yaml(),
-		cmd::opt("hex", "display payload as hex").short("x").required(false),
+		cmd::opt("bytes", "Display payload bytes").required(false),
         cmd::opt("convert-bits", "Attempt to convert payload to 8-bit values.\nNOTE: Does not work for BIP-173 addresses.").short("c").required(false),
 		cmd::arg("string", "a bech32 string").takes_value(true).required(true),
 	])
@@ -22,8 +22,8 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
     let (hrp, b32_payload) = result.unwrap();
 	let mut info = hal::bech32::Bech32Info {
 		hrp,
-		payload: None,
-		hex: None,
+		payload_bytes: None,
+		payload_hex: None,
 	};
     let payload: Vec<u8> = if matches.is_present("convert-bits") {
         let convert_result = Vec::<u8>::from_base32(&b32_payload);
@@ -34,10 +34,9 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
     } else {
         b32_payload.iter().map(|b| b.to_u8()).collect()
     };
-    if matches.is_present("hex") {
-        info.hex = Some(payload.into());
-    } else {
-        info.payload = Some(payload);
+    if matches.is_present("bytes") {
+        info.payload_bytes = Some(payload.to_vec());
     }
+    info.payload_hex = Some(payload.into());
 	cmd::print_output(matches, &info)
 }
