@@ -1,3 +1,4 @@
+extern crate bech32lib;
 extern crate bitcoin;
 extern crate bitcoin_bech32;
 extern crate bitcoin_hashes;
@@ -109,6 +110,7 @@ fn main() {
 			process::exit(1);
 		}
 		("address", Some(ref m)) => cmd::address::execute(&m),
+		("bech32", Some(ref m)) => cmd::bech32::execute(&m),
 		("block", Some(ref m)) => cmd::block::execute(&m),
 		("bip32", Some(ref m)) => cmd::bip32::execute(&m),
 		("key", Some(ref m)) => cmd::key::execute(&m),
