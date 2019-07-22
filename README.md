@@ -17,6 +17,10 @@ $ cargo install hal
 	- inspect: get information about addresses
 	- create: create addresses using public keys or scripts
 
+- bech32
+	- decode: parse the elements of the Bech32 format
+	- encode: encode data in the Bech32 format
+
 - bip32
 	- derive: derive keys and addresses from extended keys
 	- inspect: inspect a BIP-32 xpub or xpriv
