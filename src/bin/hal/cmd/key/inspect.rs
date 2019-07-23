@@ -1,33 +1,23 @@
-use bitcoin::Address;
+use bitcoin::{Address, PrivateKey};
 use clap;
-use rand;
-use secp256k1;
 
 use cmd;
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("generate", "generate a new ECDSA keypair")
-		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
-		.args(&cmd::opts_networks())
-		.args(&[cmd::opt_yaml()])
+	cmd::subcommand("inspect", "inspect private keys")
+		.args(&[cmd::opt_yaml(), cmd::arg("key", "the key").required(true)])
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	let network = cmd::network(matches);
+	let wif = matches.value_of("key").expect("no key provided");
+	let privkey: PrivateKey = wif.parse().expect("invalid WIF format");
 
-	let secp = secp256k1::Secp256k1::new();
-	let secret_key = secp256k1::SecretKey::new(&mut rand::thread_rng());
-
-	let privkey = bitcoin::PrivateKey {
-		compressed: true,
-		network: network,
-		key: secret_key,
-	};
-	let pubkey = privkey.public_key(&secp);
+	let network = privkey.network;
+	let pubkey = privkey.public_key(&secp256k1::Secp256k1::new());
 
 	let info = hal::key::KeyInfo {
-		raw_private_key: (&secret_key[..]).into(),
+		raw_private_key: (&privkey.key[..]).into(),
 		wif_private_key: privkey,
 		public_key: pubkey,
 		compressed_public_key: pubkey,
@@ -46,3 +36,4 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 
 	cmd::print_output(matches, &info)
 }
+

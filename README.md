@@ -27,6 +27,7 @@ $ cargo install hal
 
 - key
 	- generate: generate a random keypair
+	- inspect: inspect private keys
 
 - ln
 	- invoice
