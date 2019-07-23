@@ -58,6 +58,12 @@ fn init_app<'a, 'b>() -> clap::App<'a, 'b> {
 				.takes_value(false)
 				.global(true),
 		)
+		.arg(
+			cmd::opt("no-newline", "Do not print trailing newline character")
+				.short("n")
+				.takes_value(false)
+				.global(true),
+		)
 }
 
 /// The help appendix listing external subcommands.

@@ -94,4 +94,8 @@ pub fn print_output<'a, T: serde::Serialize>(matches: &clap::ArgMatches<'a>, out
 	} else {
 		serde_json::to_writer_pretty(::std::io::stdout(), &out).unwrap();
 	}
+	// Blank line after output
+	if !matches.is_present("no-newline") {
+		println!("");
+	}
 }
