@@ -6,10 +6,9 @@ pub struct Bech32Info {
 	pub bech32: String,
 	/// Human-readable part
 	pub hrp: String,
-	/// Data payload as vector
+	/// Hex-encoded data payload in base32
+	pub payload: ::HexBytes,
+	/// Hex-encoded data payload in base256
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub payload_bytes: Option<Vec<u8>>,
-	/// Data payload as hex string
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub payload_hex: Option<::HexBytes>,
+	pub payload_base256: Option<::HexBytes>,
 }

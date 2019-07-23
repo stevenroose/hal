@@ -1,4 +1,4 @@
-use bech32lib::{encode, CheckBase32, ToBase32};
+use bech32lib::{encode, CheckBase32, FromBase32, ToBase32};
 use clap;
 use hex;
 
@@ -25,21 +25,27 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 
 	let payload: Vec<u8> = hex::decode(hex).expect("Invalid hex");
 
-	let result = if matches.is_present("no-convert") {
-		let checked_payload = payload.to_vec().check_base32().expect("Invalid base32 payload");
-		encode(hrp, checked_payload)
+	let payload_base32 = if matches.is_present("no-convert") {
+		payload.check_base32().expect("Invalid base32 payload")
 	} else {
-		encode(hrp, payload.to_vec().to_base32())
+		payload.to_base32()
 	};
+
+	let result = encode(hrp, payload_base32.to_vec());
 	if result.is_err() {
 		panic!("Encode failure: {:?}", result.unwrap_err());
 	}
 
+	let payload_bytes: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
+
 	let info = hal::bech32::Bech32Info {
 		bech32: result.unwrap(),
 		hrp: hrp.to_string(),
-		payload_bytes: None,
-		payload_hex: Some(payload.into()),
+		payload: payload_bytes.into(),
+		payload_base256: match Vec::<u8>::from_base32(&payload_base32) {
+			Ok(payload_base256) => Some(payload_base256.into()),
+			Err(_) => None,
+		},
 	};
 
 	cmd::print_output(matches, &info)
