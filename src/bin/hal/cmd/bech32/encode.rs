@@ -23,23 +23,19 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let hrp = matches.value_of("hrp").expect("missing required argument");
 	let hex = matches.value_of("payload-hex").expect("missing required argument");
 
-	let payload: Vec<u8> = hex::decode(hex).expect("Invalid hex");
+	let payload: Vec<u8> = hex::decode(hex).expect("invalid hex");
 
 	let payload_base32 = if matches.is_present("no-convert") {
-		payload.check_base32().expect("Invalid base32 payload")
+		payload.check_base32().expect("invalid base32 payload")
 	} else {
 		payload.to_base32()
 	};
 
-	let result = encode(hrp, payload_base32.to_vec());
-	if result.is_err() {
-		panic!("Encode failure: {:?}", result.unwrap_err());
-	}
-
+	let bech32 = encode(hrp, payload_base32.to_vec()).expect("encode failure");
 	let payload_bytes: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
 
 	let info = hal::bech32::Bech32Info {
-		bech32: result.unwrap(),
+		bech32,
 		hrp: hrp.to_string(),
 		payload: payload_bytes.into(),
 		payload_base256: match Vec::<u8>::from_base32(&payload_base32) {

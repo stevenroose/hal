@@ -19,24 +19,22 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let s = matches.value_of("string").expect("missing required argument");
-	let result = decode(&s);
-	if result.is_err() {
-		panic!("Decode failure: {:?}", result.unwrap_err());
-	}
-	let (hrp, payload_base32) = result.unwrap();
+
+	let (hrp, payload_base32) = decode(&s).expect("decode failure");
 	let payload_bytes: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
-	let mut info = hal::bech32::Bech32Info {
+
+	let info = hal::bech32::Bech32Info {
 		bech32: s.to_string(),
 		hrp,
 		payload: payload_bytes.into(),
-		payload_base256: None,
+		payload_base256: if matches.is_present("convert-bits") {
+			let converted =
+				Vec::<u8>::from_base32(&payload_base32).expect("error converting payload to 8-bit");
+			Some(converted.into())
+		} else {
+			None
+		},
 	};
-	if matches.is_present("convert-bits") {
-		let convert_result = Vec::<u8>::from_base32(&payload_base32);
-		if convert_result.is_err() {
-			panic!("Error converting payload to 8-bit {:?}", convert_result.unwrap_err());
-		}
-		info.payload_base256 = Some(convert_result.unwrap().into());
-	}
+
 	cmd::print_output(matches, &info)
 }
