@@ -10,5 +10,5 @@ pub struct Bech32Info {
 	pub payload: ::HexBytes,
 	/// Hex-encoded data payload in base256
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub payload_base256: Option<::HexBytes>,
+	pub payload_bytes: Option<::HexBytes>,
 }

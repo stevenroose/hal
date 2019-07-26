@@ -32,14 +32,14 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 
 	let bech32 = encode(hrp, payload_base32.to_vec()).expect("encode failure");
-	let payload_bytes: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
+	let payload_as_u8: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
 
 	let info = hal::bech32::Bech32Info {
 		bech32,
 		hrp: hrp.to_string(),
-		payload: payload_bytes.into(),
-		payload_base256: match Vec::<u8>::from_base32(&payload_base32) {
-			Ok(payload_base256) => Some(payload_base256.into()),
+		payload: payload_as_u8.into(),
+		payload_bytes: match Vec::<u8>::from_base32(&payload_base32) {
+			Ok(p) => Some(p.into()),
 			Err(_) => None,
 		},
 	};

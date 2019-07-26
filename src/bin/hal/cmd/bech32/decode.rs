@@ -21,13 +21,13 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let s = matches.value_of("string").expect("missing required argument");
 
 	let (hrp, payload_base32) = decode(&s).expect("decode failure");
-	let payload_bytes: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
+	let payload_as_u8: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
 
 	let info = hal::bech32::Bech32Info {
 		bech32: s.to_string(),
 		hrp,
-		payload: payload_bytes.into(),
-		payload_base256: if matches.is_present("convert-bits") {
+		payload: payload_as_u8.into(),
+		payload_bytes: if matches.is_present("convert-bits") {
 			let converted =
 				Vec::<u8>::from_base32(&payload_base32).expect("error converting payload to 8-bit");
 			Some(converted.into())
