@@ -1,3 +1,4 @@
+extern crate bech32lib;
 extern crate bitcoin;
 extern crate bitcoin_bech32;
 extern crate bitcoin_hashes;
@@ -8,6 +9,7 @@ extern crate lightning_invoice;
 extern crate serde;
 
 pub mod address;
+pub mod bech32;
 pub mod bip32;
 pub mod block;
 pub mod key;
