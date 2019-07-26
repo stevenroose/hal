@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+# v0.3.0  --  2019/07/26
+
+- add bech32 command tree
+- add key inspect command
+- add bip32 inspect command
+- print a newline after output
+
 # v0.2.0
 
 - Update rust-bitcoin dependency v0.18.0
