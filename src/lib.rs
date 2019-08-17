@@ -1,4 +1,4 @@
-extern crate bech32lib;
+extern crate bech32 as bech32lib;
 extern crate bitcoin;
 extern crate bitcoin_bech32;
 extern crate bitcoin_hashes;

@@ -31,7 +31,7 @@ serde_yaml = "0.8.8"
 base64 = "0.10.1"
 hex = "0.3.2"
 
-bech32lib = {version = "0.7.1", package="bech32" }
+bech32 = { version = "0.7.1" }
 bitcoin = { version = "0.18.0", features = [ "serde-decimal" ] }
 bitcoin_hashes = "0.3.0"
 bitcoin-bech32 = "0.9.0"
