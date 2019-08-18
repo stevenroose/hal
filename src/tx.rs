@@ -1,7 +1,7 @@
 use bitcoin::consensus::encode::serialize;
+use bitcoin::hashes::sha256d;
 use bitcoin::util::hash::BitcoinHash;
 use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut};
-use bitcoin_hashes::sha256d;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -83,7 +83,7 @@ impl<'a> ::GetInfo<OutputScriptInfo> for OutputScript<'a> {
 				}
 				.to_owned(),
 			),
-			address: ::address::address_from_script(&self.0, network),
+			address: Address::from_script(&self.0, network),
 		}
 	}
 }

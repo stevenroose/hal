@@ -1,4 +1,4 @@
-use bech32lib::{encode, CheckBase32, FromBase32, ToBase32};
+use bitcoin::bech32::{encode, CheckBase32, FromBase32, ToBase32};
 use clap;
 use hex;
 

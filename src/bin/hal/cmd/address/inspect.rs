@@ -1,5 +1,5 @@
+use bitcoin::hashes::Hash;
 use bitcoin::Address;
-use bitcoin_hashes::Hash;
 use clap;
 
 use cmd;
@@ -39,17 +39,20 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 			info.type_ = Some("p2sh".to_owned());
 			info.script_hash = Some(sh.into_inner()[..].into());
 		}
-		Payload::WitnessProgram(ref wp) => {
-			let version = wp.version().to_u8() as usize;
+		Payload::WitnessProgram {
+			version,
+			program,
+		} => {
+			let version = version.to_u8() as usize;
 			info.witness_program_version = Some(version);
 
 			if version == 0 {
-				if wp.program().len() == 20 {
+				if program.len() == 20 {
 					info.type_ = Some("p2wpkh".to_owned());
-					info.pubkey_hash = Some(wp.program().into());
-				} else if wp.program().len() == 32 {
+					info.pubkey_hash = Some(program.into());
+				} else if program.len() == 32 {
 					info.type_ = Some("p2wsh".to_owned());
-					info.script_hash = Some(wp.program().into());
+					info.script_hash = Some(program.into());
 				} else {
 					info.type_ = Some("invalid-witness-program".to_owned());
 				}

@@ -1,6 +1,5 @@
-use bitcoin::{util::address::Payload, Address, Network};
-use bitcoin_bech32::{constants::Network as B32Network, u5, WitnessProgram};
-use bitcoin_hashes::Hash;
+use bitcoin::hashes::Hash;
+use bitcoin::{bech32::u5, util::address::Payload, Address, Network};
 use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
 use lightning_invoice::{Currency, Fallback, Invoice, InvoiceDescription, RouteHop};
@@ -114,20 +113,12 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 							Fallback::SegWitProgram {
 								version: v,
 								program: p,
-							} => Payload::WitnessProgram(
-								WitnessProgram::new(
-									//TODO(stevenroose) remove after https://github.com/rust-bitcoin/rust-bech32-bitcoin/issues/21
-									u5::try_from_u8(v.to_u8()).expect("invalid segwit version"),
-									p.to_vec(),
-									//TODO(stevenroose) see https://github.com/rust-bitcoin/rust-bech32-bitcoin/pull/18
-									match network {
-										Network::Bitcoin => B32Network::Bitcoin,
-										Network::Testnet => B32Network::Testnet,
-										Network::Regtest => B32Network::Regtest,
-									},
-								)
-								.expect("invalid witness program"),
-							),
+							} => Payload::WitnessProgram {
+								//TODO(stevenroose) remove after https://github.com/rust-bitcoin/rust-bech32-bitcoin/issues/21
+								version: u5::try_from_u8(v.to_u8())
+									.expect("invalid segwit version"),
+								program: p.to_vec(),
+							},
 						},
 						network: network,
 					}

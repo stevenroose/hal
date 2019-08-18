@@ -36,4 +36,3 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 
 	cmd::print_output(matches, &info)
 }
-

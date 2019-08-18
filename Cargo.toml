@@ -1,6 +1,6 @@
 [package]
 name = "hal"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Steven Roose <steven@stevenroose.org>"]
 license = "CC0-1.0"
 homepage = "https://github.com/stevenroose/hal/"
@@ -31,10 +31,7 @@ serde_yaml = "0.8.8"
 base64 = "0.10.1"
 hex = "0.3.2"
 
-bech32 = { version = "0.7.1" }
-bitcoin = { version = "0.18.0", features = [ "serde-decimal" ] }
-bitcoin_hashes = "0.3.0"
-bitcoin-bech32 = "0.9.0"
+bitcoin = { version = "0.19.1", features = [ "use-serde" ] }
 secp256k1 = { version = "0.12", features = [ "rand" ] }
 lightning-invoice = "0.2.0"
 

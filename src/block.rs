@@ -1,6 +1,6 @@
+use bitcoin::hashes::sha256d;
 use bitcoin::util::hash::BitcoinHash;
 use bitcoin::{Block, BlockHeader, Network};
-use bitcoin_hashes::sha256d;
 use serde::{Deserialize, Serialize};
 
 use tx::TransactionInfo;

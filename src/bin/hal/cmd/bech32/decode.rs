@@ -1,4 +1,4 @@
-use bech32lib::{decode, FromBase32};
+use bitcoin::bech32::{decode, FromBase32};
 use clap;
 
 use cmd;
