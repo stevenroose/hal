@@ -14,7 +14,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let privkey: PrivateKey = wif.parse().expect("invalid WIF format");
 
 	let network = privkey.network;
-	let pubkey = privkey.public_key(&secp256k1::Secp256k1::new());
+	let pubkey = privkey.public_key(&bitcoin::secp256k1::Secp256k1::new());
 
 	let info = hal::key::KeyInfo {
 		raw_private_key: (&privkey.key[..]).into(),

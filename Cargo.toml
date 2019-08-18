@@ -1,6 +1,6 @@
 [package]
 name = "hal"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Steven Roose <steven@stevenroose.org>"]
 license = "CC0-1.0"
 homepage = "https://github.com/stevenroose/hal/"
@@ -32,7 +32,6 @@ base64 = "0.10.1"
 hex = "0.3.2"
 
 bitcoin = { version = "0.19.1", features = [ "use-serde" ] }
-secp256k1 = { version = "0.12", features = [ "rand" ] }
 lightning-invoice = "0.2.0"
 
 # For external commands

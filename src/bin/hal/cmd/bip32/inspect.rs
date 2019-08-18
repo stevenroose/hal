@@ -16,7 +16,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	let key_str = matches.value_of("ext-key").unwrap();
 
-	let secp = secp256k1::Secp256k1::new();
+	let secp = bitcoin::secp256k1::Secp256k1::new();
 	let info = match bip32::ExtendedPrivKey::from_str(&key_str) {
 		Ok(ext) => {
 			let public_key = PublicKey::from_private_key(&secp, &ext.private_key);

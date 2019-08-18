@@ -8,7 +8,6 @@ extern crate fern;
 extern crate hex;
 extern crate jobserver;
 extern crate rand;
-extern crate secp256k1;
 extern crate serde_json;
 extern crate shell_escape;
 

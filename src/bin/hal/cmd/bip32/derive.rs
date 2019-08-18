@@ -1,6 +1,6 @@
+use bitcoin::secp256k1;
 use bitcoin::util::bip32;
 use bitcoin::Address;
-use secp256k1;
 
 use std::str::FromStr;
 
