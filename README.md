@@ -25,6 +25,10 @@ $ cargo install hal
 	- derive: derive keys and addresses from extended keys
 	- inspect: inspect a BIP-32 xpub or xpriv
 
+- bip39
+    - generate: generate a new BIP-39 mnemonic
+	- get-seed: get the seed value and BIP-32 master key for a given BIP-39 mnemonic
+
 - block
 	- create: create a binary block from JSON
 	- decode: decode a binary block to JSON

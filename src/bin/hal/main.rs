@@ -1,3 +1,4 @@
+extern crate bip39;
 extern crate bitcoin;
 extern crate lightning_invoice;
 #[macro_use]
@@ -117,6 +118,7 @@ fn main() {
 		("bech32", Some(ref m)) => cmd::bech32::execute(&m),
 		("block", Some(ref m)) => cmd::block::execute(&m),
 		("bip32", Some(ref m)) => cmd::bip32::execute(&m),
+		("bip39", Some(ref m)) => cmd::bip39::execute(&m),
 		("key", Some(ref m)) => cmd::key::execute(&m),
 		("ln", Some(ref m)) => cmd::ln::execute(&m),
 		("psbt", Some(ref m)) => cmd::psbt::execute(&m),

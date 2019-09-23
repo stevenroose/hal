@@ -1,6 +1,7 @@
 pub mod address;
 pub mod bech32;
 pub mod bip32;
+pub mod bip39;
 pub mod block;
 pub mod key;
 pub mod ln;
@@ -22,6 +23,7 @@ pub fn subcommands<'a>() -> Vec<clap::App<'a, 'a>> {
 		psbt::subcommand(),
 		script::subcommand(),
 		bip32::subcommand(),
+		bip39::subcommand(),
 	]
 }
 

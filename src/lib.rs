@@ -1,3 +1,4 @@
+extern crate bip39 as bip39lib;
 extern crate bitcoin;
 extern crate byteorder;
 extern crate chrono;
@@ -8,6 +9,7 @@ extern crate serde;
 pub mod address;
 pub mod bech32;
 pub mod bip32;
+pub mod bip39;
 pub mod block;
 pub mod key;
 pub mod lightning;
