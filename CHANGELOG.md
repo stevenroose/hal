@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.4.3  --  2019/09/23
+
+- make compatible with Rust v1.32.0
+
 # v0.4.2  --  2019/09/23
 
 - add bip39 support
