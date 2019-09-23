@@ -83,17 +83,19 @@ fn external_help() -> String {
 fn main() {
 	// Apply a custom panic hook to print a more user-friendly message
 	// in case the execution fails.
-	panic::set_hook(Box::new(|info| {
-		let message = if let Some(m) = info.payload().downcast_ref::<String>() {
-			m
-		} else if let Some(m) = info.payload().downcast_ref::<&str>() {
-			m
-		} else {
-			"No error message provided"
-		};
-		println!("Execution failed: {}", message);
-		process::exit(1);
-	}));
+	if env::var("RUST_BACKTRACE").unwrap_or(String::new()) != "1" {
+		panic::set_hook(Box::new(|info| {
+			let message = if let Some(m) = info.payload().downcast_ref::<String>() {
+				m
+			} else if let Some(m) = info.payload().downcast_ref::<&str>() {
+				m
+			} else {
+				"No error message provided"
+			};
+			println!("Execution failed: {}", message);
+			process::exit(1);
+		}));
+	}
 
 	let external_help = external_help();
 	let app = init_app().after_help(external_help.as_str());
