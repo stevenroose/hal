@@ -43,7 +43,8 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		}
 		(false, true) => {
 			let mut hasher = sha256::Hash::engine();
-			let read = io::copy(&mut io::stdin().lock(), &mut hasher).expect("error reading stdin");
+			let stdin = io::stdin();
+			let read = io::copy(&mut stdin.lock(), &mut hasher).expect("error reading stdin");
 			if read < nb_entropy_bytes as u64 {
 				warn!("Low entropy provided! Do not use this mnemonic in production!");
 			}

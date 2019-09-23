@@ -1,0 +1,15 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+  - 1.32.0
+
+script:
+  # The standard linker fails to link the fuzzing infrastructure but
+  # gold seems to handle it.
+  # See https://github.com/rust-lang/rust/issues/53945
+  - export RUSTFLAGS='-Clink-arg=-fuse-ld=gold'
+  - cargo build --verbose
+  - cargo test --verbose
+
