@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.4.2  --  2019/09/23
+
+- add bip39 support
+
 # v0.3.0  --  2019/07/26
 
 - add bech32 command tree

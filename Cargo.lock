@@ -238,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "hal"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitcoin 0.19.1 (registry+https://github.com/rust-lang/crates.io-index)",
