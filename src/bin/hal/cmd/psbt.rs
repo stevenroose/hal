@@ -1,19 +1,110 @@
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 
 use base64;
 use clap;
 use hex;
 
-use bitcoin::consensus::deserialize;
-use bitcoin::consensus::serialize;
+use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::bip32;
 use bitcoin::util::psbt;
-use bitcoin::PublicKey;
+use bitcoin::{PublicKey, Transaction};
 
 use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand_group("psbt", "partially signed Bitcoin transactions")
+		.subcommand(cmd_create())
+		.subcommand(cmd_decode())
+		.subcommand(cmd_edit())
+		.subcommand(cmd_finalize())
+		.subcommand(cmd_merge())
+}
+
+pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
+	match matches.subcommand() {
+		("create", Some(ref m)) => exec_create(&m),
+		("decode", Some(ref m)) => exec_decode(&m),
+		("edit", Some(ref m)) => exec_edit(&m),
+		("finalize", Some(ref m)) => exec_finalize(&m),
+		("merge", Some(ref m)) => exec_merge(&m),
+		(c, _) => println!("command {} unknown", c),
+	};
+}
+
+enum PsbtSource {
+	Base64,
+	Hex,
+	File,
+}
+
+/// Tries to decode the string as hex and base64, if it works, returns the bytes.
+/// If not, tries to open a filename with the given string as relative path, if it works, returns
+/// the content bytes.
+/// Also returns an enum value indicating which source worked.
+fn file_or_raw(flag: &str) -> (Vec<u8>, PsbtSource) {
+	if let Ok(raw) = base64::decode(&flag) {
+		(raw, PsbtSource::Base64)
+	} else if let Ok(raw) = hex::decode(&flag) {
+		(raw, PsbtSource::Hex)
+	} else if let Ok(mut file) = File::open(&flag) {
+		let mut buf = Vec::new();
+		file.read_to_end(&mut buf).expect("error reading file");
+		(buf, PsbtSource::File)
+	} else {
+		panic!("Can't load PSBT: invalid hex, base64 or unknown file");
+	}
+}
+
+fn cmd_create<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("create", "create a PSBT from an unsigned raw transaction").args(&[
+		cmd::arg("raw-tx", "the raw transaction in hex").required(true),
+		cmd::opt("output", "where to save the merged PSBT output")
+			.short("o")
+			.takes_value(true)
+			.required(false),
+		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r")
+			.required(false),
+	])
+}
+
+fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
+	let hex_tx = matches.value_of("raw-tx").expect("no raw tx provided");
+	let raw_tx = hex::decode(hex_tx).expect("could not decode raw tx");
+	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
+
+	let psbt = psbt::PartiallySignedTransaction::from_unsigned_tx(tx)
+		.expect("couldn't create a PSBT from the transaction");
+
+	let serialized = serialize(&psbt);
+	if let Some(path) = matches.value_of("output") {
+		let mut file = File::create(&path).expect("failed to open output file");
+		file.write_all(&serialized).expect("error writing output file");
+	} else if matches.is_present("raw-stdout") {
+		::std::io::stdout().write_all(&serialized).unwrap();
+	} else {
+		print!("{}", base64::encode(&serialized));
+	}
+}
+
+fn cmd_decode<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("decode", "decode a PSBT to JSON").args(&cmd::opts_networks()).args(&[
+		cmd::opt_yaml(),
+		cmd::arg("psbt", "the PSBT file or raw PSBT in base64/hex").required(true),
+	])
+}
+
+fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
+	let (raw_psbt, _) = file_or_raw(matches.value_of("psbt").unwrap());
+
+	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw_psbt).expect("invalid PSBT");
+
+	let info = hal::GetInfo::get_info(&psbt, cmd::network(matches));
+	cmd::print_output(matches, &info)
+}
+
+fn cmd_edit<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("edit", "edit a PSBT").args(&[
 		cmd::arg("psbt", "PSBT to edit, either base64/hex or a file path").required(true),
 		cmd::opt("input-idx", "the input index to edit")
@@ -233,8 +324,8 @@ fn edit_output<'a>(
 	}
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	let (raw, source) = super::file_or_raw(&matches.value_of("psbt").unwrap());
+fn exec_edit<'a>(matches: &clap::ArgMatches<'a>) {
+	let (raw, source) = file_or_raw(&matches.value_of("psbt").unwrap());
 	let mut psbt: psbt::PartiallySignedTransaction =
 		deserialize(&raw).expect("invalid PSBT format");
 
@@ -257,13 +348,82 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		::std::io::stdout().write_all(&edited_raw).unwrap();
 	} else {
 		match source {
-			super::PsbtSource::Hex => print!("{}", hex::encode(&edited_raw)),
-			super::PsbtSource::Base64 => print!("{}", base64::encode(&edited_raw)),
-			super::PsbtSource::File => {
+			PsbtSource::Hex => print!("{}", hex::encode(&edited_raw)),
+			PsbtSource::Base64 => print!("{}", base64::encode(&edited_raw)),
+			PsbtSource::File => {
 				let path = matches.value_of("psbt").unwrap();
 				let mut file = File::create(&path).expect("failed to PSBT file for writing");
 				file.write_all(&edited_raw).expect("error writing PSBT file");
 			}
 		}
+	}
+}
+
+fn cmd_finalize<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("finalize", "finalize a PSBT and print the fully signed tx in hex").args(&[
+		cmd::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(true),
+		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r")
+			.required(false),
+	])
+}
+
+fn exec_finalize<'a>(matches: &clap::ArgMatches<'a>) {
+	let (raw, _) = file_or_raw(&matches.value_of("psbt").unwrap());
+	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
+
+	if psbt.inputs.iter().any(|i| i.final_script_sig.is_none() && i.final_script_witness.is_none())
+	{
+		panic!("PSBT is missing input data!");
+	}
+
+	let finalized_raw = serialize(&psbt.extract_tx());
+	if matches.is_present("raw-stdout") {
+		::std::io::stdout().write_all(&finalized_raw).unwrap();
+	} else {
+		print!("{}", ::hex::encode(&finalized_raw));
+	}
+}
+
+fn cmd_merge<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("merge", "merge multiple PSBT files into one").args(&[
+		cmd::arg("psbts", "PSBTs to merge; can be file paths or base64/hex")
+			.multiple(true)
+			.required(true),
+		cmd::opt("output", "where to save the merged PSBT output")
+			.short("o")
+			.takes_value(true)
+			.required(false),
+		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r")
+			.required(false),
+	])
+}
+
+fn exec_merge<'a>(matches: &clap::ArgMatches<'a>) {
+	let mut parts = matches.values_of("psbts").unwrap().map(|f| {
+		let (raw, _) = file_or_raw(&f);
+		let psbt: psbt::PartiallySignedTransaction =
+			deserialize(&raw).expect("invalid PSBT format");
+		psbt
+	});
+
+	let mut merged = parts.next().unwrap();
+	for (idx, part) in parts.enumerate() {
+		if part.global.unsigned_tx != merged.global.unsigned_tx {
+			panic!("PSBTs are not compatible");
+		}
+
+		merged.merge(part).expect(&format!("error merging PSBT #{}", idx));
+	}
+
+	let merged_raw = serialize(&merged);
+	if let Some(path) = matches.value_of("output") {
+		let mut file = File::create(&path).expect("failed to open output file");
+		file.write_all(&merged_raw).expect("error writing output file");
+	} else if matches.is_present("raw-stdout") {
+		::std::io::stdout().write_all(&merged_raw).unwrap();
+	} else {
+		print!("{}", base64::encode(&merged_raw));
 	}
 }

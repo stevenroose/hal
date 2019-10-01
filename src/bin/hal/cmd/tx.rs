@@ -1,12 +1,26 @@
 use std::io::Write;
 
-use bitcoin::consensus::encode::serialize;
+use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
 
 use cmd;
 use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand_group("tx", "manipulate transactions")
+		.subcommand(cmd_create())
+		.subcommand(cmd_decode())
+}
+
+pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
+	match matches.subcommand() {
+		("create", Some(ref m)) => exec_create(&m),
+		("decode", Some(ref m)) => exec_decode(&m),
+		(_, _) => unreachable!("clap prints help"),
+	};
+}
+
+fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a raw transaction from JSON").args(&[
 		cmd::arg("tx-info", "the transaction info in JSON").required(true),
 		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
@@ -198,7 +212,7 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 	}
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
+fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 	let json_tx = matches.value_of("tx-info").expect("no JSON tx info provided");
 	let info: TransactionInfo = serde_json::from_str(json_tx).expect("invalid JSON");
 
@@ -209,4 +223,19 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	} else {
 		print!("{}", hex::encode(&tx_bytes));
 	}
+}
+
+fn cmd_decode<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("decode", "decode a raw transaction to JSON")
+		.args(&cmd::opts_networks())
+		.args(&[cmd::opt_yaml(), cmd::arg("raw-tx", "the raw transaction in hex").required(true)])
+}
+
+fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
+	let hex_tx = matches.value_of("raw-tx").expect("no raw tx provided");
+	let raw_tx = hex::decode(hex_tx).expect("could not decode raw tx");
+	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
+
+	let info = hal::GetInfo::get_info(&tx, cmd::network(matches));
+	cmd::print_output(matches, &info)
 }

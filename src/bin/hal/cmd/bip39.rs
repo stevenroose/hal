@@ -10,6 +10,20 @@ use cmd;
 use hal;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand_group("bip39", "BIP-39 mnemonics")
+		.subcommand(cmd_generate())
+		.subcommand(cmd_get_seed())
+}
+
+pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
+	match matches.subcommand() {
+		("generate", Some(ref m)) => exec_generate(&m),
+		("get-seed", Some(ref m)) => exec_get_seed(&m),
+		(_, _) => unreachable!("clap prints help"),
+	};
+}
+
+fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("generate", "generate a new BIP-39 mnemonic")
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
 		.arg(cmd::arg("words", "the number of words").long("words").short("w").default_value("24"))
@@ -19,7 +33,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml()])
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
+fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 	let network = cmd::network(matches);
 
 	let nb_words: usize =
@@ -59,4 +73,32 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	assert!(entropy.len() == nb_entropy_bytes);
 	let mnemonic = bip39::Mnemonic::from_entropy(&entropy, bip39::Language::English).unwrap();
 	cmd::print_output(matches, &hal::GetInfo::get_info(&mnemonic, network))
+}
+
+fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand(
+		"get-seed",
+		"get the seed value and BIP-32 master key for a given BIP-39 mnemonic",
+	)
+	.args(&[
+		cmd::arg("mnemonic", "the mnemonic phrase").required(true),
+		cmd::arg("passphrase", "the BIP-39 passphrase").long("passphrase"),
+		cmd::opt_yaml(),
+	])
+	.args(&cmd::opts_networks())
+}
+
+fn exec_get_seed<'a>(matches: &clap::ArgMatches<'a>) {
+	let network = cmd::network(matches);
+
+	let phrase = matches.value_of("mnemonic").expect("no mnemonic provided");
+	let mnemonic: bip39::Mnemonic = bip39::Mnemonic::from_phrase(phrase, bip39::Language::English)
+		.expect("invalid mnemonic phrase");
+
+	let info = ::hal::bip39::MnemonicInfo::from_mnemonic_with_passphrase(
+		&mnemonic,
+		matches.value_of("passphrase").unwrap_or(""),
+		network,
+	);
+	cmd::print_output(matches, &info)
 }
