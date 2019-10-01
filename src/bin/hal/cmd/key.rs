@@ -30,7 +30,7 @@ fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 	let network = cmd::network(matches);
 
-	let secp = secp256k1::Secp256k1::new();
+	let secp = secp256k1::Secp256k1::signing_only();
 	let entropy: [u8; 32] = rand::random();
 	let secret_key = secp256k1::SecretKey::from_slice(&entropy[..]).unwrap();
 
