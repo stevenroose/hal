@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.4.4  --  2019/10/01
+
+- add `hal key verify` command for signature verification
+
 # v0.4.3  --  2019/09/23
 
 - make compatible with Rust v1.32.0
