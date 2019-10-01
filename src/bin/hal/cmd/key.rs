@@ -1,5 +1,5 @@
 use bitcoin::secp256k1;
-use bitcoin::{Address, PrivateKey};
+use bitcoin::{Address, PrivateKey, PublicKey};
 use clap;
 use rand;
 
@@ -10,12 +10,14 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("key", "work with private and public keys")
 		.subcommand(cmd_generate())
 		.subcommand(cmd_inspect())
+		.subcommand(cmd_verify())
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	match matches.subcommand() {
 		("generate", Some(ref m)) => exec_generate(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
+		("verify", Some(ref m)) => exec_verify(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -93,4 +95,27 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 
 	cmd::print_output(matches, &info)
+}
+
+fn cmd_verify<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("verify", "verify signatures").args(&[
+		cmd::opt_yaml(),
+		cmd::arg("message", "the message to be signed in hex").required(true),
+		cmd::arg("pubkey", "the public key in hex").required(true),
+		cmd::arg("signature", "the signature in hex").required(true),
+	])
+}
+
+fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
+	let msg_hex = matches.value_of("message").expect("no message given");
+	let msg =
+		secp256k1::Message::from_slice(&hex::decode(&msg_hex).expect("message is not valid hex"))
+			.expect("invalid message to be signed");
+	let pubkey_hex = matches.value_of("pubkey").expect("no public key provided");
+	let pubkey: PublicKey = pubkey_hex.parse().expect("invalid public key");
+	let sig_hex = matches.value_of("signature").expect("no signature provided");
+	let sig: secp256k1::Signature = sig_hex.parse().expect("invalid signature");
+
+	let secp = secp256k1::Secp256k1::verification_only();
+	secp.verify(&msg, &sig, &pubkey.key).expect("invalid signature")
 }
