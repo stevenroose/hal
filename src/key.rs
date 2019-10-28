@@ -8,7 +8,6 @@ pub struct KeyInfo {
 	pub raw_private_key: ::HexBytes,
 	pub wif_private_key: PrivateKey,
 	pub public_key: PublicKey,
-	pub compressed_public_key: PublicKey,
 	pub uncompressed_public_key: PublicKey,
 	pub addresses: address::CreatedAddresses,
 }

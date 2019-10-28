@@ -47,7 +47,6 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 		raw_private_key: (&secret_key[..]).into(),
 		wif_private_key: privkey,
 		public_key: pubkey,
-		compressed_public_key: pubkey,
 		uncompressed_public_key: {
 			let mut uncompressed = pubkey.clone();
 			uncompressed.compressed = false;
