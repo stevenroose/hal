@@ -78,10 +78,18 @@ pub struct InvoiceInfo {
 	pub currency: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub amount_pico_btc: Option<u64>,
+
+	// For signed invoices.
+	pub signature: ::HexBytes,
+	pub signature_recover_id: i32,
+	pub payee_pubkey: Option<::HexBytes>,
 }
 
 impl ::GetInfo<InvoiceInfo> for Invoice {
 	fn get_info(&self, network: Network) -> InvoiceInfo {
+		let signed_raw = self.clone().into_signed_raw();
+		let (sig_rec, sig) = signed_raw.signature().0.serialize_compact();
+
 		InvoiceInfo {
 			timestamp: self.timestamp().clone().into(),
 			//TODO(stevenroose) see https://github.com/rust-bitcoin/rust-lightning-invoice/issues/23
@@ -134,6 +142,12 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 				Currency::BitcoinTestnet => "bitcoin-testnet".to_owned(),
 			},
 			amount_pico_btc: self.amount_pico_btc(),
+			signature: sig.as_ref().into(),
+			signature_recover_id: sig_rec.to_i32(),
+			payee_pubkey: signed_raw
+				.recover_payee_pub_key()
+				.ok()
+				.map(|s| s.0.serialize().as_ref().into()),
 		}
 	}
 }
