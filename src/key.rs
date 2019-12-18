@@ -9,5 +9,5 @@ pub struct KeyInfo {
 	pub wif_private_key: PrivateKey,
 	pub public_key: PublicKey,
 	pub uncompressed_public_key: PublicKey,
-	pub addresses: address::CreatedAddresses,
+	pub addresses: address::Addresses,
 }

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bitcoin::secp256k1;
 use bitcoin::util::bip32;
-use bitcoin::{Address, PublicKey};
+use bitcoin::PublicKey;
 use clap;
 
 use cmd;
@@ -66,9 +66,7 @@ fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
 		},
 		secret_key: secret_key.map(|k| k[..].into()),
 		parent_fingerprint: derived.fingerprint()[..].into(),
-		address_p2pkh: Address::p2pkh(&derived.public_key, derived.network),
-		address_p2wpkh: Address::p2wpkh(&derived.public_key, derived.network),
-		address_p2shwpkh: Address::p2shwpkh(&derived.public_key, derived.network),
+		addresses: hal::address::Addresses::from_pubkey(&derived.public_key, derived.network),
 	};
 
 	cmd::print_output(matches, &info)
@@ -101,9 +99,7 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 				},
 				secret_key: Some(ext.private_key.to_wif()),
 				parent_fingerprint: ext.fingerprint(&secp)[..].into(),
-				address_p2pkh: Address::p2pkh(&public_key, ext.network),
-				address_p2wpkh: Address::p2wpkh(&public_key, ext.network),
-				address_p2shwpkh: Address::p2shwpkh(&public_key, ext.network),
+				addresses: hal::address::Addresses::from_pubkey(&public_key, ext.network),
 				path: None,
 			}
 		}
@@ -123,9 +119,7 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 				},
 				secret_key: None,
 				parent_fingerprint: ext.fingerprint()[..].into(),
-				address_p2pkh: Address::p2pkh(&ext.public_key, ext.network),
-				address_p2wpkh: Address::p2wpkh(&ext.public_key, ext.network),
-				address_p2shwpkh: Address::p2shwpkh(&ext.public_key, ext.network),
+				addresses: hal::address::Addresses::from_pubkey(&ext.public_key, ext.network),
 				path: None,
 			}
 		}

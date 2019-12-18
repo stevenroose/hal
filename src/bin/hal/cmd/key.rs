@@ -1,5 +1,5 @@
 use bitcoin::secp256k1;
-use bitcoin::{Address, PrivateKey, PublicKey};
+use bitcoin::{PrivateKey, PublicKey};
 use clap;
 use rand;
 
@@ -52,12 +52,7 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 			uncompressed.compressed = false;
 			uncompressed
 		},
-		addresses: hal::address::CreatedAddresses {
-			p2pkh: Some(Address::p2pkh(&pubkey, network).to_string()),
-			p2wpkh: Some(Address::p2wpkh(&pubkey, network).to_string()),
-			p2shwpkh: Some(Address::p2shwpkh(&pubkey, network).to_string()),
-			..Default::default()
-		},
+		addresses: hal::address::Addresses::from_pubkey(&pubkey, network),
 	};
 
 	cmd::print_output(matches, &info)
@@ -84,12 +79,7 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 			uncompressed.compressed = false;
 			uncompressed
 		},
-		addresses: hal::address::CreatedAddresses {
-			p2pkh: Some(Address::p2pkh(&pubkey, network).to_string()),
-			p2wpkh: Some(Address::p2wpkh(&pubkey, network).to_string()),
-			p2shwpkh: Some(Address::p2shwpkh(&pubkey, network).to_string()),
-			..Default::default()
-		},
+		addresses: hal::address::Addresses::from_pubkey(&pubkey, network),
 	};
 
 	cmd::print_output(matches, &info)
