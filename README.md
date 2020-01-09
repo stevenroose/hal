@@ -68,5 +68,4 @@ hal allows the use of extensions that can be installed separately.
 
 
 ## Ideas:
-- (extended) private key generation
 - optional [Trezor](https://github.com/stevenroose/rust-trezor-api/) and Ledger integration
