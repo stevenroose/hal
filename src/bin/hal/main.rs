@@ -84,6 +84,7 @@ fn external_help() -> String {
 fn main() {
 	// Apply a custom panic hook to print a more user-friendly message
 	// in case the execution fails.
+	// We skip this for people that are interested in the panic message.
 	if env::var("RUST_BACKTRACE").unwrap_or(String::new()) != "1" {
 		panic::set_hook(Box::new(|info| {
 			let message = if let Some(m) = info.payload().downcast_ref::<String>() {
@@ -121,6 +122,7 @@ fn main() {
 		("bip39", Some(ref m)) => cmd::bip39::execute(&m),
 		("key", Some(ref m)) => cmd::key::execute(&m),
 		("ln", Some(ref m)) => cmd::ln::execute(&m),
+		("message", Some(ref m)) => cmd::message::execute(&m),
 		("psbt", Some(ref m)) => cmd::psbt::execute(&m),
 		("script", Some(ref m)) => cmd::script::execute(&m),
 		("tx", Some(ref m)) => cmd::tx::execute(&m),

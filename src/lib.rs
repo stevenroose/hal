@@ -13,6 +13,7 @@ pub mod bip39;
 pub mod block;
 pub mod key;
 pub mod lightning;
+pub mod message;
 pub mod psbt;
 pub mod tx;
 

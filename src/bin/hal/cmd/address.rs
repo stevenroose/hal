@@ -33,7 +33,6 @@ fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 	let created = if let Some(pubkey_hex) = matches.value_of("pubkey") {
 		let pubkey: PublicKey = pubkey_hex.parse().expect("invalid pubkey");
 		hal::address::Addresses::from_pubkey(&pubkey, network)
-	
 	} else if let Some(script_hex) = matches.value_of("script") {
 		let script_bytes = hex::decode(script_hex).expect("invalid script hex");
 		let script = script_bytes.into();

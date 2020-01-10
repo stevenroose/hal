@@ -42,6 +42,10 @@ $ cargo install hal
 	- invoice
 		- decode: decode Lightning invoices
 
+- message
+    - sign: sign a message using Bitcoin Signed Message
+    - verify: verify a Bitcoin Signed Message
+
 - psbt
 	- create: create a PSBT from a raw unsigned transaction
 	- decode: decode a PSBT to JSON
