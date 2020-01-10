@@ -1,7 +1,5 @@
 use bitcoin::consensus::encode::serialize;
-use bitcoin::hashes::sha256d;
-use bitcoin::util::hash::BitcoinHash;
-use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut};
+use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut, Txid, Wtxid};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -24,7 +22,7 @@ impl<'a> ::GetInfo<InputScriptInfo> for InputScript<'a> {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InputInfo {
 	pub prevout: Option<String>,
-	pub txid: Option<sha256d::Hash>,
+	pub txid: Option<Txid>,
 	pub vout: Option<u32>,
 	pub script_sig: Option<InputScriptInfo>,
 	pub sequence: Option<u32>,
@@ -105,8 +103,8 @@ impl ::GetInfo<OutputInfo> for TxOut {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct TransactionInfo {
-	pub txid: Option<sha256d::Hash>,
-	pub hash: Option<sha256d::Hash>,
+	pub txid: Option<Txid>,
+	pub wtxid: Option<Wtxid>,
 	pub size: Option<usize>,
 	pub weight: Option<usize>,
 	pub vsize: Option<usize>,
@@ -120,7 +118,7 @@ impl ::GetInfo<TransactionInfo> for Transaction {
 	fn get_info(&self, network: Network) -> TransactionInfo {
 		TransactionInfo {
 			txid: Some(self.txid()),
-			hash: Some(self.bitcoin_hash()),
+			wtxid: Some(self.wtxid()),
 			version: Some(self.version),
 			locktime: Some(self.lock_time),
 			size: Some(serialize(self).len()),

@@ -1,4 +1,4 @@
-use bitcoin::{Address, Network};
+use bitcoin::Network;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]

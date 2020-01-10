@@ -1,6 +1,5 @@
-use bitcoin::hashes::sha256d;
 use bitcoin::util::hash::BitcoinHash;
-use bitcoin::{Block, BlockHeader, Network};
+use bitcoin::{Block, BlockHash, BlockHeader, Network, TxMerkleNode, Txid};
 use serde::{Deserialize, Serialize};
 
 use tx::TransactionInfo;
@@ -8,10 +7,10 @@ use tx::TransactionInfo;
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct BlockHeaderInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub block_hash: Option<sha256d::Hash>,
+	pub block_hash: Option<BlockHash>,
 	pub version: u32,
-	pub previous_block_hash: sha256d::Hash,
-	pub merkle_root: sha256d::Hash,
+	pub previous_block_hash: BlockHash,
+	pub merkle_root: TxMerkleNode,
 	pub time: u32,
 	pub bits: u32,
 	pub nonce: u32,
@@ -38,7 +37,7 @@ pub struct BlockInfo {
 	pub transactions: Option<Vec<TransactionInfo>>,
 
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub txids: Option<Vec<sha256d::Hash>>,
+	pub txids: Option<Vec<Txid>>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub raw_transactions: Option<Vec<::HexBytes>>,
 }

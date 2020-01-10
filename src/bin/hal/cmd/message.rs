@@ -40,7 +40,7 @@ fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
 	let info = SignedMessageInfo {
 		message: msg.to_owned(),
 		public_key: privkey.public_key(&secp),
-		signature_der_hex: signature.serialize_der().into(),
+		signature_der_hex: signature.serialize_der()[..].into(),
 		signature_der_base64: base64::encode(&signature.serialize_der()[..]),
 		signature_compact_hex: signature.serialize_compact()[..].into(),
 		signature_compact_base64: base64::encode(&signature.serialize_compact()[..]),

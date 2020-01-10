@@ -181,8 +181,8 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 	if info.txid.is_some() {
 		warn!("Field \"txid\" is ignored.");
 	}
-	if info.hash.is_some() {
-		warn!("Field \"hash\" is ignored.");
+	if info.wtxid.is_some() {
+		warn!("Field \"wtxid\" is ignored.");
 	}
 	if info.size.is_some() {
 		warn!("Field \"size\" is ignored.");
