@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+# v0.5.0  --  2020/12/18
+
+- Renamed `address-*` fields in bip32 info to single `addresses` object.
+- Remove `compressed_public_key` field from key info.
+- Add signature and pubkey info to lightnig invoice.
+- Add support for Bitcoin Signed Message
+- Update `bitcoin` dependency to v0.23.0.
+
 # v0.4.4  --  2019/10/01
 
 - add `hal key verify` command for signature verification
