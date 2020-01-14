@@ -1,7 +1,12 @@
 CHANGELOG
 =========
 
-# v0.5.0  --  2020/12/18
+# v0.5.1  --  2020/01/24
+
+- Add `hal message recover`.
+- Fix `hal message sign`.
+
+# v0.5.0  --  2020/01/10
 
 - Renamed `address-*` fields in bip32 info to single `addresses` object.
 - Remove `compressed_public_key` field from key info.

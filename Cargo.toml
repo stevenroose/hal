@@ -1,6 +1,6 @@
 [package]
 name = "hal"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Steven Roose <steven@stevenroose.org>"]
 license = "CC0-1.0"
 homepage = "https://github.com/stevenroose/hal/"
@@ -32,6 +32,7 @@ base64 = "0.10.1"
 hex = "0.3.2"
 
 bitcoin = { version = "0.23", features = [ "use-serde" ] }
+secp256k1 = { version = "0.17", features = [ "recovery" ] }
 tiny-bip39 = "0.6.2"
 lightning-invoice = "0.2.0"
 
