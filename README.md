@@ -45,6 +45,7 @@ $ cargo install hal
 - message
     - sign: sign a message using Bitcoin Signed Message
     - verify: verify a Bitcoin Signed Message
+    - recover: recover the pubkey or address that signed a message
 
 - psbt
 	- create: create a PSBT from a raw unsigned transaction
