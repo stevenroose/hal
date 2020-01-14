@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.5.2  --  2020/01/24
+
+- Small fix in `hal message recover` and compressedness.
+
 # v0.5.1  --  2020/01/24
 
 - Add `hal message recover`.
