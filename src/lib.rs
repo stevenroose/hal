@@ -4,6 +4,7 @@ extern crate byteorder;
 extern crate chrono;
 extern crate hex;
 extern crate lightning_invoice;
+extern crate secp256k1;
 extern crate serde;
 
 pub mod address;
@@ -13,7 +14,6 @@ pub mod bip39;
 pub mod block;
 pub mod key;
 pub mod lightning;
-pub mod message;
 pub mod psbt;
 pub mod tx;
 
