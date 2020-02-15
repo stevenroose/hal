@@ -1,3 +1,5 @@
+use bitcoin::hashes::hex::FromHex;
+use bitcoin::Script;
 use clap;
 use hal::miniscript::{DescriptorInfo, MiniscriptInfo, MiniscriptKeyType, PolicyInfo};
 use miniscript::descriptor::Descriptor;
@@ -11,6 +13,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.alias("ms")
 		.subcommand(cmd_descriptor())
 		.subcommand(cmd_inspect())
+		.subcommand(cmd_parse())
 		.subcommand(cmd_policy())
 }
 
@@ -18,6 +21,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	match matches.subcommand() {
 		("descriptor", Some(ref m)) => exec_descriptor(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
+		("parse", Some(ref m)) => exec_parse(&m),
 		("policy", Some(ref m)) => exec_policy(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
@@ -112,6 +116,29 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 			})
 		})
 		.expect("invalid miniscript");
+	cmd::print_output(matches, &info);
+}
+
+fn cmd_parse<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("parse", "parse a script into a miniscript")
+		.arg(cmd::opt_yaml())
+		.args(&[cmd::arg("script", "hex script to ").required(true)])
+}
+
+fn exec_parse<'a>(matches: &clap::ArgMatches<'a>) {
+	let script_hex = matches.value_of("script").expect("no script argument given");
+	let script = Script::from(Vec::<u8>::from_hex(&script_hex).expect("invalid hex script"));
+
+	let ms = Miniscript::parse(&script).expect("script is not valid miniscript");
+	let info = MiniscriptInfo {
+		key_type: MiniscriptKeyType::PublicKey,
+		script_size: ms.script_size(),
+		max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements(),
+		max_satisfaction_size_segwit: ms.max_satisfaction_size(2),
+		max_satisfaction_size_non_segwit: ms.max_satisfaction_size(1),
+		script: Some(ms.encode().into_bytes().into()),
+		policy: policy::Liftable::lift(&ms).to_string(),
+	};
 	cmd::print_output(matches, &info);
 }
 
