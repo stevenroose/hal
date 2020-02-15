@@ -8,18 +8,18 @@ pub enum MiniscriptKeyType {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
-pub struct PolicyInfo {
-	pub is_concrete: bool,
+pub struct DescriptorInfo {
 	pub key_type: MiniscriptKeyType,
-	pub is_trivial: bool,
-	pub is_unsatisfiable: bool,
-	pub relative_timelocks: Vec<u32>,
-	pub n_keys: usize,
-	pub minimum_n_keys: usize,
-	pub sorted: String,
-	pub normalized: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub miniscript: Option<String>,
+	pub address: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub script_pubkey: Option<::HexBytes>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub unsigned_script_sig: Option<::HexBytes>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub witness_script: Option<::HexBytes>,
+	pub max_satisfaction_weight: usize,
+	pub policy: String,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -32,4 +32,19 @@ pub struct MiniscriptInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub script: Option<::HexBytes>,
 	pub policy: String,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+pub struct PolicyInfo {
+	pub is_concrete: bool,
+	pub key_type: MiniscriptKeyType,
+	pub is_trivial: bool,
+	pub is_unsatisfiable: bool,
+	pub relative_timelocks: Vec<u32>,
+	pub n_keys: usize,
+	pub minimum_n_keys: usize,
+	pub sorted: String,
+	pub normalized: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub miniscript: Option<String>,
 }
