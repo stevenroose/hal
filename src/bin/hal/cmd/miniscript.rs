@@ -1,5 +1,6 @@
 use clap;
-use hal::miniscript::{MiniscriptInfo, MiniscriptKeyType, PolicyInfo};
+use hal::miniscript::{DescriptorInfo, MiniscriptInfo, MiniscriptKeyType, PolicyInfo};
+use miniscript::descriptor::Descriptor;
 use miniscript::miniscript::Miniscript;
 use miniscript::{policy, DummyKey, DummyKeyHash, MiniscriptKey};
 
@@ -8,16 +9,63 @@ use cmd;
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("miniscript", "work with miniscript (alias: ms)")
 		.alias("ms")
+		.subcommand(cmd_descriptor())
 		.subcommand(cmd_inspect())
 		.subcommand(cmd_policy())
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	match matches.subcommand() {
+		("descriptor", Some(ref m)) => exec_descriptor(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("policy", Some(ref m)) => exec_policy(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
+}
+
+fn cmd_descriptor<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("descriptor", "get information about an output descriptor")
+		.arg(cmd::opt_yaml())
+		.args(&[cmd::arg("descriptor", "the output descriptor to inspect").required(true)])
+}
+
+fn exec_descriptor<'a>(matches: &clap::ArgMatches<'a>) {
+	let desc_str = matches.value_of("descriptor").expect("no descriptor argument given");
+	let network = cmd::network(matches);
+
+	let info = desc_str
+		.parse::<Descriptor<bitcoin::PublicKey>>()
+		.map(|desc| DescriptorInfo {
+			key_type: MiniscriptKeyType::PublicKey,
+			address: desc.address(network).map(|a| a.to_string()),
+			script_pubkey: Some(desc.script_pubkey().into_bytes().into()),
+			unsigned_script_sig: Some(desc.unsigned_script_sig().into_bytes().into()),
+			witness_script: Some(desc.witness_script().into_bytes().into()),
+			max_satisfaction_weight: desc.max_satisfaction_weight(),
+			policy: policy::Liftable::lift(&desc).to_string(),
+		})
+		.or_else(|e| {
+			debug!("Can't parse descriptor with public keys: {}", e);
+			// Then try with strings.
+			desc_str.parse::<Descriptor<String>>().map(|desc| {
+				let dummy = {
+					let res: Result<_, ()> =
+						desc.translate_pk(|_| Ok(DummyKey), |_| Ok(DummyKeyHash));
+					res.unwrap()
+				};
+				DescriptorInfo {
+					key_type: MiniscriptKeyType::String,
+					address: None,
+					script_pubkey: None,
+					unsigned_script_sig: None,
+					witness_script: None,
+					max_satisfaction_weight: dummy.max_satisfaction_weight(),
+					policy: policy::Liftable::lift(&desc).to_string(),
+				}
+			})
+		})
+		.expect("invalid miniscript");
+	cmd::print_output(matches, &info);
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
