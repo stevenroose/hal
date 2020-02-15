@@ -3,6 +3,7 @@ extern crate bitcoin;
 extern crate lightning_invoice;
 #[macro_use]
 extern crate log;
+extern crate miniscript;
 extern crate base64;
 extern crate clap;
 extern crate fern;
@@ -123,6 +124,7 @@ fn main() {
 		("key", Some(ref m)) => cmd::key::execute(&m),
 		("ln", Some(ref m)) => cmd::ln::execute(&m),
 		("message", Some(ref m)) => cmd::message::execute(&m),
+		("miniscript", Some(ref m)) => cmd::miniscript::execute(&m),
 		("psbt", Some(ref m)) => cmd::psbt::execute(&m),
 		("script", Some(ref m)) => cmd::script::execute(&m),
 		("tx", Some(ref m)) => cmd::tx::execute(&m),
