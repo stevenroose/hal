@@ -35,6 +35,7 @@ bitcoin = { version = "0.23", features = [ "use-serde" ] }
 secp256k1 = { version = "0.17", features = [ "recovery" ] }
 tiny-bip39 = "0.6.2"
 lightning-invoice = "0.2.0"
+miniscript = { version = "0.12.0", features = ["compiler"] }
 
 # For external commands
 jobserver = "0.1.11"

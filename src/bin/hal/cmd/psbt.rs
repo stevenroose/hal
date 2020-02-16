@@ -370,12 +370,14 @@ fn cmd_finalize<'a>() -> clap::App<'a, 'a> {
 
 fn exec_finalize<'a>(matches: &clap::ArgMatches<'a>) {
 	let (raw, _) = file_or_raw(&matches.value_of("psbt").unwrap());
-	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
+	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
 
 	if psbt.inputs.iter().any(|i| i.final_script_sig.is_none() && i.final_script_witness.is_none())
 	{
 		panic!("PSBT is missing input data!");
 	}
+
+	::miniscript::psbt::finalize(&mut psbt).expect("failed to finalize");
 
 	let finalized_raw = serialize(&psbt.extract_tx());
 	if matches.is_present("raw-stdout") {
