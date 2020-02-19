@@ -131,13 +131,12 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 		compressed: compressed,
 	};
 
+	let network = cmd::network(matches);
 	if let Ok(pk) = signer_pubk_res {
 		if pubkey != pk {
 			panic!("Signed for pubkey {}, expected {}", pubkey, pk);
 		}
-	}
-	let network = cmd::network(matches);
-	if let Ok(expected) = signer_addr_res {
+	} else if let Ok(expected) = signer_addr_res {
 		let addr = match expected.address_type() {
 			None => panic!("Unknown address type provided"),
 			Some(AddressType::P2pkh) => Address::p2pkh(&pubkey, network),
@@ -154,7 +153,10 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 				expected.address_type().map(|t| t.to_string()).unwrap_or("unknown type".into()),
 			);
 		}
+	} else {
+		unreachable!();
 	}
+	eprintln!("Signature is valid.");
 }
 
 fn cmd_recover<'a>() -> clap::App<'a, 'a> {

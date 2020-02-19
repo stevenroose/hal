@@ -105,5 +105,6 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	let sig: secp256k1::Signature = sig_hex.parse().expect("invalid signature");
 
 	let secp = secp256k1::Secp256k1::verification_only();
-	secp.verify(&msg, &sig, &pubkey.key).expect("invalid signature")
+	secp.verify(&msg, &sig, &pubkey.key).expect("invalid signature");
+	eprintln!("Signature is valid.");
 }
