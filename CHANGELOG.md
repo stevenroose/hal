@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.5.3  --  2020/02/19
+
+- Add `hal message hash` command.
+
 # v0.5.2  --  2020/01/24
 
 - Small fix in `hal message recover` and compressedness.

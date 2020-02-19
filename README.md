@@ -43,6 +43,7 @@ $ cargo install hal
 		- decode: decode Lightning invoices
 
 - message
+    - hash: get hashes of Bitcoin Signed Message
     - sign: sign a message using Bitcoin Signed Message
     - verify: verify a Bitcoin Signed Message
     - recover: recover the pubkey or address that signed a message
