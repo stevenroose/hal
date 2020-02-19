@@ -8,6 +8,7 @@ use cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("message", "Bitcoin Signed Messages")
+		.subcommand(cmd_hash())
 		.subcommand(cmd_sign())
 		.subcommand(cmd_verify())
 		.subcommand(cmd_recover())
@@ -15,11 +16,31 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	match matches.subcommand() {
+		("hash", Some(ref m)) => exec_hash(&m),
 		("sign", Some(ref m)) => exec_sign(&m),
 		("verify", Some(ref m)) => exec_verify(&m),
 		("recover", Some(ref m)) => exec_recover(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
+}
+
+fn cmd_hash<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("hash", "calculate Bitcoin Signed Message hash").args(&[
+		cmd::opt_yaml(),
+		cmd::arg("message", "the message to sign (without prefix)").required(true),
+	])
+}
+
+fn exec_hash<'a>(matches: &clap::ArgMatches<'a>) {
+	use bitcoin::hashes::Hash;
+	let msg = matches.value_of("message").expect("no message provided");
+	let res = hal::message::MessageHash {
+		sha256: bitcoin::hashes::sha256::Hash::hash(msg.as_bytes()),
+		sha256d: bitcoin::hashes::sha256d::Hash::hash(msg.as_bytes()),
+		sign_hash: bitcoin::util::misc::signed_msg_hash(&msg),
+	};
+
+	cmd::print_output(matches, &res)
 }
 
 fn cmd_sign<'a>() -> clap::App<'a, 'a> {
