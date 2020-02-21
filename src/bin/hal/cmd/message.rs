@@ -116,7 +116,7 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	}
 	let recid = secp256k1::recovery::RecoveryId::from_i32((sig_bytes[0] - 27 & 0x03) as i32)
 		.expect("invalid recoverable signature (invalid recid)");
-	let compressed = sig_bytes[0] & 0x04 != 0x04;
+	let compressed = (sig_bytes[0] - 27 & 0x04) != 0;
 	let signature = secp256k1::recovery::RecoverableSignature::from_compact(&sig_bytes[1..], recid)
 		.expect("invalid recoverable signature");
 
