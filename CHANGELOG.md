@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.5.4  --  2020/02/25
+
+- Fix compressedness bug in `hal message verify`.
+
 # v0.5.3  --  2020/02/19
 
 - Add `hal message hash` command.
