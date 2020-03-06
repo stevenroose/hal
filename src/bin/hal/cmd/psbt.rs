@@ -28,7 +28,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		("edit", Some(ref m)) => exec_edit(&m),
 		("finalize", Some(ref m)) => exec_finalize(&m),
 		("merge", Some(ref m)) => exec_merge(&m),
-		(c, _) => println!("command {} unknown", c),
+		(c, _) => eprintln!("command {} unknown", c),
 	};
 }
 

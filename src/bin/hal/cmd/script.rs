@@ -25,5 +25,5 @@ fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
 	let raw_script = hex::decode(hex_script).expect("could not decode raw script");
 	let script: Script = raw_script.into();
 
-	println!("{}", script.asm());
+	print!("{}", script.asm());
 }

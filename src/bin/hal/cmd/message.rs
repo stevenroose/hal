@@ -70,7 +70,7 @@ fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
 	}
 	serialized[1..].copy_from_slice(&raw[..]);
 
-	println!("{}", base64::encode(&serialized[..]));
+	print!("{}", base64::encode(&serialized[..]));
 }
 
 fn cmd_verify<'a>() -> clap::App<'a, 'a> {
