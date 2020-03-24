@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+# v0.6.0  --  2020/03/24
+
+- Don't print newlines after output.
+- Update `quote` dependency.
+- Use `base64-compat` crate instead of `base64`.
+
 # v0.5.4  --  2020/02/25
 
 - Fix compressedness bug in `hal message verify`.
