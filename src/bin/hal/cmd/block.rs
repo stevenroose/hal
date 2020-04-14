@@ -27,7 +27,35 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r")
 			.required(false),
-	])
+	]).long_about(r#"
+Create a block from JSON. Use the same format as the `hal block decode` output.
+
+It's possible to pass the JSON string as the first argument or pass it via stdin.
+
+One can chose to pass in transaction info objects like used for `hal tx create` into the
+"transactions" field or hexadecimal raw transactions in the "raw_transactions" field.
+
+Example format:
+{
+	"header": {
+		"block_hash": "0000000000000000000b52e5f79972ccb1b42f14bd5097381551ed7bb4f78478",
+		"version": 1,
+		"previous_block_hash": "00000000000000000011604b6d32a6074720f60aae04edf20396bbaf65e50edc",
+		"merkle_root": "b7f360ae3bb1f6ca1935269d8955808c6606ff20af9b98fbc3ddb7de6c9df5c3",
+		"time": 12345,
+		"bits": 12345,
+		"nonce": 12345
+	},
+
+	!! only either of these fields should be provided !!
+	"transactions": [
+		{ ... }
+	],
+	"raw_transaction": [
+		"deadbeef"
+	]
+}"#
+	)
 }
 
 fn create_block_header(info: BlockHeaderInfo) -> BlockHeader {
