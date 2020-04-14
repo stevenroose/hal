@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{self, Read, Write};
 
 use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Block, BlockHeader};
@@ -22,12 +22,15 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("create", "create a raw block from JSON").args(&[
-		cmd::arg("block-info", "the block info in JSON").required(true),
-		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false),
-	]).long_about(r#"
+	cmd::subcommand("create", "create a raw block from JSON")
+		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
+		.args(&[
+			cmd::arg("block-info", "the block info in JSON").required(false),
+			cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+				.short("r")
+				.required(false),
+		])
+		.long_about(r#"
 Create a block from JSON. Use the same format as the `hal block decode` output.
 
 It's possible to pass the JSON string as the first argument or pass it via stdin.
@@ -74,8 +77,19 @@ fn create_block_header(info: BlockHeaderInfo) -> BlockHeader {
 }
 
 fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
-	let json_block = matches.value_of("block-info").expect("no JSON blok info provided");
-	let info: BlockInfo = serde_json::from_str(json_block).expect("invalid JSON");
+	let info: BlockInfo = if let Some(json) = matches.value_of("block-info") {
+		serde_json::from_str(json).expect("invalid JSON")
+	} else {
+		// Read from stdin.
+		let mut input = Vec::new();
+		let stdin = io::stdin();
+		let mut stdin_lock = stdin.lock();
+		while stdin_lock.read(&mut input).expect("failed to read from stdin") > 0 {}
+		if input.is_empty() {
+			panic!("No block-info argument given");
+		}
+		serde_json::from_slice(&input).expect("invalid JSON from stdin")
+	};
 
 	if info.txids.is_some() {
 		warn!("Field \"txids\" is ignored.");
