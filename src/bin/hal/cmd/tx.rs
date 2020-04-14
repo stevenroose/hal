@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{self, Read, Write};
 
 use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
@@ -21,14 +21,19 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("create", "create a raw transaction from JSON").args(&[
-		cmd::arg("tx-info", "the transaction info in JSON").required(true),
+	cmd::subcommand("create", "create a raw transaction from JSON")
+		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
+		.args(&[
+		cmd::arg("tx-info", "the transaction info in JSON; If omitted, reads from stdin.")
+			.required(false),
 		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r")
 			.required(false),
 	])
 	.long_about(r#"
 Create a transaction from JSON. Use the same format as the `hal tx decode` output.
+
+It's possible to pass the JSON string as the first argument or pass it via stdin.
 
 Example format:
 {
@@ -207,8 +212,19 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 }
 
 fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
-	let json_tx = matches.value_of("tx-info").expect("no JSON tx info provided");
-	let info: TransactionInfo = serde_json::from_str(json_tx).expect("invalid JSON");
+	let info: TransactionInfo = if let Some(json) = matches.value_of("tx-info") {
+		serde_json::from_str(json).expect("invalid JSON")
+	} else {
+		// Read from stdin.
+		let mut input = Vec::new();
+		let stdin = io::stdin();
+		let mut stdin_lock = stdin.lock();
+		while stdin_lock.read(&mut input).expect("failed to read from stdin") > 0 {}
+		if input.is_empty() {
+			panic!("No tx-info argument given");
+		}
+		serde_json::from_slice(&input).expect("invalid JSON from stdin")
+	};
 
 	let tx = create_transaction(info);
 	let tx_bytes = serialize(&tx);
