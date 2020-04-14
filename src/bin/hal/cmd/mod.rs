@@ -55,7 +55,6 @@ pub fn subcommand_group<'a>(name: &'static str, about: &'static str) -> clap::Ap
 pub fn subcommand<'a>(name: &'static str, about: &'static str) -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name(name)
 		.about(about)
-		.setting(clap::AppSettings::ArgRequiredElseHelp)
 		.setting(clap::AppSettings::DisableHelpSubcommand)
 }
 

@@ -22,7 +22,6 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a raw transaction from JSON")
-		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
 		.args(&[
 		cmd::arg("tx-info", "the transaction info in JSON; If omitted, reads from stdin.")
 			.required(false),

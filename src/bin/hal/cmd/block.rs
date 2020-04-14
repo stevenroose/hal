@@ -23,7 +23,6 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a raw block from JSON")
-		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
 		.args(&[
 			cmd::arg("block-info", "the block info in JSON").required(false),
 			cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
