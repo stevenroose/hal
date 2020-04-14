@@ -78,28 +78,18 @@ Example format:
 
 /// Check both ways to specify the outpoint and panic if conflicting.
 fn outpoint_from_input_info(input: &InputInfo) -> OutPoint {
-	let op1 = input.prevout.as_ref().map(|ref op| op.parse().expect("invalid prevout format"));
-	let op2 = match input.txid {
-		Some(txid) => match input.vout {
-			Some(vout) => Some(OutPoint {
-				txid: txid,
-				vout: vout,
-			}),
-			None => panic!("\"txid\" field given in input without \"vout\" field"),
-		},
-		None => None,
-	};
+	let prevout: Option<OutPoint> = input.prevout.as_ref().map(
+		|ref op| op.parse().expect("invalid prevout format")
+	);
+	let txid = input.txid;
+	let vout = input.vout;
 
-	match (op1, op2) {
-		(Some(op1), Some(op2)) => {
-			if op1 != op2 {
-				panic!("Conflicting prevout information in input.");
-			}
-			op1
-		}
-		(Some(op), None) => op,
-		(None, Some(op)) => op,
-		(None, None) => panic!("No previous output provided in input."),
+	match (prevout, txid, vout) {
+		(Some(p), Some(t), _) if t != p.txid => panic!("prevout and txid don't match"),
+		(Some(p), _, Some(v)) if v != p.vout => panic!("prevout and vout don't match"),
+		(Some(p), _, _) => p,
+		(None, Some(t), Some(v)) => OutPoint::new(t, v),
+		_ => panic!("inputs should specify either the prevout or both the txid and vout"),
 	}
 }
 
