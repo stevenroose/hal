@@ -124,6 +124,14 @@ fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network
 		warn!("Field \"type\" of output is ignored.");
 	}
 
+	// First check consistency of the address, if given.
+	if let Some(ref addr) = spk.address {
+		// Error if another network had already been used.
+		if used_network.replace(addr.network).unwrap_or(addr.network) != addr.network {
+			panic!("Addresses for different networks are used in the output scripts.");
+		}
+	}
+
 	if let Some(hex) = spk.hex {
 		if spk.asm.is_some() {
 			warn!("Field \"asm\" of output is ignored.");
@@ -139,13 +147,9 @@ fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network
 			warn!("Field \"address\" of output is ignored.");
 		}
 
+		//TODO(stevenroose) support script disassembly
 		panic!("Decoding script assembly is not yet supported.");
 	} else if let Some(address) = spk.address {
-		// Error if another network had already been used.
-		if used_network.replace(address.network).unwrap_or(address.network) != address.network {
-			panic!("Addresses for different networks are used in the output scripts.");
-		}
-
 		address.script_pubkey()
 	} else {
 		panic!("No scriptPubKey info provided.");
