@@ -39,3 +39,12 @@ lightning-invoice = "0.2.0"
 # For external commands
 jobserver = "0.1.11"
 shell-escape = "0.1.4"
+
+[package.metadata.rpm]
+package = "hal-bitcoin"
+
+[package.metadata.rpm.cargo]
+buildflags = ["--release"]
+
+[package.metadata.rpm.targets]
+hal = { path = "/usr/bin/hal" }
