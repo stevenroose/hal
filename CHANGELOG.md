@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+# v0.6.1  --  2020/04/16
+
+- Support `tx/block create` reading JSON from stdin.
+- Warn earlier when conflicting addresses are used in `tx create`.
+- Improve description on `tx/block create` commands.
+
 # v0.6.0  --  2020/03/24
 
 - Don't print newlines after output.
