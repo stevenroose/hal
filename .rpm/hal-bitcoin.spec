@@ -5,7 +5,7 @@
 Name: hal-bitcoin
 Summary: hal - the Bitcoin companion
 Version: @@VERSION@@
-Release: @@RELEASE@@
+Release: @@RELEASE@@%{?dist}
 License: CC0
 Group: Applications/System
 Source0: %{name}-%{version}.tar.gz
