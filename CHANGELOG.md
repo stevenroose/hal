@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+# v0.7.0  --  2020/05/17
+
+- Add miniscript commands
+- Add xpub and xpriv fields to BIP-32 derivation outputs
+- Add --reverse field to message signature verification
+- Change a bunch of types in the hal library types
+
 # v0.6.1  --  2020/04/16
 
 - Support `tx/block create` reading JSON from stdin.
