@@ -86,9 +86,11 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_verify<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("verify", "verify signatures").args(&[
+	cmd::subcommand("verify", "verify signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
+		flag must be used because Bitcoin Core reverses the hex order for those!").args(&[
 		cmd::opt_yaml(),
-		cmd::arg("message", "the message to be signed in hex").required(true),
+		cmd::opt("reverse", "reverse the message"),
+		cmd::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
 		cmd::arg("pubkey", "the public key in hex").required(true),
 		cmd::arg("signature", "the signature in hex").required(true),
 	])
@@ -96,9 +98,11 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 
 fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	let msg_hex = matches.value_of("message").expect("no message given");
-	let msg =
-		secp256k1::Message::from_slice(&hex::decode(&msg_hex).expect("message is not valid hex"))
-			.expect("invalid message to be signed");
+	let mut msg_bytes = hex::decode(&msg_hex).expect("invalid hex message");
+	if matches.is_present("reverse") {
+		msg_bytes.reverse();
+	}
+	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
 	let pubkey_hex = matches.value_of("pubkey").expect("no public key provided");
 	let pubkey: PublicKey = pubkey_hex.parse().expect("invalid public key");
 	let sig_hex = matches.value_of("signature").expect("no signature provided");
