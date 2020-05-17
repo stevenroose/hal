@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use bitcoin::util::psbt;
+use bitcoin::util::{bip32, psbt};
 use bitcoin::{Network, SigHashType};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -19,8 +19,8 @@ impl ::GetInfo<PsbtGlobalInfo> for psbt::Global {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct HDPathInfo {
-	pub master_fingerprint: ::HexBytes,
-	pub path: String,
+	pub master_fingerprint: bip32::Fingerprint,
+	pub path: bip32::DerivationPath,
 }
 
 pub fn sighashtype_to_string(sht: SigHashType) -> String {
@@ -32,8 +32,7 @@ pub fn sighashtype_to_string(sht: SigHashType) -> String {
 		AllPlusAnyoneCanPay => "ALL|ANYONECANPAY",
 		NonePlusAnyoneCanPay => "NONE|ANYONECANPAY",
 		SinglePlusAnyoneCanPay => "SINGLE|ANYONECANPAY",
-	}
-	.to_owned()
+	}.to_owned()
 }
 
 pub fn sighashtype_values() -> &'static [&'static str] {
@@ -83,52 +82,30 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 			partial_sigs: {
 				let mut partial_sigs = HashMap::new();
 				for (key, value) in self.partial_sigs.iter() {
-					partial_sigs.insert(
-						{
-							//TODO(stevenroose) key.serialize()
-							let mut buf = Vec::new();
-							key.write_into(&mut buf);
-							buf.into()
-						},
-						value.clone().into(),
-					);
+					partial_sigs.insert(key.to_bytes().into(), value.clone().into());
 				}
 				partial_sigs
 			},
 			sighash_type: self.sighash_type.map(sighashtype_to_string),
-			redeem_script: self
-				.redeem_script
-				.as_ref()
+			redeem_script: self.redeem_script.as_ref()
 				.map(|s| ::tx::OutputScript(s).get_info(network)),
-			witness_script: self
-				.witness_script
-				.as_ref()
+			witness_script: self.witness_script.as_ref()
 				.map(|s| ::tx::OutputScript(s).get_info(network)),
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
 				for (key, value) in self.hd_keypaths.iter() {
-					hd_keypaths.insert(
-						{
-							//TODO(stevenroose) key.serialize()
-							let mut buf = Vec::new();
-							key.write_into(&mut buf);
-							buf.into()
-						},
+					hd_keypaths.insert(key.to_bytes().into(),
 						HDPathInfo {
 							master_fingerprint: value.0[..].into(),
-							path: value.1.to_string(),
+							path: value.1.clone(),
 						},
 					);
 				}
 				hd_keypaths
 			},
-			final_script_sig: self
-				.final_script_sig
-				.as_ref()
+			final_script_sig: self.final_script_sig.as_ref()
 				.map(|s| ::tx::InputScript(s).get_info(network)),
-			final_script_witness: self
-				.final_script_witness
-				.as_ref()
+			final_script_witness: self.final_script_witness.as_ref()
 				.map(|w| w.iter().map(|p| p.clone().into()).collect()),
 		}
 	}
@@ -147,27 +124,17 @@ pub struct PsbtOutputInfo {
 impl ::GetInfo<PsbtOutputInfo> for psbt::Output {
 	fn get_info(&self, network: Network) -> PsbtOutputInfo {
 		PsbtOutputInfo {
-			redeem_script: self
-				.redeem_script
-				.as_ref()
+			redeem_script: self.redeem_script.as_ref()
 				.map(|s| ::tx::OutputScript(s).get_info(network)),
-			witness_script: self
-				.witness_script
-				.as_ref()
+			witness_script: self.witness_script.as_ref()
 				.map(|s| ::tx::OutputScript(s).get_info(network)),
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
 				for (key, value) in self.hd_keypaths.iter() {
-					hd_keypaths.insert(
-						{
-							//TODO(stevenroose) key.serialize()
-							let mut buf = Vec::new();
-							key.write_into(&mut buf);
-							buf.into()
-						},
+					hd_keypaths.insert(key.to_bytes().into(),
 						HDPathInfo {
 							master_fingerprint: value.0[..].into(),
-							path: value.1.to_string(),
+							path: value.1.clone(),
 						},
 					);
 				}

@@ -1,5 +1,5 @@
 use bitcoin::hashes::Hash;
-use bitcoin::{Address, PublicKey};
+use bitcoin::{Address, PublicKey, WPubkeyHash, WScriptHash};
 use clap;
 
 use cmd;
@@ -66,6 +66,8 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 		type_: None,
 		pubkey_hash: None,
 		script_hash: None,
+		witness_pubkey_hash: None,
+		witness_script_hash: None,
 		witness_program_version: None,
 	};
 
@@ -73,11 +75,11 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 	match address.payload {
 		Payload::PubkeyHash(pkh) => {
 			info.type_ = Some("p2pkh".to_owned());
-			info.pubkey_hash = Some(pkh.into_inner()[..].into());
+			info.pubkey_hash = Some(pkh);
 		}
-		Payload::ScriptHash(ref sh) => {
+		Payload::ScriptHash(sh) => {
 			info.type_ = Some("p2sh".to_owned());
-			info.script_hash = Some(sh.into_inner()[..].into());
+			info.script_hash = Some(sh);
 		}
 		Payload::WitnessProgram {
 			version,
@@ -89,10 +91,12 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 			if version == 0 {
 				if program.len() == 20 {
 					info.type_ = Some("p2wpkh".to_owned());
-					info.pubkey_hash = Some(program.into());
+					info.witness_pubkey_hash = 
+						Some(WPubkeyHash::from_slice(&program).expect("size 20"));
 				} else if program.len() == 32 {
 					info.type_ = Some("p2wsh".to_owned());
-					info.script_hash = Some(program.into());
+					info.witness_script_hash =
+						Some(WScriptHash::from_slice(&program).expect("size 32"));
 				} else {
 					info.type_ = Some("invalid-witness-program".to_owned());
 				}

@@ -1,5 +1,7 @@
 use bitcoin::hashes::Hash;
-use bitcoin::{bech32::u5, util::address::Payload, Address, Network};
+use bitcoin::bech32::u5;
+use bitcoin::util::address::Payload;
+use bitcoin::{Address, Network};
 use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
 use lightning_invoice::{Currency, Fallback, Invoice, InvoiceDescription, RouteHop};
