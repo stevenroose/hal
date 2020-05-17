@@ -1,4 +1,4 @@
-use bitcoin::hashes::Hash;
+use bitcoin::hashes::{Hash, sha256};
 use bitcoin::bech32::u5;
 use bitcoin::util::address::Payload;
 use bitcoin::{Address, Network};
@@ -65,7 +65,7 @@ impl ::GetInfo<RouteHopInfo> for RouteHop {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InvoiceInfo {
 	pub timestamp: DateTime<Local>,
-	pub payment_hash: String, //TODO(stevenroose) use bitcoin_hashes
+	pub payment_hash: sha256::Hash,
 	pub description: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub payee_pub_key: Option<::HexBytes>,
@@ -94,12 +94,10 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 
 		InvoiceInfo {
 			timestamp: self.timestamp().clone().into(),
-			//TODO(stevenroose) see https://github.com/rust-bitcoin/rust-lightning-invoice/issues/23
-			payment_hash: format!("{:?}", self.payment_hash()),
+			payment_hash: sha256::Hash::from_slice(&self.payment_hash().0[..]).unwrap(),
 			description: match self.description() {
 				InvoiceDescription::Direct(s) => s.clone().into_inner(),
-				//TODO(stevenroose) see https://github.com/rust-bitcoin/rust-lightning-invoice/issues/23
-				InvoiceDescription::Hash(h) => format!("{:?}", h),
+				InvoiceDescription::Hash(h) => h.0.to_string(),
 			},
 			payee_pub_key: self.payee_pub_key().map(|pk| pk.serialize()[..].into()),
 			expiry_time: self.expiry_time().map(|e| {
@@ -124,7 +122,6 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 								version: v,
 								program: p,
 							} => Payload::WitnessProgram {
-								//TODO(stevenroose) remove after https://github.com/rust-bitcoin/rust-bech32-bitcoin/issues/21
 								version: u5::try_from_u8(v.to_u8())
 									.expect("invalid segwit version"),
 								program: p.to_vec(),
