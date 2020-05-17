@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use bitcoin::secp256k1;
 use bitcoin::util::bip32;
-use bitcoin::PublicKey;
 use clap;
 
 use cmd;
@@ -31,18 +30,17 @@ fn cmd_derive<'a>() -> clap::App<'a, 'a> {
 fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
 	let path_str = matches.value_of("derivation-path").unwrap();
 	let path: bip32::DerivationPath = path_str.parse().expect("error parsing derivation path");
-
 	let key_str = matches.value_of("ext-key").unwrap();
-	let master_fingerprint;
-	let mut secret_key = None;
 
 	let secp = secp256k1::Secp256k1::new();
-	let derived = match bip32::ExtendedPrivKey::from_str(&key_str) {
+
+	let master_fingerprint;
+	let mut derived_xpriv = None;
+	let derived_xpub = match bip32::ExtendedPrivKey::from_str(&key_str) {
 		Ok(ext_priv) => {
-			let derived_priv = ext_priv.derive_priv(&secp, &path).expect("derivation error");
+			derived_xpriv = Some(ext_priv.derive_priv(&secp, &path).expect("derivation error"));
 			master_fingerprint = ext_priv.fingerprint(&secp);
-			secret_key = Some(derived_priv.private_key.to_wif());
-			bip32::ExtendedPubKey::from_private(&secp, &derived_priv)
+			bip32::ExtendedPubKey::from_private(&secp, derived_xpriv.as_ref().unwrap())
 		}
 		Err(_) => {
 			let ext_pub: bip32::ExtendedPubKey = key_str.parse().expect("invalid extended key");
@@ -52,21 +50,19 @@ fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 
 	let info = hal::bip32::DerivationInfo {
-		network: derived.network,
-		master_fingerprint: Some(master_fingerprint[..].into()),
-		path: Some(path_str.to_owned()),
-		chain_code: derived.chain_code.to_bytes()[..].into(),
-		identifier: derived.identifier()[..].into(),
-		fingerprint: derived.fingerprint()[..].into(),
-		public_key: {
-			//TODO(stevenroose) key.serialize()
-			let mut buf = Vec::new();
-			derived.public_key.write_into(&mut buf);
-			buf.into()
-		},
-		secret_key: secret_key.map(|k| k[..].into()),
-		parent_fingerprint: derived.fingerprint()[..].into(),
-		addresses: hal::address::Addresses::from_pubkey(&derived.public_key, derived.network),
+		network: derived_xpub.network,
+		master_fingerprint: Some(master_fingerprint),
+		path: Some(path),
+		xpriv: derived_xpriv,
+		xpub: derived_xpub,
+		chain_code: derived_xpub.chain_code,
+		identifier: derived_xpub.identifier(),
+		fingerprint: derived_xpub.fingerprint(),
+		public_key: derived_xpub.public_key,
+		private_key: derived_xpriv.map(|x| x.private_key),
+		addresses: hal::address::Addresses::from_pubkey(
+			&derived_xpub.public_key, derived_xpub.network,
+		),
 	};
 
 	cmd::print_output(matches, &info)
@@ -82,47 +78,31 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 	let key_str = matches.value_of("ext-key").unwrap();
 
 	let secp = bitcoin::secp256k1::Secp256k1::signing_only();
-	let info = match bip32::ExtendedPrivKey::from_str(&key_str) {
-		Ok(ext) => {
-			let public_key = PublicKey::from_private_key(&secp, &ext.private_key);
-			hal::bip32::DerivationInfo {
-				network: ext.network,
-				master_fingerprint: None,
-				chain_code: ext.chain_code.to_bytes()[..].into(),
-				identifier: ext.identifier(&secp)[..].into(),
-				fingerprint: ext.fingerprint(&secp)[..].into(),
-				public_key: {
-					//TODO(stevenroose) key.serialize()
-					let mut buf = Vec::new();
-					public_key.write_into(&mut buf);
-					buf.into()
-				},
-				secret_key: Some(ext.private_key.to_wif()),
-				parent_fingerprint: ext.fingerprint(&secp)[..].into(),
-				addresses: hal::address::Addresses::from_pubkey(&public_key, ext.network),
-				path: None,
-			}
+
+	let mut xpriv = None;
+
+	let xpub = match bip32::ExtendedPrivKey::from_str(&key_str) {
+		Ok(ext_priv) => {
+			xpriv = Some(ext_priv);
+			bip32::ExtendedPubKey::from_private(&secp, xpriv.as_ref().unwrap())
 		}
-		Err(_) => {
-			let ext: bip32::ExtendedPubKey = key_str.parse().expect("invalid extended key");
-			hal::bip32::DerivationInfo {
-				network: ext.network,
-				master_fingerprint: None,
-				chain_code: ext.chain_code.to_bytes()[..].into(),
-				identifier: ext.identifier()[..].into(),
-				fingerprint: ext.fingerprint()[..].into(),
-				public_key: {
-					//TODO(stevenroose) key.serialize()
-					let mut buf = Vec::new();
-					ext.public_key.write_into(&mut buf);
-					buf.into()
-				},
-				secret_key: None,
-				parent_fingerprint: ext.fingerprint()[..].into(),
-				addresses: hal::address::Addresses::from_pubkey(&ext.public_key, ext.network),
-				path: None,
-			}
-		}
+		Err(_) => key_str.parse().expect("invalid extended key"),
+	};
+
+	let info = hal::bip32::DerivationInfo {
+		network: xpub.network,
+		master_fingerprint: None,
+		path: None,
+		xpriv: xpriv,
+		xpub: xpub,
+		chain_code: xpub.chain_code,
+		identifier: xpub.identifier(),
+		fingerprint: xpub.fingerprint(),
+		public_key: xpub.public_key,
+		private_key: xpriv.map(|x| x.private_key),
+		addresses: hal::address::Addresses::from_pubkey(
+			&xpub.public_key, xpub.network,
+		),
 	};
 
 	cmd::print_output(matches, &info)

@@ -1,19 +1,22 @@
 use bitcoin::Network;
+use bitcoin::util::bip32;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct DerivationInfo {
 	pub network: Network,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub master_fingerprint: Option<::HexBytes>,
+	pub master_fingerprint: Option<bip32::Fingerprint>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub path: Option<String>,
-	pub chain_code: ::HexBytes,
-	pub identifier: ::HexBytes,
-	pub fingerprint: ::HexBytes,
-	pub public_key: ::HexBytes,
+	pub path: Option<bip32::DerivationPath>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub secret_key: Option<String>,
-	pub parent_fingerprint: ::HexBytes,
+	pub xpriv: Option<bip32::ExtendedPrivKey>,
+	pub xpub: bip32::ExtendedPubKey,
+	pub chain_code: bip32::ChainCode,
+	pub identifier: bitcoin::XpubIdentifier,
+	pub fingerprint: bip32::Fingerprint,
+	pub public_key: bitcoin::PublicKey,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub private_key: Option<bitcoin::PrivateKey>,
 	pub addresses: ::address::Addresses,
 }
