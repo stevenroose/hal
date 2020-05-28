@@ -45,7 +45,7 @@ shell-escape = "0.1.4"
 package = "hal-bitcoin"
 
 [package.metadata.rpm.cargo]
-buildflags = ["--release"]
+buildflags = ["--release", "--frozen"]
 
 [package.metadata.rpm.targets]
 hal = { path = "/usr/bin/hal" }
