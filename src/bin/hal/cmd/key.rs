@@ -1,3 +1,4 @@
+use std::process;
 use std::str::FromStr;
 
 use bitcoin::secp256k1;
@@ -130,6 +131,7 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 		flag must be used because Bitcoin Core reverses the hex order for those!").args(&[
 		cmd::opt_yaml(),
 		cmd::opt("reverse", "reverse the message"),
+		cmd::opt("no-try-reverse", "don't try to verify for reversed message"),
 		cmd::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
 		cmd::arg("pubkey", "the public key in hex").required(true),
 		cmd::arg("signature", "the signature in hex").required(true),
@@ -156,6 +158,26 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 
 	let secp = secp256k1::Secp256k1::verification_only();
-	secp.verify(&msg, &sig, &pubkey.key).expect("invalid signature");
-	eprintln!("Signature is valid.");
+	let valid = secp.verify(&msg, &sig, &pubkey.key).is_ok();
+
+	// Perhaps the user should have passed --reverse.
+	if !valid && !matches.is_present("no-try-reverse") {
+		msg_bytes.reverse();
+		let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
+		if secp.verify(&msg, &sig, &pubkey.key).is_ok() {
+			eprintln!("Signature is valid for the reverse message.");
+			if matches.is_present("reverse") {
+				eprintln!("Try dropping the --reverse");
+			} else {
+				eprintln!("If the message is a Bitcoin SHA256 hash, try --reverse");
+			}
+		}
+	}
+
+	if valid {
+		eprintln!("Signature is valid.");
+	} else {
+		eprintln!("Signature is invalid!");
+		process::exit(1);
+	}
 }
