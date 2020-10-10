@@ -105,8 +105,15 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
 	let pubkey_hex = matches.value_of("pubkey").expect("no public key provided");
 	let pubkey: PublicKey = pubkey_hex.parse().expect("invalid public key");
-	let sig_hex = matches.value_of("signature").expect("no signature provided");
-	let sig: secp256k1::Signature = sig_hex.parse().expect("invalid signature");
+	let sig = {
+		let hex = matches.value_of("signature").expect("no signature provided");
+		let bytes = hex::decode(&hex).expect("invalid signature: not hex");
+		if bytes.len() == 64 {
+			secp256k1::Signature::from_compact(&bytes).expect("invalid signature")
+		} else {
+			secp256k1::Signature::from_der(&bytes).expect("invalid DER signature")
+		}
+	};
 
 	let secp = secp256k1::Secp256k1::verification_only();
 	secp.verify(&msg, &sig, &pubkey.key).expect("invalid signature");
