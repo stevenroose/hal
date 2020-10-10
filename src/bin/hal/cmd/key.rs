@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use bitcoin::secp256k1;
 use bitcoin::{PrivateKey, PublicKey};
 use clap;
@@ -10,6 +12,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("key", "work with private and public keys")
 		.subcommand(cmd_generate())
 		.subcommand(cmd_inspect())
+		.subcommand(cmd_sign())
 		.subcommand(cmd_verify())
 }
 
@@ -17,6 +20,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	match matches.subcommand() {
 		("generate", Some(ref m)) => exec_generate(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
+		("sign", Some(ref m)) => exec_sign(&m),
 		("verify", Some(ref m)) => exec_verify(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
@@ -82,6 +86,42 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 		addresses: hal::address::Addresses::from_pubkey(&pubkey, network),
 	};
 
+	cmd::print_output(matches, &info)
+}
+
+fn cmd_sign<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("sign", "sign messages\n\nNOTE!! For SHA-256-d hashes, the --reverse \
+		flag must be used because Bitcoin Core reverses the hex order for those!").args(&[
+		cmd::opt_yaml(),
+		cmd::opt("reverse", "reverse the message"),
+		cmd::arg("privkey", "the private key in hex or WIF").required(true),
+		cmd::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
+	])
+}
+
+fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
+	let msg_hex = matches.value_of("message").expect("no message given");
+	let mut msg_bytes = hex::decode(&msg_hex).expect("invalid hex message");
+	if matches.is_present("reverse") {
+		msg_bytes.reverse();
+	}
+	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
+	let privkey = {
+		let pk = matches.value_of("privkey").expect("no private key provided");
+		if let Ok(sk) = secp256k1::SecretKey::from_str(&pk) {
+			sk
+		} else {
+			bitcoin::PrivateKey::from_wif(&pk).expect("invalid private key provided").key
+		}
+	};
+
+	let secp = secp256k1::Secp256k1::signing_only();
+	let signature = secp.sign(&msg, &privkey);
+
+	let info = hal::key::SignatureInfo {
+		der: signature.serialize_der().as_ref().into(),
+		compact: signature.serialize_compact().to_vec().into(),
+	};
 	cmd::print_output(matches, &info)
 }
 

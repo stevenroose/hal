@@ -36,3 +36,10 @@ impl ::GetInfo<PublicKeyInfo> for PublicKey {
 		}
 	}
 }
+
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+pub struct SignatureInfo {
+	pub der: ::HexBytes,
+	pub compact: ::HexBytes,
+}
+
