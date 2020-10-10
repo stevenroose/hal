@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+# v0.7.1  --  2020/10/10
+
+- Support parsing DER signatures in `key verify`.
+- Add `key sign` for signing with raw secp keys
+- When verifying, if a signature is valid for the reversed message,
+  suggest to use the `--reverse` option.
+
 # v0.7.0  --  2020/05/17
 
 - Add miniscript commands
