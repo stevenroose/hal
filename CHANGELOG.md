@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.7.2  --  2020/12/04
+
+- Add hex private key support for `hal key inspect`.
+
 # v0.7.1  --  2020/10/10
 
 - Support parsing DER signatures in `key verify`.
