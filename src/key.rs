@@ -6,7 +6,8 @@ use address;
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct KeyInfo {
 	pub raw_private_key: ::HexBytes,
-	pub wif_private_key: PrivateKey,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub wif_private_key: Option<PrivateKey>,
 	pub public_key: PublicKey,
 	pub uncompressed_public_key: PublicKey,
 	pub addresses: address::Addresses,

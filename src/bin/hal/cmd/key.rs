@@ -50,7 +50,7 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 
 	let info = hal::key::KeyInfo {
 		raw_private_key: (&secret_key[..]).into(),
-		wif_private_key: privkey,
+		wif_private_key: Some(privkey),
 		public_key: pubkey,
 		uncompressed_public_key: {
 			let mut uncompressed = pubkey.clone();
@@ -69,22 +69,42 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
-	let wif = matches.value_of("key").expect("no key provided");
-	let privkey: PrivateKey = wif.parse().expect("invalid WIF format");
+	let raw = matches.value_of("key").expect("no key provided");
 
-	let network = privkey.network;
-	let pubkey = privkey.public_key(&secp256k1::Secp256k1::new());
+	let info = if let Ok(privkey) = PrivateKey::from_str(&raw) {
+		let network = privkey.network;
+		let pubkey = privkey.public_key(&secp256k1::Secp256k1::new());
 
-	let info = hal::key::KeyInfo {
-		raw_private_key: (&privkey.key[..]).into(),
-		wif_private_key: privkey,
-		public_key: pubkey,
-		uncompressed_public_key: {
-			let mut uncompressed = pubkey.clone();
-			uncompressed.compressed = false;
-			uncompressed
-		},
-		addresses: hal::address::Addresses::from_pubkey(&pubkey, network),
+		hal::key::KeyInfo {
+			raw_private_key: (&privkey.key[..]).into(),
+			wif_private_key: Some(privkey),
+			public_key: pubkey,
+			uncompressed_public_key: {
+				let mut uncompressed = pubkey.clone();
+				uncompressed.compressed = false;
+				uncompressed
+			},
+			addresses: hal::address::Addresses::from_pubkey(&pubkey, network),
+		}
+	} else if let Ok(sk) = secp256k1::SecretKey::from_str(&raw) {
+		let pubkey = secp256k1::PublicKey::from_secret_key(&secp256k1::Secp256k1::new(), &sk);
+		let btc_pubkey = PublicKey {
+			compressed: true,
+			key: pubkey.clone(),
+		};
+		let network = cmd::network(matches);
+		hal::key::KeyInfo {
+			raw_private_key: sk[..].into(),
+			wif_private_key: None,
+			public_key: btc_pubkey,
+			uncompressed_public_key: PublicKey {
+				compressed: false,
+				key: pubkey,
+			},
+			addresses: hal::address::Addresses::from_pubkey(&btc_pubkey, network),
+		}
+	} else {
+		panic!("invalid WIF/hex private key: {}", raw);
 	};
 
 	cmd::print_output(matches, &info)
