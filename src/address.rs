@@ -39,8 +39,8 @@ impl Addresses {
 	pub fn from_pubkey(pubkey: &PublicKey, network: Network) -> Addresses {
 		Addresses {
 			p2pkh: Some(Address::p2pkh(pubkey, network)),
-			p2wpkh: Some(Address::p2wpkh(pubkey, network)),
-			p2shwpkh: Some(Address::p2shwpkh(pubkey, network)),
+			p2wpkh: Address::p2wpkh(pubkey, network).ok(),
+			p2shwpkh: Address::p2shwpkh(pubkey, network).ok(),
 			..Default::default()
 		}
 	}

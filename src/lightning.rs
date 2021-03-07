@@ -1,5 +1,5 @@
-use bitcoin::hashes::{Hash, sha256};
 use bitcoin::bech32::u5;
+use bitcoin::hashes::{sha256, Hash};
 use bitcoin::util::address::Payload;
 use bitcoin::{Address, Network};
 use byteorder::{BigEndian, ByteOrder};
@@ -94,17 +94,16 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 
 		InvoiceInfo {
 			timestamp: self.timestamp().clone().into(),
-			payment_hash: sha256::Hash::from_slice(&self.payment_hash().0[..]).unwrap(),
+			payment_hash: sha256::Hash::from_slice(&self.payment_hash().into_inner()[..]).unwrap(),
 			description: match self.description() {
 				InvoiceDescription::Direct(s) => s.clone().into_inner(),
 				InvoiceDescription::Hash(h) => h.0.to_string(),
 			},
 			payee_pub_key: self.payee_pub_key().map(|pk| pk.serialize()[..].into()),
-			expiry_time: self.expiry_time().map(|e| {
-				let duration = Duration::from_std(*e.as_duration()).expect("invalid expiry");
-				Local::now() + duration
-			}),
-			min_final_cltv_expiry: self.min_final_cltv_expiry().map(|e| e.0),
+			expiry_time: Some(
+				Local::now() + Duration::from_std(self.expiry_time()).expect("Invalid expiry"),
+			),
+			min_final_cltv_expiry: self.min_final_cltv_expiry().map(|e| *e),
 			fallback_addresses: self
 				.fallbacks()
 				.iter()
@@ -139,6 +138,8 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 			currency: match self.currency() {
 				Currency::Bitcoin => "bitcoin".to_owned(),
 				Currency::BitcoinTestnet => "bitcoin-testnet".to_owned(),
+				Currency::Regtest => "bitcoin-regtest".to_owned(),
+				Currency::Simnet => "bitcoin-signet".to_owned(),
 			},
 			amount_pico_btc: self.amount_pico_btc(),
 			signature: sig.as_ref().into(),

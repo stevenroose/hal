@@ -6,6 +6,7 @@ use clap;
 use hex;
 
 use bitcoin::consensus::{deserialize, serialize};
+use bitcoin::secp256k1;
 use bitcoin::util::bip32;
 use bitcoin::util::psbt;
 use bitcoin::{PublicKey, Transaction};
@@ -273,11 +274,11 @@ fn edit_input<'a>(
 	}
 
 	if let Some(csv) = matches.value_of("hd-keypaths") {
-		input.hd_keypaths = csv.split(",").map(parse_hd_keypath_triplet).collect();
+		input.bip32_derivation = csv.split(",").map(parse_hd_keypath_triplet).collect();
 	}
 	if let Some(triplets) = matches.values_of("hd-keypaths-add") {
 		for (pk, pair) in triplets.map(parse_hd_keypath_triplet) {
-			if input.hd_keypaths.insert(pk, pair).is_some() {
+			if input.bip32_derivation.insert(pk, pair).is_some() {
 				panic!("public key {} is already in HD keypaths", &pk);
 			}
 		}
@@ -313,11 +314,11 @@ fn edit_output<'a>(
 	}
 
 	if let Some(csv) = matches.value_of("hd-keypaths") {
-		output.hd_keypaths = csv.split(",").map(parse_hd_keypath_triplet).collect();
+		output.bip32_derivation = csv.split(",").map(parse_hd_keypath_triplet).collect();
 	}
 	if let Some(triplets) = matches.values_of("hd-keypaths-add") {
 		for (pk, pair) in triplets.map(parse_hd_keypath_triplet) {
-			if output.hd_keypaths.insert(pk, pair).is_some() {
+			if output.bip32_derivation.insert(pk, pair).is_some() {
 				panic!("public key {} is already in HD keypaths", &pk);
 			}
 		}
@@ -377,7 +378,9 @@ fn exec_finalize<'a>(matches: &clap::ArgMatches<'a>) {
 		panic!("PSBT is missing input data!");
 	}
 
-	::miniscript::psbt::finalize(&mut psbt).expect("failed to finalize");
+	// Create a secp context, should there be one with static lifetime?
+	let secp = secp256k1::Secp256k1::verification_only();
+	::miniscript::psbt::finalize(&mut psbt, &secp).expect("failed to finalize");
 
 	let finalized_raw = serialize(&psbt.extract_tx());
 	if matches.is_present("raw-stdout") {
