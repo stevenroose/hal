@@ -16,6 +16,30 @@ pub struct ScriptContexts {
 
 impl ScriptContexts {
 
+	pub fn from_bare(bare: bool) -> Self {
+		Self {
+			bare: bare,
+			p2sh: false,
+			segwitv0: false,
+		}
+	}
+
+	pub fn from_p2sh(p2sh: bool) -> Self {
+		Self {
+			bare: false,
+			p2sh: p2sh,
+			segwitv0: false,
+		}
+	}
+
+	pub fn from_segwitv0(segwitv0: bool) -> Self {
+		Self {
+			bare: false,
+			p2sh: false,
+			segwitv0: segwitv0,
+		}
+	}
+
 	pub fn or(a: Self, b: Self) -> Self {
 		Self {
 			bare: a.bare || b.bare,
@@ -57,6 +81,12 @@ pub struct DescriptorInfo {
 pub struct MiniscriptInfo {
 	pub key_type: MiniscriptKeyType,
 	pub valid_script_contexts: ScriptContexts,
+	pub requires_sig: bool,
+	pub has_mixed_timelocks: bool,
+	pub has_repeated_keys: bool,
+	pub non_malleable: ScriptContexts,
+	pub within_resource_limits: ScriptContexts,
+	pub sane_miniscript: ScriptContexts,
 	pub script_size: usize,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub max_satisfaction_witness_elements: Option<usize>,

@@ -262,11 +262,7 @@ impl FromScriptContexts for MiniscriptInfo {
 	) -> Self {
 		Self {
 			key_type: key_type,
-			valid_script_contexts: ScriptContexts {
-				bare: true,
-				p2sh: false,
-				segwitv0: false,
-			},
+			valid_script_contexts: ScriptContexts::from_bare(true),
 			script_size: ms.script_size(),
 			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
 			max_satisfaction_size_segwit: None,
@@ -279,6 +275,12 @@ impl FromScriptContexts for MiniscriptInfo {
 					None
 				}
 			},
+			requires_sig: ms.requires_sig(),
+			non_malleable: ScriptContexts::from_bare(ms.is_non_malleable()),
+			within_resource_limits: ScriptContexts::from_bare(ms.within_resource_limits()),
+			has_mixed_timelocks: ms.has_mixed_timelocks(),
+			has_repeated_keys: ms.has_repeated_keys(),
+			sane_miniscript: ScriptContexts::from_bare(ms.sanity_check().is_ok()),
 		}
 	}
 
@@ -289,11 +291,7 @@ impl FromScriptContexts for MiniscriptInfo {
 	) -> Self {
 		Self {
 			key_type: key_type,
-			valid_script_contexts: ScriptContexts {
-				bare: false,
-				p2sh: true,
-				segwitv0: false,
-			},
+			valid_script_contexts: ScriptContexts::from_p2sh(true),
 			script_size: ms.script_size(),
 			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
 			max_satisfaction_size_segwit: None,
@@ -306,6 +304,12 @@ impl FromScriptContexts for MiniscriptInfo {
 					None
 				}
 			},
+			requires_sig: ms.requires_sig(),
+			non_malleable: ScriptContexts::from_p2sh(ms.is_non_malleable()),
+			within_resource_limits: ScriptContexts::from_p2sh(ms.within_resource_limits()),
+			has_mixed_timelocks: ms.has_mixed_timelocks(),
+			has_repeated_keys: ms.has_repeated_keys(),
+			sane_miniscript: ScriptContexts::from_p2sh(ms.sanity_check().is_ok()),
 		}
 	}
 
@@ -316,11 +320,7 @@ impl FromScriptContexts for MiniscriptInfo {
 	) -> Self {
 		Self {
 			key_type: key_type,
-			valid_script_contexts: ScriptContexts {
-				bare: false,
-				p2sh: false,
-				segwitv0: true,
-			},
+			valid_script_contexts: ScriptContexts::from_segwitv0(true),
 			script_size: ms.script_size(),
 			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
 			max_satisfaction_size_segwit: ms.max_satisfaction_size().ok(),
@@ -333,6 +333,12 @@ impl FromScriptContexts for MiniscriptInfo {
 					None
 				}
 			},
+			requires_sig: ms.requires_sig(),
+			non_malleable: ScriptContexts::from_segwitv0(ms.is_non_malleable()),
+			within_resource_limits: ScriptContexts::from_segwitv0(ms.within_resource_limits()),
+			has_mixed_timelocks: ms.has_mixed_timelocks(),
+			has_repeated_keys: ms.has_repeated_keys(),
+			sane_miniscript: ScriptContexts::from_segwitv0(ms.sanity_check().is_ok()),
 		}
 	}
 
@@ -363,6 +369,12 @@ impl FromScriptContexts for MiniscriptInfo {
 						.or(b.max_satisfaction_size_non_segwit),
 					script: a.script,
 					policy: a.policy.or(b.policy),
+					requires_sig: a.requires_sig,
+					non_malleable: ScriptContexts::or(a.non_malleable,b.non_malleable),
+					within_resource_limits: ScriptContexts::or(a.within_resource_limits,b.within_resource_limits),
+					has_mixed_timelocks: a.has_mixed_timelocks,
+					has_repeated_keys: b.has_repeated_keys,
+					sane_miniscript: ScriptContexts::or(a.sane_miniscript,b.sane_miniscript),
 				})
 			}
 		}
