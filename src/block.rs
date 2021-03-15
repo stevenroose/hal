@@ -1,4 +1,3 @@
-use bitcoin::util::hash::BitcoinHash;
 use bitcoin::{Block, BlockHash, BlockHeader, Network, TxMerkleNode, Txid};
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +7,7 @@ use tx::TransactionInfo;
 pub struct BlockHeaderInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub block_hash: Option<BlockHash>,
-	pub version: u32,
+	pub version: i32,
 	pub previous_block_hash: BlockHash,
 	pub merkle_root: TxMerkleNode,
 	pub time: u32,
@@ -19,7 +18,7 @@ pub struct BlockHeaderInfo {
 impl<'a> ::GetInfo<BlockHeaderInfo> for BlockHeader {
 	fn get_info(&self, _network: Network) -> BlockHeaderInfo {
 		BlockHeaderInfo {
-			block_hash: Some(self.bitcoin_hash()),
+			block_hash: Some(self.block_hash()),
 			version: self.version,
 			previous_block_hash: self.prev_blockhash,
 			merkle_root: self.merkle_root,

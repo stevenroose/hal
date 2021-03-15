@@ -1,10 +1,13 @@
 use bitcoin::hashes::hex::FromHex;
 use bitcoin::Script;
 use clap;
-use hal::miniscript::{DescriptorInfo, MiniscriptInfo, MiniscriptKeyType, PolicyInfo};
+use hal::miniscript::{
+	DescriptorInfo, MiniscriptInfo, MiniscriptKeyType, Miniscripts, PolicyInfo, ScriptContexts,
+};
 use miniscript::descriptor::Descriptor;
-use miniscript::miniscript::Miniscript;
-use miniscript::{policy, DummyKey, DummyKeyHash, MiniscriptKey};
+use miniscript::miniscript::{BareCtx, Legacy, Miniscript, Segwitv0};
+use miniscript::policy::Liftable;
+use miniscript::{policy, DescriptorTrait, MiniscriptKey};
 
 use cmd;
 
@@ -41,31 +44,24 @@ fn exec_descriptor<'a>(matches: &clap::ArgMatches<'a>) {
 		.parse::<Descriptor<bitcoin::PublicKey>>()
 		.map(|desc| DescriptorInfo {
 			key_type: MiniscriptKeyType::PublicKey,
-			address: desc.address(network).map(|a| a.to_string()),
+			address: desc.address(network).map(|a| a.to_string()).ok(),
 			script_pubkey: Some(desc.script_pubkey().into_bytes().into()),
 			unsigned_script_sig: Some(desc.unsigned_script_sig().into_bytes().into()),
-			witness_script: Some(desc.witness_script().into_bytes().into()),
-			max_satisfaction_weight: desc.max_satisfaction_weight(),
-			policy: policy::Liftable::lift(&desc).to_string(),
+			witness_script: Some(desc.explicit_script().into_bytes().into()),
+			max_satisfaction_weight: desc.max_satisfaction_weight().ok(),
+			policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
 		})
 		.or_else(|e| {
 			debug!("Can't parse descriptor with public keys: {}", e);
 			// Then try with strings.
-			desc_str.parse::<Descriptor<String>>().map(|desc| {
-				let dummy = {
-					let res: Result<_, ()> =
-						desc.translate_pk(|_| Ok(DummyKey), |_| Ok(DummyKeyHash));
-					res.unwrap()
-				};
-				DescriptorInfo {
-					key_type: MiniscriptKeyType::String,
-					address: None,
-					script_pubkey: None,
-					unsigned_script_sig: None,
-					witness_script: None,
-					max_satisfaction_weight: dummy.max_satisfaction_weight(),
-					policy: policy::Liftable::lift(&desc).to_string(),
-				}
+			desc_str.parse::<Descriptor<String>>().map(|desc| DescriptorInfo {
+				key_type: MiniscriptKeyType::String,
+				address: None,
+				script_pubkey: None,
+				unsigned_script_sig: None,
+				witness_script: None,
+				max_satisfaction_weight: desc.max_satisfaction_weight().ok(),
+				policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
 			})
 		})
 		.expect("invalid miniscript");
@@ -84,38 +80,48 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 	let miniscript_str = matches.value_of("miniscript").expect("no miniscript argument given");
 
 	// First try with pubkeys.
-	let info = miniscript_str
-		.parse::<Miniscript<bitcoin::PublicKey>>()
-		.map(|ms| MiniscriptInfo {
-			key_type: MiniscriptKeyType::PublicKey,
-			script_size: ms.script_size(),
-			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements(),
-			max_satisfaction_size_segwit: ms.max_satisfaction_size(2),
-			max_satisfaction_size_non_segwit: ms.max_satisfaction_size(1),
-			script: Some(ms.encode().into_bytes().into()),
-			policy: policy::Liftable::lift(&ms).to_string(),
+	let bare_info = Miniscript::<bitcoin::PublicKey, BareCtx>::from_str_insane(miniscript_str)
+		.map_err(|e| debug!("Cannot parse as Bare Miniscript {}", e))
+		.map(|x| {
+			let script = x.encode();
+			MiniscriptInfo::from_bare(x, MiniscriptKeyType::PublicKey, Some(script))
 		})
-		.or_else(|e| {
-			debug!("Can't parse miniscript with public keys: {}", e);
-			// Then try with strings.
-			miniscript_str.parse::<Miniscript<String>>().map(|ms| {
-				let dummy = {
-					let res: Result<_, ()> =
-						ms.translate_pk(&mut |_| Ok(DummyKey), &mut |_| Ok(DummyKeyHash));
-					res.unwrap()
-				};
-				MiniscriptInfo {
-					key_type: MiniscriptKeyType::String,
-					script_size: dummy.script_size(),
-					max_satisfaction_witness_elements: dummy.max_satisfaction_witness_elements(),
-					max_satisfaction_size_segwit: dummy.max_satisfaction_size(2),
-					max_satisfaction_size_non_segwit: dummy.max_satisfaction_size(1),
-					script: None,
-					policy: policy::Liftable::lift(&ms).to_string(),
-				}
-			})
+		.ok();
+	let p2sh_info = Miniscript::<bitcoin::PublicKey, Legacy>::from_str_insane(miniscript_str)
+		.map_err(|e| debug!("Cannot parse as Legacy/p2sh Miniscript {}", e))
+		.map(|x| {
+			let script = x.encode();
+			MiniscriptInfo::from_p2sh(x, MiniscriptKeyType::PublicKey, Some(script))
 		})
-		.expect("invalid miniscript");
+		.ok();
+	let segwit_info = Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str_insane(miniscript_str)
+		.map_err(|e| info!("Cannot parse as Segwitv0 Miniscript {}", e))
+		.map(|x| {
+			let script = x.encode();
+			MiniscriptInfo::from_segwitv0(x, MiniscriptKeyType::PublicKey, Some(script))
+		})
+		.ok();
+	let info = if bare_info.is_none() && p2sh_info.is_none() && segwit_info.is_none() {
+		// Try as Strings
+		let bare_info = Miniscript::<String, BareCtx>::from_str_insane(miniscript_str)
+			.map_err(|e| debug!("Cannot parse as Bare Miniscript {}", e))
+			.map(|x| MiniscriptInfo::from_bare(x, MiniscriptKeyType::String, None))
+			.ok();
+		let p2sh_info = Miniscript::<String, Legacy>::from_str_insane(miniscript_str)
+			.map_err(|e| debug!("Cannot parse as Legacy/p2sh Miniscript {}", e))
+			.map(|x| MiniscriptInfo::from_p2sh(x, MiniscriptKeyType::String, None))
+			.ok();
+		let segwit_info = Miniscript::<String, Segwitv0>::from_str_insane(miniscript_str)
+			.map_err(|e| info!("Cannot parse as Segwitv0 Miniscript {}", e))
+			.map(|x| MiniscriptInfo::from_segwitv0(x, MiniscriptKeyType::String, None))
+			.ok();
+
+		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
+			.expect("Invalid Miniscript");
+	} else {
+		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
+			.unwrap();
+	};
 	cmd::print_output(matches, &info);
 }
 
@@ -129,17 +135,28 @@ fn exec_parse<'a>(matches: &clap::ArgMatches<'a>) {
 	let script_hex = matches.value_of("script").expect("no script argument given");
 	let script = Script::from(Vec::<u8>::from_hex(&script_hex).expect("invalid hex script"));
 
-	let ms = Miniscript::parse(&script).expect("script is not valid miniscript");
-	let info = MiniscriptInfo {
-		key_type: MiniscriptKeyType::PublicKey,
-		script_size: ms.script_size(),
-		max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements(),
-		max_satisfaction_size_segwit: ms.max_satisfaction_size(2),
-		max_satisfaction_size_non_segwit: ms.max_satisfaction_size(1),
-		script: Some(ms.encode().into_bytes().into()),
-		policy: policy::Liftable::lift(&ms).to_string(),
-	};
-	cmd::print_output(matches, &info);
+	let segwit_info = Miniscript::<_, Segwitv0>::parse_insane(&script)
+		.map_err(|e| info!("Cannot parse as segwit Miniscript {}", e))
+		.map(|x| {
+			MiniscriptInfo::from_segwitv0(x, MiniscriptKeyType::PublicKey, Some(script.clone()))
+		})
+		.ok();
+	let legacy_info = Miniscript::<_, Legacy>::parse_insane(&script)
+		.map_err(|e| debug!("Cannot parse as Legacy Miniscript {}", e))
+		.map(|x| MiniscriptInfo::from_p2sh(x, MiniscriptKeyType::PublicKey, Some(script.clone())))
+		.ok();
+	let bare_info = Miniscript::<_, BareCtx>::parse_insane(&script)
+		.map_err(|e| debug!("Cannot parse as Bare Miniscript {}", e))
+		.map(|x| MiniscriptInfo::from_bare(x, MiniscriptKeyType::PublicKey, Some(script)))
+		.ok();
+	if segwit_info.is_none() && legacy_info.is_none() && bare_info.is_none() {
+		panic!("Invalid Miniscript under all script contexts")
+	}
+
+	let comb_info =
+		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, legacy_info), segwit_info)
+			.unwrap();
+	cmd::print_output(matches, &comb_info);
 }
 
 fn cmd_policy<'a>() -> clap::App<'a, 'a> {
@@ -155,12 +172,14 @@ fn get_policy_info<Pk: MiniscriptKey>(
 	key_type: MiniscriptKeyType,
 ) -> Result<PolicyInfo, miniscript::Error>
 where
+	Pk: std::str::FromStr,
+	Pk::Hash: std::str::FromStr,
 	<<Pk as miniscript::MiniscriptKey>::Hash as ::std::str::FromStr>::Err: ::std::fmt::Display,
 	<Pk as ::std::str::FromStr>::Err: ::std::fmt::Display,
 {
 	let concrete_pol: Option<policy::Concrete<Pk>> = policy_str.parse().ok();
 	let policy = match concrete_pol {
-		Some(ref concrete) => policy::Liftable::lift(concrete),
+		Some(ref concrete) => policy::Liftable::lift(concrete)?,
 		None => policy_str.parse()?,
 	};
 	Ok(PolicyInfo {
@@ -173,12 +192,28 @@ where
 		minimum_n_keys: policy.minimum_n_keys(),
 		sorted: policy.clone().sorted().to_string(),
 		normalized: policy.clone().normalized().to_string(),
-		miniscript: concrete_pol.and_then(|p| match policy::compiler::best_compilation(&p) {
-			Ok(ms) => Some(ms.to_string()),
-			Err(e) => {
-				info!("Compiler error: {}", e);
-				None
-			}
+		miniscript: concrete_pol.map(|p| Miniscripts {
+			bare: match policy::compiler::best_compilation::<Pk, BareCtx>(&p) {
+				Ok(ms) => Some(ms.to_string()),
+				Err(e) => {
+					debug!("Compiler error: {}", e);
+					None
+				}
+			},
+			p2sh: match policy::compiler::best_compilation::<Pk, Legacy>(&p) {
+				Ok(ms) => Some(ms.to_string()),
+				Err(e) => {
+					debug!("Compiler error: {}", e);
+					None
+				}
+			},
+			segwitv0: match policy::compiler::best_compilation::<Pk, Segwitv0>(&p) {
+				Ok(ms) => Some(ms.to_string()),
+				Err(e) => {
+					debug!("Compiler error: {}", e);
+					None
+				}
+			},
 		}),
 	})
 }
@@ -196,6 +231,152 @@ fn exec_policy<'a>(matches: &clap::ArgMatches<'a>) {
 		match get_policy_info::<String>(policy_str, MiniscriptKeyType::String) {
 			Ok(info) => cmd::print_output(matches, &info),
 			Err(e) => panic!("Invalid policy: {}", e),
+		}
+	}
+}
+
+trait FromScriptContexts: Sized {
+	fn from_bare<Pk: MiniscriptKey>(
+		ms: Miniscript<Pk, BareCtx>,
+		key_type: MiniscriptKeyType,
+		script: Option<bitcoin::Script>,
+	) -> Self;
+	fn from_p2sh<Pk: MiniscriptKey>(
+		ms: Miniscript<Pk, Legacy>,
+		key_type: MiniscriptKeyType,
+		script: Option<bitcoin::Script>,
+	) -> Self;
+	fn from_segwitv0<Pk: MiniscriptKey>(
+		ms: Miniscript<Pk, Segwitv0>,
+		key_type: MiniscriptKeyType,
+		script: Option<bitcoin::Script>,
+	) -> Self;
+	fn combine(a: Option<Self>, b: Option<Self>) -> Option<Self>;
+}
+
+impl FromScriptContexts for MiniscriptInfo {
+	fn from_bare<Pk: MiniscriptKey>(
+		ms: Miniscript<Pk, BareCtx>,
+		key_type: MiniscriptKeyType,
+		script: Option<bitcoin::Script>,
+	) -> Self {
+		Self {
+			key_type: key_type,
+			valid_script_contexts: ScriptContexts::from_bare(true),
+			script_size: ms.script_size(),
+			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
+			max_satisfaction_size_segwit: None,
+			max_satisfaction_size_non_segwit: ms.max_satisfaction_size().ok(),
+			script: script.map(|x| x.into_bytes().into()),
+			policy: match ms.lift() {
+				Ok(pol) => Some(pol.to_string()),
+				Err(e) => {
+					info!("Lift error {}: BareCtx", e);
+					None
+				}
+			},
+			requires_sig: ms.requires_sig(),
+			non_malleable: ScriptContexts::from_bare(ms.is_non_malleable()),
+			within_resource_limits: ScriptContexts::from_bare(ms.within_resource_limits()),
+			has_mixed_timelocks: ms.has_mixed_timelocks(),
+			has_repeated_keys: ms.has_repeated_keys(),
+			sane_miniscript: ScriptContexts::from_bare(ms.sanity_check().is_ok()),
+		}
+	}
+
+	fn from_p2sh<Pk: MiniscriptKey>(
+		ms: Miniscript<Pk, Legacy>,
+		key_type: MiniscriptKeyType,
+		script: Option<bitcoin::Script>,
+	) -> Self {
+		Self {
+			key_type: key_type,
+			valid_script_contexts: ScriptContexts::from_p2sh(true),
+			script_size: ms.script_size(),
+			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
+			max_satisfaction_size_segwit: None,
+			max_satisfaction_size_non_segwit: ms.max_satisfaction_size().ok(),
+			script: script.map(|x| x.into_bytes().into()),
+			policy: match ms.lift() {
+				Ok(pol) => Some(pol.to_string()),
+				Err(e) => {
+					info!("Lift error {}: Legacy(p2sh) context", e);
+					None
+				}
+			},
+			requires_sig: ms.requires_sig(),
+			non_malleable: ScriptContexts::from_p2sh(ms.is_non_malleable()),
+			within_resource_limits: ScriptContexts::from_p2sh(ms.within_resource_limits()),
+			has_mixed_timelocks: ms.has_mixed_timelocks(),
+			has_repeated_keys: ms.has_repeated_keys(),
+			sane_miniscript: ScriptContexts::from_p2sh(ms.sanity_check().is_ok()),
+		}
+	}
+
+	fn from_segwitv0<Pk: MiniscriptKey>(
+		ms: Miniscript<Pk, Segwitv0>,
+		key_type: MiniscriptKeyType,
+		script: Option<bitcoin::Script>,
+	) -> Self {
+		Self {
+			key_type: key_type,
+			valid_script_contexts: ScriptContexts::from_segwitv0(true),
+			script_size: ms.script_size(),
+			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
+			max_satisfaction_size_segwit: ms.max_satisfaction_size().ok(),
+			max_satisfaction_size_non_segwit: None,
+			script: script.map(|x| x.into_bytes().into()),
+			policy: match ms.lift() {
+				Ok(pol) => Some(pol.to_string()),
+				Err(e) => {
+					info!("Lift error {}: Segwitv0 Context", e);
+					None
+				}
+			},
+			requires_sig: ms.requires_sig(),
+			non_malleable: ScriptContexts::from_segwitv0(ms.is_non_malleable()),
+			within_resource_limits: ScriptContexts::from_segwitv0(ms.within_resource_limits()),
+			has_mixed_timelocks: ms.has_mixed_timelocks(),
+			has_repeated_keys: ms.has_repeated_keys(),
+			sane_miniscript: ScriptContexts::from_segwitv0(ms.sanity_check().is_ok()),
+		}
+	}
+
+	// Helper function to combine two Miniscript Infos of same key types
+	// Used to combine Infos from different scriptContexts
+	fn combine(a: Option<Self>, b: Option<Self>) -> Option<Self> {
+		match (a, b) {
+			(None, None) => None,
+			(None, Some(b)) => Some(b),
+			(Some(a), None) => Some(a),
+			(Some(a), Some(b)) => {
+				debug_assert!(a.key_type == b.key_type);
+				Some(Self {
+					key_type: a.key_type,
+					valid_script_contexts: ScriptContexts::or(
+						a.valid_script_contexts,
+						b.valid_script_contexts,
+					),
+					script_size: a.script_size,
+					max_satisfaction_witness_elements: a
+						.max_satisfaction_witness_elements
+						.or(b.max_satisfaction_witness_elements),
+					max_satisfaction_size_segwit: a
+						.max_satisfaction_size_segwit
+						.or(b.max_satisfaction_size_segwit),
+					max_satisfaction_size_non_segwit: a
+						.max_satisfaction_size_non_segwit
+						.or(b.max_satisfaction_size_non_segwit),
+					script: a.script,
+					policy: a.policy.or(b.policy),
+					requires_sig: a.requires_sig,
+					non_malleable: ScriptContexts::or(a.non_malleable,b.non_malleable),
+					within_resource_limits: ScriptContexts::or(a.within_resource_limits,b.within_resource_limits),
+					has_mixed_timelocks: a.has_mixed_timelocks,
+					has_repeated_keys: b.has_repeated_keys,
+					sane_miniscript: ScriptContexts::or(a.sane_miniscript,b.sane_miniscript),
+				})
+			}
 		}
 	}
 }

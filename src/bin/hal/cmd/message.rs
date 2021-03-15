@@ -140,8 +140,12 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 		let addr = match expected.address_type() {
 			None => panic!("Unknown address type provided"),
 			Some(AddressType::P2pkh) => Address::p2pkh(&pubkey, network),
-			Some(AddressType::P2wpkh) => Address::p2wpkh(&pubkey, network),
-			Some(AddressType::P2sh) => Address::p2shwpkh(&pubkey, network),
+			Some(AddressType::P2wpkh) => {
+				Address::p2wpkh(&pubkey, network).expect("Uncompressed key in Segwit")
+			}
+			Some(AddressType::P2sh) => {
+				Address::p2shwpkh(&pubkey, network).expect("Uncompressed key in Segwit")
+			}
 			Some(tp) => panic!("Address of type {} can't sign messages.", tp),
 		};
 		// We need to use to_string because regtest and testnet addresses are the same.

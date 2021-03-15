@@ -93,7 +93,7 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 				.map(|s| ::tx::OutputScript(s).get_info(network)),
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
-				for (key, value) in self.hd_keypaths.iter() {
+				for (key, value) in self.bip32_derivation.iter() {
 					hd_keypaths.insert(key.to_bytes().into(),
 						HDPathInfo {
 							master_fingerprint: value.0[..].into(),
@@ -130,7 +130,7 @@ impl ::GetInfo<PsbtOutputInfo> for psbt::Output {
 				.map(|s| ::tx::OutputScript(s).get_info(network)),
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
-				for (key, value) in self.hd_keypaths.iter() {
+				for (key, value) in self.bip32_derivation.iter() {
 					hd_keypaths.insert(key.to_bytes().into(),
 						HDPathInfo {
 							master_fingerprint: value.0[..].into(),

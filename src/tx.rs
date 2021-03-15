@@ -108,7 +108,7 @@ pub struct TransactionInfo {
 	pub size: Option<usize>,
 	pub weight: Option<usize>,
 	pub vsize: Option<usize>,
-	pub version: Option<u32>,
+	pub version: Option<i32>,
 	pub locktime: Option<u32>,
 	pub inputs: Option<Vec<InputInfo>>,
 	pub outputs: Option<Vec<OutputInfo>>,
