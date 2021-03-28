@@ -374,10 +374,6 @@ fn exec_finalize<'a>(matches: &clap::ArgMatches<'a>) {
 	let (raw, _) = file_or_raw(&matches.value_of("psbt").unwrap());
 	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
 
-	if psbt.inputs.iter().any(|i| i.final_script_sig.is_none() && i.final_script_witness.is_none())
-	{
-		panic!("PSBT is missing input data!");
-	}
 
 	// Create a secp context, should there be one with static lifetime?
 	let secp = secp256k1::Secp256k1::verification_only();
