@@ -33,6 +33,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 }
 
+#[derive(Debug)]
 enum PsbtSource {
 	Base64,
 	Hex,
@@ -44,10 +45,10 @@ enum PsbtSource {
 /// the content bytes.
 /// Also returns an enum value indicating which source worked.
 fn file_or_raw(flag: &str) -> (Vec<u8>, PsbtSource) {
-	if let Ok(raw) = base64::decode(&flag) {
-		(raw, PsbtSource::Base64)
-	} else if let Ok(raw) = hex::decode(&flag) {
+	if let Ok(raw) = hex::decode(&flag) {
 		(raw, PsbtSource::Hex)
+	} else if let Ok(raw) = base64::decode(&flag) {
+		(raw, PsbtSource::Base64)
 	} else if let Ok(mut file) = File::open(&flag) {
 		let mut buf = Vec::new();
 		file.read_to_end(&mut buf).expect("error reading file");
