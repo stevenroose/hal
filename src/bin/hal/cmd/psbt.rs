@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::io::{Read, Write};
+use std::str::FromStr;
 
 use base64;
 use clap;
 use hex;
 
-use bitcoin::consensus::{deserialize, serialize};
+use bitcoin::{PrivateKey, consensus::{deserialize, serialize}};
 use bitcoin::secp256k1;
 use bitcoin::util::bip32;
 use bitcoin::util::psbt;
@@ -20,6 +21,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_edit())
 		.subcommand(cmd_finalize())
 		.subcommand(cmd_merge())
+		.subcommand(cmd_rawsign())
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
@@ -29,6 +31,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		("edit", Some(ref m)) => exec_edit(&m),
 		("finalize", Some(ref m)) => exec_finalize(&m),
 		("merge", Some(ref m)) => exec_merge(&m),
+		("rawsign", Some(ref m)) => exec_rawsign(&m),
 		(c, _) => eprintln!("command {} unknown", c),
 	};
 }
@@ -427,5 +430,110 @@ fn exec_merge<'a>(matches: &clap::ArgMatches<'a>) {
 		::std::io::stdout().write_all(&merged_raw).unwrap();
 	} else {
 		print!("{}", base64::encode(&merged_raw));
+	}
+}
+
+fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("rawsign", "sign a psbt with private key and add sig to partial sigs").args(&[
+		cmd::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(true),
+		cmd::arg("input-idx", "the input index to edit").required(true),
+		cmd::arg("priv-key", "the private key in WIF/hex").required(true),
+		cmd::arg("compressed", "Whether the corresponding pk is compressed")
+			.required(false)
+			.default_value("true"),
+		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r")
+			.required(false),
+		cmd::opt("output", "where to save the resulting PSBT file -- in place if omitted")
+			.short("o")
+			.takes_value(true)
+			.required(false),
+	])
+}
+
+// Get the scriptpubkey/amount for the psbt input
+fn get_spk_amt(psbt: &psbt::PartiallySignedTransaction, index: usize) -> (&bitcoin::Script, u64) {
+	let script_pubkey;
+	let amt;
+	let inp = &psbt.inputs[index];
+	if let Some(ref witness_utxo) = inp.witness_utxo {
+		script_pubkey = &witness_utxo.script_pubkey;
+		amt = witness_utxo.value;
+	} else if let Some(ref non_witness_utxo) = inp.non_witness_utxo {
+		let vout = psbt.global.unsigned_tx.input[index].previous_output.vout;
+		script_pubkey = &non_witness_utxo.output[vout as usize].script_pubkey;
+		amt = non_witness_utxo.output[vout as usize].value;
+	} else {
+		panic!("Psbt missing both witness and non-witness utxo")
+	}
+	(script_pubkey, amt)
+}
+
+fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
+	let (raw, source) = file_or_raw(&matches.value_of("psbt").unwrap());
+	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
+
+	let priv_key = matches.value_of("priv-key").expect("no key provided");
+	let i = matches.value_of("input-idx").expect("Input index not provided")
+		.parse::<usize>().expect("input-idx must be a positive integer");
+	let compressed = matches.value_of("compressed").unwrap()
+		.parse::<bool>().expect("Compressed must be boolean");
+
+	if i >= psbt.inputs.len() {
+		panic!("Psbt input index out of range")
+	}
+	let (spk, amt) = get_spk_amt(&psbt, i);
+	let redeem_script = psbt.inputs[i].redeem_script.as_ref().map(|x|
+		bitcoin::blockdata::script::Builder::new()
+		.push_slice(x.as_bytes())
+		.into_script());
+	let witness_script = psbt.inputs[i].witness_script.as_ref()
+		.map(|x| vec![x.clone().into_bytes()]);
+	let witness = witness_script.unwrap_or(Vec::new());
+	let script_sig = redeem_script.unwrap_or(bitcoin::Script::new());
+
+	// Call with age and height 0.
+	// TODO: Create a method to rust-bitcoin psbt that outputs sighash
+	// Workaround using miniscript interpreter
+	let interp = miniscript::Interpreter::from_txdata(spk, &script_sig, &witness, 0, 0)
+		.expect("Witness/Redeem Script is not a Miniscript");
+	let sighash_ty = psbt.inputs[i].sighash_type.unwrap_or(bitcoin::SigHashType::All);
+	let msg = interp.sighash_message(&psbt.global.unsigned_tx, i, amt, sighash_ty);
+
+	let sk = if let Ok(privkey) = PrivateKey::from_str(&priv_key) {
+		privkey.key
+	} else if let Ok(sk) = secp256k1::SecretKey::from_str(&priv_key) {
+		sk
+	} else {
+		panic!("invalid WIF/hex private key: {}", priv_key);
+	};
+	let secp = secp256k1::Secp256k1::signing_only();
+	let pk = secp256k1::PublicKey::from_secret_key(&secp, &sk);
+	let pk = bitcoin::PublicKey {
+		compressed: compressed,
+		key: pk,
+	};
+	let secp_sig = secp.sign(&msg, &sk);
+	let mut btc_sig = secp_sig.serialize_der().as_ref().to_vec();
+	btc_sig.push(sighash_ty as u8);
+
+	// mutate the psbt
+	psbt.inputs[i].partial_sigs.insert(pk, btc_sig);
+	let raw = serialize(&psbt);
+	if let Some(path) = matches.value_of("output") {
+		let mut file = File::create(&path).expect("failed to open output file");
+		file.write_all(&raw).expect("error writing output file");
+	} else if matches.is_present("raw-stdout") {
+		::std::io::stdout().write_all(&raw).unwrap();
+	} else {
+		match source {
+			PsbtSource::Hex => println!("{}", hex::encode(&raw)),
+			PsbtSource::Base64 => println!("{}", base64::encode(&raw)),
+			PsbtSource::File => {
+				let path = matches.value_of("psbt").unwrap();
+				let mut file = File::create(&path).expect("failed to PSBT file for writing");
+				file.write_all(&raw).expect("error writing PSBT file");
+			}
+		}
 	}
 }
