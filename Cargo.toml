@@ -33,7 +33,7 @@ hex = "0.3.2"
 
 bitcoin = { version = "0.26.0", features = [ "use-serde" ] }
 secp256k1 = { version = "0.20.1", features = [ "recovery" ] }
-tiny-bip39 = "0.6.2"
+bip39 = { version = "1.0.1", features = [ "all-languages" ] }
 lightning-invoice = "0.4.0"
 miniscript = { version = "5.1.0", features = ["compiler"] }
 

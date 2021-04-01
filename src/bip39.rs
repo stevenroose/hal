@@ -1,4 +1,4 @@
-use bip39lib::{Language, Mnemonic, Seed};
+use bip39lib::{Language, Mnemonic};
 use bitcoin::{secp256k1, util::bip32, Network};
 use serde::{Deserialize, Serialize};
 
@@ -18,23 +18,24 @@ impl MnemonicInfo {
 		passphrase: &str,
 		network: Network,
 	) -> MnemonicInfo {
-		let entropy: Vec<u8> = mnemonic.entropy().into();
+		let entropy: Vec<u8> = mnemonic.to_entropy().into();
 		MnemonicInfo {
-			mnemonic: mnemonic.phrase().to_owned(),
+			mnemonic: mnemonic.to_string(),
 			entropy_bits: entropy.len() * 8,
 			entropy: entropy.into(),
 			language: match mnemonic.language() {
 				Language::English => "english",
-				Language::ChineseSimplified => "simplified-chinese",
-				Language::ChineseTraditional => "traditional-chinese",
+				Language::Czech => "czech",
 				Language::French => "french",
 				Language::Italian => "italian",
 				Language::Japanese => "japanese",
 				Language::Korean => "korean",
 				Language::Spanish => "spanish",
+				Language::SimplifiedChinese => "simplified-chinese",
+				Language::TraditionalChinese => "traditional-chinese",
 			},
 			passphrase: passphrase.to_owned(),
-			seed: ::GetInfo::get_info(&bip39::Seed::new(&mnemonic, passphrase), network),
+			seed: ::GetInfo::get_info(&mnemonic.to_seed(passphrase), network),
 		}
 	}
 }
@@ -52,13 +53,13 @@ pub struct SeedInfo {
 	pub bip32_xpub: bip32::ExtendedPubKey,
 }
 
-impl ::GetInfo<SeedInfo> for Seed {
+impl ::GetInfo<SeedInfo> for [u8; 64] {
 	fn get_info(&self, network: Network) -> SeedInfo {
-		let xpriv = bip32::ExtendedPrivKey::new_master(network, self.as_bytes()).unwrap();
+		let xpriv = bip32::ExtendedPrivKey::new_master(network, &self[..]).unwrap();
 		let xpub =
 			bip32::ExtendedPubKey::from_private(&secp256k1::Secp256k1::signing_only(), &xpriv);
 		SeedInfo {
-			seed: self.as_bytes().into(),
+			seed: self.to_vec().into(),
 			bip32_xpriv: xpriv,
 			bip32_xpub: xpub,
 		}

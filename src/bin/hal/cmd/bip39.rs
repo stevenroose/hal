@@ -1,6 +1,6 @@
 use std::io;
 
-use bip39;
+use bip39::{Language, Mnemonic};
 use bitcoin::hashes::{sha256, Hash};
 use clap;
 use hex;
@@ -36,11 +36,12 @@ fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 	let network = cmd::network(matches);
 
-	let nb_words: usize =
-		matches.value_of("words").unwrap_or("24").parse().expect("invalid number of words");
-	let mnem_type = bip39::MnemonicType::for_word_count(nb_words).expect("invalid number of words");
-	let nb_entropy_bytes = (mnem_type.entropy_bits() / 8) as usize;
-	assert!(nb_entropy_bytes <= 32, "{} > 32", nb_entropy_bytes);
+	let word_count = matches.value_of("words").unwrap_or("24").parse::<usize>()
+		.expect("invalid number of words");
+	if word_count < 12 || word_count % 6 != 0 || word_count > 24 {
+		panic!("invalid word count: {}", word_count);
+	}
+	let nb_entropy_bytes = (word_count / 3) * 4;
 
 	let mut entropy;
 	match (matches.is_present("entropy"), matches.is_present("stdin")) {
@@ -50,7 +51,7 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 			if entropy_hex.len() != nb_entropy_bytes * 2 {
 				panic!(
 					"invalid entropy length for {} word mnemonic, need {} bytes",
-					nb_words, nb_entropy_bytes
+					word_count, nb_entropy_bytes
 				);
 			}
 			entropy = hex::decode(&entropy_hex).expect("invalid entropy hex");
@@ -71,7 +72,7 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 	}
 
 	assert!(entropy.len() == nb_entropy_bytes);
-	let mnemonic = bip39::Mnemonic::from_entropy(&entropy, bip39::Language::English).unwrap();
+	let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy).unwrap();
 	cmd::print_output(matches, &hal::GetInfo::get_info(&mnemonic, network))
 }
 
@@ -91,8 +92,8 @@ fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
 fn exec_get_seed<'a>(matches: &clap::ArgMatches<'a>) {
 	let network = cmd::network(matches);
 
-	let phrase = matches.value_of("mnemonic").expect("no mnemonic provided");
-	let mnemonic: bip39::Mnemonic = bip39::Mnemonic::from_phrase(phrase, bip39::Language::English)
+	let mnemonic = matches.value_of("mnemonic").expect("no mnemonic provided");
+	let mnemonic = Mnemonic::parse(mnemonic)
 		.expect("invalid mnemonic phrase");
 
 	let info = ::hal::bip39::MnemonicInfo::from_mnemonic_with_passphrase(
