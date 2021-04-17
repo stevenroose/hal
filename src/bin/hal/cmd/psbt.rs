@@ -453,20 +453,15 @@ fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
 
 // Get the scriptpubkey/amount for the psbt input
 fn get_spk_amt(psbt: &psbt::PartiallySignedTransaction, index: usize) -> (&bitcoin::Script, u64) {
-	let script_pubkey;
-	let amt;
 	let inp = &psbt.inputs[index];
 	if let Some(ref witness_utxo) = inp.witness_utxo {
-		script_pubkey = &witness_utxo.script_pubkey;
-		amt = witness_utxo.value;
+		(&witness_utxo.script_pubkey, witness_utxo.value)
 	} else if let Some(ref non_witness_utxo) = inp.non_witness_utxo {
-		let vout = psbt.global.unsigned_tx.input[index].previous_output.vout;
-		script_pubkey = &non_witness_utxo.output[vout as usize].script_pubkey;
-		amt = non_witness_utxo.output[vout as usize].value;
+		let vout = psbt.global.unsigned_tx.input[index].previous_output.vout as usize;
+		(&non_witness_utxo.output[vout].script_pubkey, non_witness_utxo.output[vout].value)
 	} else {
-		panic!("Psbt missing both witness and non-witness utxo")
+		panic!("PSBT missing both witness and non-witness utxo")
 	}
-	(script_pubkey, amt)
 }
 
 fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
@@ -480,9 +475,8 @@ fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
 		.parse::<bool>().expect("Compressed must be boolean");
 
 	if i >= psbt.inputs.len() {
-		panic!("Psbt input index out of range")
+		panic!("PSBT input index out of range")
 	}
-	let (spk, amt) = get_spk_amt(&psbt, i);
 	let redeem_script = psbt.inputs[i].redeem_script.as_ref().map(|x|
 		bitcoin::blockdata::script::Builder::new()
 		.push_slice(x.as_bytes())
@@ -492,13 +486,17 @@ fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
 	let witness = witness_script.unwrap_or(Vec::new());
 	let script_sig = redeem_script.unwrap_or(bitcoin::Script::new());
 
-	// Call with age and height 0.
-	// TODO: Create a method to rust-bitcoin psbt that outputs sighash
-	// Workaround using miniscript interpreter
-	let interp = miniscript::Interpreter::from_txdata(spk, &script_sig, &witness, 0, 0)
-		.expect("Witness/Redeem Script is not a Miniscript");
-	let sighash_ty = psbt.inputs[i].sighash_type.unwrap_or(bitcoin::SigHashType::All);
-	let msg = interp.sighash_message(&psbt.global.unsigned_tx, i, amt, sighash_ty);
+	let (msg, sighashtype) = {
+		let (spk, amt) = get_spk_amt(&psbt, i);
+		// Call with age and height 0.
+		// TODO: Create a method to rust-bitcoin psbt that outputs sighash
+		// Workaround using miniscript interpreter
+		let interp = miniscript::Interpreter::from_txdata(spk, &script_sig, &witness, 0, 0)
+			.expect("Witness/Redeem Script is not a Miniscript");
+		let sht = psbt.inputs[i].sighash_type.unwrap_or(bitcoin::SigHashType::All);
+		let msg = interp.sighash_message(&psbt.global.unsigned_tx, i, amt, sht);
+		(msg, sht)
+	};
 
 	let sk = if let Ok(privkey) = PrivateKey::from_str(&priv_key) {
 		privkey.key
@@ -515,7 +513,7 @@ fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 	let secp_sig = secp.sign(&msg, &sk);
 	let mut btc_sig = secp_sig.serialize_der().as_ref().to_vec();
-	btc_sig.push(sighash_ty as u8);
+	btc_sig.push(sighashtype as u8);
 
 	// mutate the psbt
 	psbt.inputs[i].partial_sigs.insert(pk, btc_sig);
