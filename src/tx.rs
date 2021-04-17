@@ -112,20 +112,23 @@ pub struct TransactionInfo {
 	pub locktime: Option<u32>,
 	pub inputs: Option<Vec<InputInfo>>,
 	pub outputs: Option<Vec<OutputInfo>>,
+	pub total_output_value: Option<u64>,
 }
 
 impl ::GetInfo<TransactionInfo> for Transaction {
 	fn get_info(&self, network: Network) -> TransactionInfo {
+		let weight = self.get_weight() as usize;
 		TransactionInfo {
 			txid: Some(self.txid()),
 			wtxid: Some(self.wtxid()),
 			version: Some(self.version),
 			locktime: Some(self.lock_time),
 			size: Some(serialize(self).len()),
-			weight: Some(self.get_weight() as usize),
-			vsize: Some((self.get_weight() / 4) as usize),
+			weight: Some(weight),
+			vsize: Some(weight / 4),
 			inputs: Some(self.input.iter().map(|i| i.get_info(network)).collect()),
 			outputs: Some(self.output.iter().map(|o| o.get_info(network)).collect()),
+			total_output_value: Some(self.output.iter().map(|o| o.value).sum()),
 		}
 	}
 }
