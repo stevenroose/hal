@@ -152,7 +152,7 @@ impl ProcessBuilder {
 		let exit = command.status().expect(&format!("could not execute process {}", self));
 
 		if !exit.success() {
-			panic!(format!("process didn't exit successfully: {}", self));
+			panic!("process didn't exit successfully: {}", self);
 		}
 	}
 
@@ -182,7 +182,7 @@ impl ProcessBuilder {
 		let output = command.output().expect(&format!("could not execute process {}", self));
 
 		if !output.status.success() {
-			panic!(format!("process didn't exit successfully: {}", self));
+			panic!("process didn't exit successfully: {}", self);
 		}
 	}
 

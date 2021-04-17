@@ -117,10 +117,10 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 			.ok();
 
 		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
-			.expect("Invalid Miniscript");
+			.expect("Invalid Miniscript")
 	} else {
 		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
-			.unwrap();
+			.unwrap()
 	};
 	cmd::print_output(matches, &info);
 }

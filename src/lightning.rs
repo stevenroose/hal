@@ -14,15 +14,15 @@ pub fn parse_short_channel_id(cid: &str) -> u64 {
 	let mut split = cid.split("x");
 	let blocknum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
 	if blocknum & 0xFFFFFF != blocknum {
-		panic!(WRONG_CID);
+		panic!("{}", WRONG_CID);
 	}
 	let txnum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
 	if txnum & 0xFFFFFF != txnum {
-		panic!(WRONG_CID);
+		panic!("{}", WRONG_CID);
 	}
 	let outnum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
 	if outnum & 0xFFFF != outnum {
-		panic!(WRONG_CID);
+		panic!("{}", WRONG_CID);
 	}
 	blocknum << 40 | txnum << 16 | outnum
 }
