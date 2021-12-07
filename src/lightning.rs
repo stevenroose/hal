@@ -94,7 +94,7 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 
 		InvoiceInfo {
 			timestamp: self.timestamp().clone().into(),
-			payment_hash: sha256::Hash::from_slice(&self.payment_hash().into_inner()[..]).unwrap(),
+			payment_hash: sha256::Hash::from_slice(&self.payment_hash()[..]).unwrap(),
 			description: match self.description() {
 				InvoiceDescription::Direct(s) => s.clone().into_inner(),
 				InvoiceDescription::Hash(h) => h.0.to_string(),
