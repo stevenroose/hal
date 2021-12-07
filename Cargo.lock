@@ -142,7 +142,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "hal"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "base64-compat 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bip39 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",

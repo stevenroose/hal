@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+# v0.8.0  --  2021/12/07
+
+- Update bitcoin dependency to v0.27.0
+- Update miniscript dependency to v6.0.1
+- Add TxInfo::total_output_value
+- Reinstate compatibility with Rust 1.32
+- Add `psbt rawsign` command
+- Fix bug in `miniscript inspect`
+
 # v0.7.2  --  2020/12/04
 
 - Add hex private key support for `hal key inspect`.
