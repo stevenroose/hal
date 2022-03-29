@@ -10,6 +10,7 @@ use miniscript::policy::Liftable;
 use miniscript::{policy, DescriptorTrait, MiniscriptKey};
 
 use cmd;
+use util;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("miniscript", "work with miniscript (alias: ms)")
@@ -33,11 +34,11 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 fn cmd_descriptor<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("descriptor", "get information about an output descriptor")
 		.arg(cmd::opt_yaml())
-		.args(&[cmd::arg("descriptor", "the output descriptor to inspect").required(true)])
+		.args(&[cmd::arg("descriptor", "the output descriptor to inspect").required(false)])
 }
 
 fn exec_descriptor<'a>(matches: &clap::ArgMatches<'a>) {
-	let desc_str = matches.value_of("descriptor").expect("no descriptor argument given");
+	let desc_str = util::arg_or_stdin(matches, "descriptor");
 	let network = cmd::network(matches);
 
 	let info = desc_str
@@ -73,11 +74,12 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 		"miniscript",
 		"the miniscript to inspect",
 	)
-	.required(true)])
+	.required(false)])
 }
 
 fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
-	let miniscript_str = matches.value_of("miniscript").expect("no miniscript argument given");
+	let input = util::arg_or_stdin(matches, "miniscript");
+	let miniscript_str = input.as_ref();
 
 	// First try with pubkeys.
 	let bare_info = Miniscript::<bitcoin::PublicKey, BareCtx>::from_str_insane(miniscript_str)
@@ -128,11 +130,11 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 fn cmd_parse<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("parse", "parse a script into a miniscript")
 		.arg(cmd::opt_yaml())
-		.args(&[cmd::arg("script", "hex script to ").required(true)])
+		.args(&[cmd::arg("script", "hex script to parse").required(false)])
 }
 
 fn exec_parse<'a>(matches: &clap::ArgMatches<'a>) {
-	let script_hex = matches.value_of("script").expect("no script argument given");
+	let script_hex = util::arg_or_stdin(matches, "script");
 	let script = Script::from(Vec::<u8>::from_hex(&script_hex).expect("invalid hex script"));
 
 	let segwit_info = Miniscript::<_, Segwitv0>::parse_insane(&script)
@@ -164,7 +166,7 @@ fn cmd_policy<'a>() -> clap::App<'a, 'a> {
 		"policy",
 		"the miniscript policy to inspect",
 	)
-	.required(true)])
+	.required(false)])
 }
 
 fn get_policy_info<Pk: MiniscriptKey>(
@@ -219,7 +221,8 @@ where
 }
 
 fn exec_policy<'a>(matches: &clap::ArgMatches<'a>) {
-	let policy_str = matches.value_of("policy").expect("no policy argument given");
+	let input = util::arg_or_stdin(matches, "policy");
+	let policy_str = input.as_ref();
 
 	// First try a concrete policy with pubkeys.
 	if let Ok(info) =

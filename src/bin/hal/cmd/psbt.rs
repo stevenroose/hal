@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{self, BufRead, Read, Write};
 use std::str::FromStr;
 
 use base64;
@@ -13,6 +13,7 @@ use bitcoin::util::psbt;
 use bitcoin::{PublicKey, Transaction};
 
 use cmd;
+use util;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("psbt", "partially signed Bitcoin transactions")
@@ -63,7 +64,7 @@ fn file_or_raw(flag: &str) -> (Vec<u8>, PsbtSource) {
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a PSBT from an unsigned raw transaction").args(&[
-		cmd::arg("raw-tx", "the raw transaction in hex").required(true),
+		cmd::arg("raw-tx", "the raw transaction in hex").required(false),
 		cmd::opt("output", "where to save the merged PSBT output")
 			.short("o")
 			.takes_value(true)
@@ -75,8 +76,8 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
-	let hex_tx = matches.value_of("raw-tx").expect("no raw tx provided");
-	let raw_tx = hex::decode(hex_tx).expect("could not decode raw tx");
+	let hex_tx = util::arg_or_stdin(matches, "raw-tx");
+	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw tx");
 	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
 
 	let psbt = psbt::PartiallySignedTransaction::from_unsigned_tx(tx)
@@ -96,12 +97,13 @@ fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode a PSBT to JSON").args(&cmd::opts_networks()).args(&[
 		cmd::opt_yaml(),
-		cmd::arg("psbt", "the PSBT file or raw PSBT in base64/hex").required(true),
+		cmd::arg("psbt", "the PSBT file or raw PSBT in base64/hex").required(false),
 	])
 }
 
 fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
-	let (raw_psbt, _) = file_or_raw(matches.value_of("psbt").unwrap());
+	let input = util::arg_or_stdin(matches, "psbt");
+	let (raw_psbt, _) = file_or_raw(input.as_ref());
 
 	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw_psbt).expect("invalid PSBT");
 
@@ -111,7 +113,7 @@ fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
 
 fn cmd_edit<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("edit", "edit a PSBT").args(&[
-		cmd::arg("psbt", "PSBT to edit, either base64/hex or a file path").required(true),
+		cmd::arg("psbt", "PSBT to edit, either base64/hex or a file path").required(false),
 		cmd::opt("input-idx", "the input index to edit")
 			.display_order(1)
 			.takes_value(true)
@@ -330,7 +332,8 @@ fn edit_output<'a>(
 }
 
 fn exec_edit<'a>(matches: &clap::ArgMatches<'a>) {
-	let (raw, source) = file_or_raw(&matches.value_of("psbt").unwrap());
+	let input = util::arg_or_stdin(matches, "psbt");
+	let (raw, source) = file_or_raw(input.as_ref());
 	let mut psbt: psbt::PartiallySignedTransaction =
 		deserialize(&raw).expect("invalid PSBT format");
 
@@ -366,7 +369,7 @@ fn exec_edit<'a>(matches: &clap::ArgMatches<'a>) {
 
 fn cmd_finalize<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("finalize", "finalize a PSBT and print the fully signed tx in hex").args(&[
-		cmd::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(true),
+		cmd::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(false),
 		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r")
 			.required(false),
@@ -374,7 +377,8 @@ fn cmd_finalize<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_finalize<'a>(matches: &clap::ArgMatches<'a>) {
-	let (raw, _) = file_or_raw(&matches.value_of("psbt").unwrap());
+	let input = util::arg_or_stdin(matches, "psbt");
+	let (raw, _) = file_or_raw(input.as_ref());
 	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
 
 
@@ -406,12 +410,26 @@ fn cmd_merge<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_merge<'a>(matches: &clap::ArgMatches<'a>) {
-	let mut parts = matches.values_of("psbts").unwrap().map(|f| {
-		let (raw, _) = file_or_raw(&f);
-		let psbt: psbt::PartiallySignedTransaction =
-			deserialize(&raw).expect("invalid PSBT format");
-		psbt
-	});
+	let stdin = io::stdin();
+	let mut parts: Box<dyn Iterator<Item = psbt::PartiallySignedTransaction>> =
+		if let Some(values) = matches.values_of("psbts")
+	{
+		Box::new(values.into_iter().map(|f| {
+			let (raw, _) = file_or_raw(&f);
+			let psbt: psbt::PartiallySignedTransaction =
+				deserialize(&raw).expect("invalid PSBT format");
+			psbt
+		}))
+	} else {
+		// Read from stdin.
+		let stdin_lock = stdin.lock();
+		let buf = io::BufReader::new(stdin_lock);
+		Box::new(buf.lines().take_while(|l| l.is_ok() && !l.as_ref().unwrap().is_empty()).map(|l| {
+			let (raw, _) = file_or_raw(&l.unwrap());
+			deserialize::<psbt::PartiallySignedTransaction>(&raw)
+				.expect("invalid PSBT format")
+		}))
+	};
 
 	let mut merged = parts.next().unwrap();
 	for (idx, part) in parts.enumerate() {
@@ -435,7 +453,7 @@ fn exec_merge<'a>(matches: &clap::ArgMatches<'a>) {
 
 fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("rawsign", "sign a psbt with private key and add sig to partial sigs").args(&[
-		cmd::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(true),
+		cmd::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(false),
 		cmd::arg("input-idx", "the input index to edit").required(true),
 		cmd::arg("priv-key", "the private key in WIF/hex").required(true),
 		cmd::arg("compressed", "Whether the corresponding pk is compressed")
@@ -465,7 +483,8 @@ fn get_spk_amt(psbt: &psbt::PartiallySignedTransaction, index: usize) -> (&bitco
 }
 
 fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
-	let (raw, source) = file_or_raw(&matches.value_of("psbt").unwrap());
+	let input = util::arg_or_stdin(matches, "psbt");
+	let (raw, source) = file_or_raw(input.as_ref());
 	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
 
 	let priv_key = matches.value_of("priv-key").expect("no key provided");

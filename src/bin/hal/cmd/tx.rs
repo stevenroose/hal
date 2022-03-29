@@ -1,10 +1,11 @@
-use std::io::{self, Read, Write};
+use std::io::Write;
 
 use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
 
 use cmd;
 use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
+use util;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("tx", "manipulate transactions")
@@ -211,19 +212,8 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 }
 
 fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
-	let info: TransactionInfo = if let Some(json) = matches.value_of("tx-info") {
-		serde_json::from_str(json).expect("invalid JSON")
-	} else {
-		// Read from stdin.
-		let mut input = Vec::new();
-		let stdin = io::stdin();
-		let mut stdin_lock = stdin.lock();
-		while stdin_lock.read(&mut input).expect("failed to read from stdin") > 0 {}
-		if input.is_empty() {
-			panic!("No tx-info argument given");
-		}
-		serde_json::from_slice(&input).expect("invalid JSON from stdin")
-	};
+	let info = serde_json::from_str::<TransactionInfo>(&util::arg_or_stdin(matches, "tx-info"))
+		.expect("invalid JSON provided");
 
 	let tx = create_transaction(info);
 	let tx_bytes = serialize(&tx);
@@ -237,12 +227,12 @@ fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode a raw transaction to JSON")
 		.args(&cmd::opts_networks())
-		.args(&[cmd::opt_yaml(), cmd::arg("raw-tx", "the raw transaction in hex").required(true)])
+		.args(&[cmd::opt_yaml(), cmd::arg("raw-tx", "the raw transaction in hex").required(false)])
 }
 
 fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
-	let hex_tx = matches.value_of("raw-tx").expect("no raw tx provided");
-	let raw_tx = hex::decode(hex_tx).expect("could not decode raw tx");
+	let hex_tx = util::arg_or_stdin(matches, "raw-tx");
+	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw tx");
 	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
 
 	let info = hal::GetInfo::get_info(&tx, cmd::network(matches));

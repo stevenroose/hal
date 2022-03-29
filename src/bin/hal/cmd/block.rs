@@ -1,10 +1,11 @@
-use std::io::{self, Read, Write};
+use std::io::Write;
 
 use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Block, BlockHeader};
 
 use cmd;
 use cmd::tx::create_transaction;
+use util;
 use hal::block::{BlockHeaderInfo, BlockInfo};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
@@ -76,19 +77,8 @@ fn create_block_header(info: BlockHeaderInfo) -> BlockHeader {
 }
 
 fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
-	let info: BlockInfo = if let Some(json) = matches.value_of("block-info") {
-		serde_json::from_str(json).expect("invalid JSON")
-	} else {
-		// Read from stdin.
-		let mut input = Vec::new();
-		let stdin = io::stdin();
-		let mut stdin_lock = stdin.lock();
-		while stdin_lock.read(&mut input).expect("failed to read from stdin") > 0 {}
-		if input.is_empty() {
-			panic!("No block-info argument given");
-		}
-		serde_json::from_slice(&input).expect("invalid JSON from stdin")
-	};
+	let info = serde_json::from_str::<BlockInfo>(&util::arg_or_stdin(matches, "block-info"))
+		.expect("invaid json JSON input");
 
 	if info.txids.is_some() {
 		warn!("Field \"txids\" is ignored.");
@@ -118,14 +108,14 @@ fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode a raw block to JSON").args(&cmd::opts_networks()).args(&[
 		cmd::opt_yaml(),
-		cmd::arg("raw-block", "the raw block in hex").required(true),
+		cmd::arg("raw-block", "the raw block in hex").required(false),
 		cmd::opt("txids", "provide transactions IDs instead of full transactions"),
 	])
 }
 
 fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
-	let hex_tx = matches.value_of("raw-block").expect("no raw block provided");
-	let raw_tx = hex::decode(hex_tx).expect("could not decode raw block hex");
+	let hex_tx = util::arg_or_stdin(matches, "raw-block");
+	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw block hex");
 	let block: Block = deserialize(&raw_tx).expect("invalid block format");
 
 	if matches.is_present("txids") {

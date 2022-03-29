@@ -4,6 +4,7 @@ use hex;
 
 use cmd;
 use hal;
+use util;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("bech32", "encode and decode the bech32 format")
@@ -29,15 +30,15 @@ fn cmd_encode<'a>() -> clap::App<'a, 'a> {
 			"hex-encoded payload bytes, 8-bit values\nunless --no-convert is specified",
 		)
 		.takes_value(true)
-		.required(true),
+		.required(false),
 	])
 }
 
 fn exec_encode<'a>(matches: &clap::ArgMatches<'a>) {
 	let hrp = matches.value_of("hrp").expect("missing required argument");
-	let hex = matches.value_of("payload-hex").expect("missing required argument");
+	let hex = util::arg_or_stdin(matches, "payload-hex");
 
-	let payload: Vec<u8> = hex::decode(hex).expect("invalid hex");
+	let payload: Vec<u8> = hex::decode(hex.as_ref()).expect("invalid hex");
 
 	let payload_base32 = if matches.is_present("no-convert") {
 		payload.check_base32().expect("invalid base32 payload")
@@ -70,12 +71,12 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 		)
 		.short("c")
 		.required(false),
-		cmd::arg("string", "a bech32 string").takes_value(true).required(true),
+		cmd::arg("string", "a bech32 string").takes_value(true).required(false),
 	])
 }
 
 fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
-	let s = matches.value_of("string").expect("missing required argument");
+	let s = util::arg_or_stdin(matches, "string");
 
 	let (hrp, payload_base32, _variant) = decode(&s).expect("decode failure");
 	let payload_as_u8: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();

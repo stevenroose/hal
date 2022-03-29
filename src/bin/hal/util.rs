@@ -1,7 +1,9 @@
-use std::cmp;
+use std::{cmp, io};
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use cmd;
@@ -28,6 +30,25 @@ impl CommandInfo {
 				..
 			} => name.to_string(),
 		}
+	}
+}
+
+/// Get the named argument from the CLI arguments or try read from stdin if not provided.
+pub fn arg_or_stdin<'a>(matches: &'a clap::ArgMatches<'a>, arg: &str) -> Cow<'a, str> {
+	if let Some(s) = matches.value_of(arg) {
+		s.into()
+	} else {
+		// Read from stdin.
+		let mut input = Vec::new();
+		let stdin = io::stdin();
+		let mut stdin_lock = stdin.lock();
+		let _ = stdin_lock.read_to_end(&mut input);
+		while stdin_lock.read_to_end(&mut input).unwrap_or(0) > 0 {}
+		if input.is_empty() {
+			panic!("no '{}' argument given", arg);
+		}
+		String::from_utf8(input).expect(&format!("invalid utf8 on stdin for '{}'", arg))
+			.trim().to_owned().into()
 	}
 }
 

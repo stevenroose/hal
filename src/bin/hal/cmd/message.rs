@@ -5,6 +5,7 @@ use bitcoin::{Address, AddressType, PrivateKey, PublicKey};
 use clap;
 
 use cmd;
+use util;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("message", "Bitcoin Signed Messages")
@@ -46,7 +47,7 @@ fn exec_hash<'a>(matches: &clap::ArgMatches<'a>) {
 fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("sign", "create a new Bitcoin Signed Message").args(&[
 		cmd::arg("key", "the private key to sign with in WIF format").required(true),
-		cmd::arg("message", "the message to sign (without prefix)").required(true),
+		cmd::arg("message", "the message to sign (without prefix)").required(false),
 	])
 }
 
@@ -54,7 +55,7 @@ fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
 	let wif = matches.value_of("key").expect("no key provided");
 	let privkey: PrivateKey = wif.parse().expect("invalid WIF format");
 
-	let msg = matches.value_of("message").expect("no message provided");
+	let msg = util::arg_or_stdin(matches, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
 	let secp = secp256k1::Secp256k1::new();
@@ -79,7 +80,7 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 		.args(&[
 			cmd::arg("signer", "the signer's public key or address").required(true),
 			cmd::arg("signature", "the signature in hex").required(true),
-			cmd::arg("message", "the message that was signed (without prefix)").required(true),
+			cmd::arg("message", "the message that was signed (without prefix)").required(false),
 		])
 }
 
@@ -120,7 +121,7 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	let signature = secp256k1::recovery::RecoverableSignature::from_compact(&sig_bytes[1..], recid)
 		.expect("invalid recoverable signature");
 
-	let msg = matches.value_of("message").expect("no message given");
+	let msg = util::arg_or_stdin(matches, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
 	let secp = secp256k1::Secp256k1::verification_only();

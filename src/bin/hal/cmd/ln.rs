@@ -2,6 +2,7 @@ use clap;
 use lightning_invoice::Invoice;
 
 use cmd;
+use util;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("ln", "everything Lightning").subcommand(
@@ -23,14 +24,14 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 fn cmd_invoice_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode Lightning invoices")
 		.args(&cmd::opts_networks())
-		.args(&[cmd::opt_yaml(), cmd::arg("invoice", "the invoice in bech32").required(true)])
+		.args(&[cmd::opt_yaml(), cmd::arg("invoice", "the invoice in bech32").required(false)])
 }
 
 fn exec_invoice_decode<'a>(matches: &clap::ArgMatches<'a>) {
 	::lightning_invoice::check_platform();
 
-	let invoice_str = matches.value_of("invoice").expect("no invoice provided");
-	let invoice: Invoice = invoice_str.parse().expect("invalid invoice encoding");
+	let invoice_str = util::arg_or_stdin(matches, "invoice");
+	let invoice: Invoice = invoice_str.as_ref().parse().expect("invalid invoice encoding");
 
 	let info = hal::GetInfo::get_info(&invoice, cmd::network(matches));
 	cmd::print_output(matches, &info)
