@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# v0.8.1  --  2022/03/06
+
+- Support passing various arguments through stdin
+
 # v0.8.0  --  2021/12/07
 
 - Update bitcoin dependency to v0.27.0
