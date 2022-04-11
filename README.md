@@ -7,7 +7,7 @@ hal is a command line tool that provides all kinds of Bitcoin-related utilities.
 # Installation
 
 ```
-$ cargo install hal
+$ cargo install --locked hal
 ```
 
 
