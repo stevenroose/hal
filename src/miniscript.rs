@@ -62,6 +62,7 @@ pub struct Miniscripts {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct DescriptorInfo {
+	pub descriptor: String,
 	pub key_type: MiniscriptKeyType,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub address: Option<String>,

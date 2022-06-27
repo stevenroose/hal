@@ -44,6 +44,7 @@ fn exec_descriptor<'a>(matches: &clap::ArgMatches<'a>) {
 	let info = desc_str
 		.parse::<Descriptor<bitcoin::PublicKey>>()
 		.map(|desc| DescriptorInfo {
+			descriptor: desc.to_string(),
 			key_type: MiniscriptKeyType::PublicKey,
 			address: desc.address(network).map(|a| a.to_string()).ok(),
 			script_pubkey: Some(desc.script_pubkey().into_bytes().into()),
@@ -56,6 +57,7 @@ fn exec_descriptor<'a>(matches: &clap::ArgMatches<'a>) {
 			debug!("Can't parse descriptor with public keys: {}", e);
 			// Then try with strings.
 			desc_str.parse::<Descriptor<String>>().map(|desc| DescriptorInfo {
+				descriptor: desc.to_string(),
 				key_type: MiniscriptKeyType::String,
 				address: None,
 				script_pubkey: None,
