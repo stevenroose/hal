@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+# v0.8.2  --  2022/06/27
+
+- Add a `descriptor` field to `DescriptorInfo`
+- Bump miniscript dep to v6.1.0 because v6.0.1. is yanked
+
 # v0.8.1  --  2022/03/06
 
 - Support passing various arguments through stdin
