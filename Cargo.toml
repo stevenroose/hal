@@ -32,7 +32,7 @@ serde_yaml = "0.8.8"
 hex = "0.3.2"
 
 bitcoin = { version = "0.27.0", features = [ "use-serde" ] }
-secp256k1 = { version = "0.20.3", features = [ "recovery" ] }
+secp256k1 = { version = "0.22.2", features = [ "recovery" ] }
 bip39 = { version = "1.0.1", features = [ "all-languages" ] }
 lightning-invoice = "0.4.0"
 miniscript = { version = "6.0.1", features = ["compiler"] }
