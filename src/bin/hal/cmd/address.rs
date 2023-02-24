@@ -85,13 +85,13 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 			version,
 			program,
 		} => {
-			let version = version.to_u8() as usize;
+			let version = version.to_num() as usize;
 			info.witness_program_version = Some(version);
 
 			if version == 0 {
 				if program.len() == 20 {
 					info.type_ = Some("p2wpkh".to_owned());
-					info.witness_pubkey_hash = 
+					info.witness_pubkey_hash =
 						Some(WPubkeyHash::from_slice(&program).expect("size 20"));
 				} else if program.len() == 32 {
 					info.type_ = Some("p2wsh".to_owned());

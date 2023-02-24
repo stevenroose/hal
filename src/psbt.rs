@@ -1,21 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use bitcoin::util::{bip32, psbt};
-use bitcoin::{Network, SigHashType};
-
-#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
-pub struct PsbtGlobalInfo {
-	pub unsigned_tx: ::tx::TransactionInfo,
-}
-
-impl ::GetInfo<PsbtGlobalInfo> for psbt::Global {
-	fn get_info(&self, network: Network) -> PsbtGlobalInfo {
-		PsbtGlobalInfo {
-			unsigned_tx: self.unsigned_tx.get_info(network),
-		}
-	}
-}
+use bitcoin::util::{bip32, sighash, psbt};
+use bitcoin::Network;
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct HDPathInfo {
@@ -23,15 +10,20 @@ pub struct HDPathInfo {
 	pub path: bip32::DerivationPath,
 }
 
-pub fn sighashtype_to_string(sht: SigHashType) -> String {
-	use bitcoin::SigHashType::*;
-	match sht {
-		All => "ALL",
-		None => "NONE",
-		Single => "SINGLE",
-		AllPlusAnyoneCanPay => "ALL|ANYONECANPAY",
-		NonePlusAnyoneCanPay => "NONE|ANYONECANPAY",
-		SinglePlusAnyoneCanPay => "SINGLE|ANYONECANPAY",
+pub fn sighashtype_to_string(sht: psbt::PsbtSighashType) -> String {
+	if let Ok(t) = sht.ecdsa_hash_ty() {
+		match t {
+			sighash::EcdsaSighashType::All => "ALL",
+			sighash::EcdsaSighashType::None => "NONE",
+			sighash::EcdsaSighashType::Single => "SINGLE",
+			sighash::EcdsaSighashType::AllPlusAnyoneCanPay => "ALL|ANYONECANPAY",
+			sighash::EcdsaSighashType::NonePlusAnyoneCanPay => "NONE|ANYONECANPAY",
+			sighash::EcdsaSighashType::SinglePlusAnyoneCanPay => "SINGLE|ANYONECANPAY",
+		}
+	} else if let Ok(_) = sht.schnorr_hash_ty() {
+		todo!("schnorr sigs are not yet supported");
+	} else {
+		unreachable!();
 	}.to_owned()
 }
 
@@ -39,17 +31,18 @@ pub fn sighashtype_values() -> &'static [&'static str] {
 	&["ALL", "NONE", "SINGLE", "ALL|ANYONECANPAY", "NONE|ANYONECANPAY", "SINGLE|ANYONECANPAY"]
 }
 
-pub fn sighashtype_from_string(sht: &str) -> SigHashType {
-	use bitcoin::SigHashType::*;
-	match sht {
+pub fn ecdsa_sighashtype_from_string(sht: &str) -> psbt::PsbtSighashType {
+	use bitcoin::EcdsaSighashType::*;
+	let ecdsa_sighash = match sht {
 		"ALL" => All,
 		"NONE" => None,
 		"SINGLE" => Single,
 		"ALL|ANYONECANPAY" => AllPlusAnyoneCanPay,
 		"NONE|ANYONECANPAY" => NonePlusAnyoneCanPay,
 		"SINGLE|ANYONECANPAY" => SinglePlusAnyoneCanPay,
-		_ => panic!("invalid SIGHASH type value -- possible values: {:?}", &sighashtype_values()),
-	}
+		_ => panic!("invalid ecdsa SIGHASH type value -- possible values: {:?}", &sighashtype_values()),
+	};
+	psbt::PsbtSighashType::from(ecdsa_sighash)
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -82,7 +75,7 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 			partial_sigs: {
 				let mut partial_sigs = HashMap::new();
 				for (key, value) in self.partial_sigs.iter() {
-					partial_sigs.insert(key.to_bytes().into(), value.clone().into());
+					partial_sigs.insert(key.to_bytes().into(), value.clone().to_vec().into());
 				}
 				partial_sigs
 			},
@@ -94,7 +87,7 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
 				for (key, value) in self.bip32_derivation.iter() {
-					hd_keypaths.insert(key.to_bytes().into(),
+					hd_keypaths.insert(key.serialize().to_vec().into(),
 						HDPathInfo {
 							master_fingerprint: value.0[..].into(),
 							path: value.1.clone(),
@@ -131,7 +124,7 @@ impl ::GetInfo<PsbtOutputInfo> for psbt::Output {
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
 				for (key, value) in self.bip32_derivation.iter() {
-					hd_keypaths.insert(key.to_bytes().into(),
+					hd_keypaths.insert(key.serialize().to_vec().into(),
 						HDPathInfo {
 							master_fingerprint: value.0[..].into(),
 							path: value.1.clone(),
@@ -146,7 +139,7 @@ impl ::GetInfo<PsbtOutputInfo> for psbt::Output {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct PsbtInfo {
-	pub global: PsbtGlobalInfo,
+	pub unsigned_tx: ::tx::TransactionInfo,
 	pub inputs: Vec<PsbtInputInfo>,
 	pub outputs: Vec<PsbtOutputInfo>,
 }
@@ -154,7 +147,7 @@ pub struct PsbtInfo {
 impl ::GetInfo<PsbtInfo> for psbt::PartiallySignedTransaction {
 	fn get_info(&self, network: Network) -> PsbtInfo {
 		PsbtInfo {
-			global: self.global.get_info(network),
+			unsigned_tx: self.unsigned_tx.get_info(network),
 			inputs: self.inputs.iter().map(|i| i.get_info(network)).collect(),
 			outputs: self.outputs.iter().map(|o| o.get_info(network)).collect(),
 		}

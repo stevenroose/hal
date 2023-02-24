@@ -15,8 +15,8 @@ pub struct DerivationInfo {
 	pub chain_code: bip32::ChainCode,
 	pub identifier: bitcoin::XpubIdentifier,
 	pub fingerprint: bip32::Fingerprint,
-	pub public_key: bitcoin::PublicKey,
+	pub public_key: bitcoin::secp256k1::PublicKey,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub private_key: Option<bitcoin::PrivateKey>,
+	pub private_key: Option<bitcoin::secp256k1::SecretKey>,
 	pub addresses: ::address::Addresses,
 }

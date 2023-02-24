@@ -1,11 +1,11 @@
-use bitcoin::bech32::u5;
 use bitcoin::hashes::{sha256, Hash};
-use bitcoin::util::address::Payload;
+use bitcoin::util::address::{Payload, WitnessVersion};
 use bitcoin::{Address, Network};
 use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
 use lightning_invoice::{Currency, Fallback, Invoice, InvoiceDescription, RouteHop};
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 const WRONG_CID: &'static str = "incorrect short channel ID HRF format";
 
@@ -121,7 +121,7 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 								version: v,
 								program: p,
 							} => Payload::WitnessProgram {
-								version: u5::try_from_u8(v.to_u8())
+								version: WitnessVersion::try_from(v.to_u8())
 									.expect("invalid segwit version"),
 								program: p.to_vec(),
 							},

@@ -40,7 +40,7 @@ fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
 		Ok(ext_priv) => {
 			derived_xpriv = Some(ext_priv.derive_priv(&secp, &path).expect("derivation error"));
 			master_fingerprint = ext_priv.fingerprint(&secp);
-			bip32::ExtendedPubKey::from_private(&secp, derived_xpriv.as_ref().unwrap())
+			bip32::ExtendedPubKey::from_priv(&secp, derived_xpriv.as_ref().unwrap())
 		}
 		Err(_) => {
 			let ext_pub: bip32::ExtendedPubKey = key_str.parse().expect("invalid extended key");
@@ -61,7 +61,7 @@ fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
 		public_key: derived_xpub.public_key,
 		private_key: derived_xpriv.map(|x| x.private_key),
 		addresses: hal::address::Addresses::from_pubkey(
-			&derived_xpub.public_key, derived_xpub.network,
+			&bitcoin::PublicKey::new(derived_xpub.public_key), derived_xpub.network,
 		),
 	};
 
@@ -84,7 +84,7 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 	let xpub = match bip32::ExtendedPrivKey::from_str(&key_str) {
 		Ok(ext_priv) => {
 			xpriv = Some(ext_priv);
-			bip32::ExtendedPubKey::from_private(&secp, xpriv.as_ref().unwrap())
+			bip32::ExtendedPubKey::from_priv(&secp, xpriv.as_ref().unwrap())
 		}
 		Err(_) => key_str.parse().expect("invalid extended key"),
 	};
@@ -101,7 +101,7 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 		public_key: xpub.public_key,
 		private_key: xpriv.map(|x| x.private_key),
 		addresses: hal::address::Addresses::from_pubkey(
-			&xpub.public_key, xpub.network,
+			&bitcoin::PublicKey::new(xpub.public_key), xpub.network,
 		),
 	};
 
