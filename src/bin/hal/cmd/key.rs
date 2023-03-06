@@ -15,6 +15,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_inspect())
 		.subcommand(cmd_sign())
 		.subcommand(cmd_verify())
+		.subcommand(cmd_pubkey_tweak_add())
+		.subcommand(cmd_pubkey_combine())
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
@@ -23,6 +25,8 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("sign", Some(ref m)) => exec_sign(&m),
 		("verify", Some(ref m)) => exec_verify(&m),
+		("pubkey-tweak-add", Some(ref m)) => exec_pubkey_tweak_add(&m),
+		("pubkey-combine", Some(ref m)) => exec_pubkey_combine(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -111,8 +115,12 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_sign<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("sign", "sign messages\n\nNOTE!! For SHA-256-d hashes, the --reverse \
-		flag must be used because Bitcoin Core reverses the hex order for those!").args(&[
+	cmd::subcommand(
+		"sign",
+		"sign messages\n\nNOTE!! For SHA-256-d hashes, the --reverse \
+		flag must be used because Bitcoin Core reverses the hex order for those!",
+	)
+	.args(&[
 		cmd::opt_yaml(),
 		cmd::opt("reverse", "reverse the message"),
 		cmd::arg("privkey", "the private key in hex or WIF").required(true),
@@ -147,8 +155,12 @@ fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_verify<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("verify", "verify signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
-		flag must be used because Bitcoin Core reverses the hex order for those!").args(&[
+	cmd::subcommand(
+		"verify",
+		"verify signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
+		flag must be used because Bitcoin Core reverses the hex order for those!",
+	)
+	.args(&[
 		cmd::opt_yaml(),
 		cmd::opt("reverse", "reverse the message"),
 		cmd::opt("no-try-reverse", "don't try to verify for reversed message"),
@@ -183,7 +195,8 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	// Perhaps the user should have passed --reverse.
 	if !valid && !matches.is_present("no-try-reverse") {
 		msg_bytes.reverse();
-		let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
+		let msg =
+			secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
 		if secp.verify(&msg, &sig, &pubkey.key).is_ok() {
 			eprintln!("Signature is valid for the reverse message.");
 			if matches.is_present("reverse") {
@@ -199,5 +212,60 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	} else {
 		eprintln!("Signature is invalid!");
 		process::exit(1);
+	}
+}
+
+fn cmd_pubkey_tweak_add<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("pubkey-tweak-add", "add a scalar (private key) to a point (public key)").args(
+		&[
+			cmd::opt_yaml(),
+			cmd::arg("point", "the public key in hex").required(true),
+			cmd::arg("scalar", "the private key in hex").required(true),
+		],
+	)
+}
+
+fn exec_pubkey_tweak_add<'a>(matches: &clap::ArgMatches<'a>) {
+	let point_hex = matches.value_of("point").expect("no point provided");
+	let mut point: PublicKey = point_hex.parse().expect("invalid point");
+
+	let scalar_hex = matches.value_of("scalar").expect("no scalar given");
+	let scalar_bytes = hex::decode(&scalar_hex).expect("invalid hex scalar");
+
+	let secp = secp256k1::Secp256k1::verification_only();
+	match point.key.add_exp_assign(&secp, &scalar_bytes) {
+		Ok(..) => {
+			eprintln!("{}", point.to_string());
+		}
+		Err(err) => {
+			eprintln!("error: {}", err);
+			process::exit(1);
+		}
+	}
+}
+
+fn cmd_pubkey_combine<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("pubkey-combine", "add a point (public key) to another").args(&[
+		cmd::opt_yaml(),
+		cmd::arg("pubkey1", "the first public key in hex").required(true),
+		cmd::arg("pubkey2", "the second public key in hex").required(true),
+	])
+}
+
+fn exec_pubkey_combine<'a>(matches: &clap::ArgMatches<'a>) {
+	let pubkey1_hex = matches.value_of("pubkey1").expect("no first public key provided");
+	let pubkey1: PublicKey = pubkey1_hex.parse().expect("invalid first public key");
+
+	let pubkey2_hex = matches.value_of("pubkey2").expect("no second public key provided");
+	let pubkey2: PublicKey = pubkey2_hex.parse().expect("invalid second public key");
+
+	match pubkey1.key.combine(&pubkey2.key) {
+		Ok(sum) => {
+			eprintln!("{}", sum.to_string());
+		}
+		Err(err) => {
+			eprintln!("error: {}", err);
+			process::exit(1);
+		}
 	}
 }
