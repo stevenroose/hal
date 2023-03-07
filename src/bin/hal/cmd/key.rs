@@ -12,6 +12,7 @@ use hal;
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("key", "work with private and public keys")
 		.subcommand(cmd_generate())
+		.subcommand(cmd_derive())
 		.subcommand(cmd_inspect())
 		.subcommand(cmd_sign())
 		.subcommand(cmd_verify())
@@ -22,6 +23,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 	match matches.subcommand() {
 		("generate", Some(ref m)) => exec_generate(&m),
+		("derive", Some(ref m)) => exec_derive(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("sign", Some(ref m)) => exec_sign(&m),
 		("verify", Some(ref m)) => exec_verify(&m),
@@ -47,7 +49,48 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 
 	let privkey = bitcoin::PrivateKey {
 		compressed: true,
-		network: network,
+		network,
+		key: secret_key,
+	};
+	let pubkey = privkey.public_key(&secp);
+
+	let info = hal::key::KeyInfo {
+		raw_private_key: (&secret_key[..]).into(),
+		wif_private_key: Some(privkey),
+		public_key: pubkey,
+		uncompressed_public_key: {
+			let mut uncompressed = pubkey.clone();
+			uncompressed.compressed = false;
+			uncompressed
+		},
+		addresses: hal::address::Addresses::from_pubkey(&pubkey, network),
+	};
+
+	cmd::print_output(matches, &info)
+}
+
+fn cmd_derive<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("derive", "generate a public key from a private key")
+		.args(&cmd::opts_networks())
+		.args(&[cmd::opt_yaml(), cmd::arg("privkey", "the secret key").required(true)])
+}
+
+fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
+	let network = cmd::network(matches);
+
+	let secp = secp256k1::Secp256k1::signing_only();
+	let secret_key = {
+		let privkey = matches.value_of("privkey").expect("no private key provided");
+		if let Ok(sk) = secp256k1::SecretKey::from_str(&privkey) {
+			sk
+		} else {
+			bitcoin::PrivateKey::from_wif(&privkey).expect("invalid private key provided").key
+		}
+	};
+
+	let privkey = bitcoin::PrivateKey {
+		compressed: true,
+		network,
 		key: secret_key,
 	};
 	let pubkey = privkey.public_key(&secp);
@@ -136,11 +179,11 @@ fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
 	}
 	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
 	let privkey = {
-		let pk = matches.value_of("privkey").expect("no private key provided");
-		if let Ok(sk) = secp256k1::SecretKey::from_str(&pk) {
+		let privkey = matches.value_of("privkey").expect("no private key provided");
+		if let Ok(sk) = secp256k1::SecretKey::from_str(&privkey) {
 			sk
 		} else {
-			bitcoin::PrivateKey::from_wif(&pk).expect("invalid private key provided").key
+			bitcoin::PrivateKey::from_wif(&privkey).expect("invalid private key provided").key
 		}
 	};
 

@@ -1,4 +1,6 @@
-use bitcoin::{Address, Network, PublicKey, Script, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
+use bitcoin::{
+	Address, Network, PubkeyHash, PublicKey, Script, ScriptHash, WPubkeyHash, WScriptHash,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]

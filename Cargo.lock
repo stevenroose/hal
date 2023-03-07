@@ -165,7 +165,7 @@ checksum = "a06f77d526c1a601b7c4cdd98f54b5eaabffc14d5f2f0296febdc7f357c6d3ba"
 
 [[package]]
 name = "hal"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "base64-compat",
  "bip39",
