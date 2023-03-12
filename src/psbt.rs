@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use bitcoin::util::{bip32, sighash, psbt};
 use bitcoin::Network;
 
+use crate::{tx, GetInfo, HexBytes};
+
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct HDPathInfo {
 	pub master_fingerprint: bip32::Fingerprint,
@@ -48,26 +50,26 @@ pub fn ecdsa_sighashtype_from_string(sht: &str) -> psbt::PsbtSighashType {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct PsbtInputInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub non_witness_utxo: Option<::tx::TransactionInfo>,
+	pub non_witness_utxo: Option<tx::TransactionInfo>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub witness_utxo: Option<::tx::OutputInfo>,
+	pub witness_utxo: Option<tx::OutputInfo>,
 	#[serde(skip_serializing_if = "HashMap::is_empty")]
-	pub partial_sigs: HashMap<::HexBytes, ::HexBytes>,
+	pub partial_sigs: HashMap<HexBytes, HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub sighash_type: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub redeem_script: Option<::tx::OutputScriptInfo>,
+	pub redeem_script: Option<tx::OutputScriptInfo>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub witness_script: Option<::tx::OutputScriptInfo>,
+	pub witness_script: Option<tx::OutputScriptInfo>,
 	#[serde(skip_serializing_if = "HashMap::is_empty")]
-	pub hd_keypaths: HashMap<::HexBytes, HDPathInfo>,
+	pub hd_keypaths: HashMap<HexBytes, HDPathInfo>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub final_script_sig: Option<::tx::InputScriptInfo>,
+	pub final_script_sig: Option<tx::InputScriptInfo>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub final_script_witness: Option<Vec<::HexBytes>>,
+	pub final_script_witness: Option<Vec<HexBytes>>,
 }
 
-impl ::GetInfo<PsbtInputInfo> for psbt::Input {
+impl GetInfo<PsbtInputInfo> for psbt::Input {
 	fn get_info(&self, network: Network) -> PsbtInputInfo {
 		PsbtInputInfo {
 			non_witness_utxo: self.non_witness_utxo.as_ref().map(|u| u.get_info(network)),
@@ -81,9 +83,9 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 			},
 			sighash_type: self.sighash_type.map(sighashtype_to_string),
 			redeem_script: self.redeem_script.as_ref()
-				.map(|s| ::tx::OutputScript(s).get_info(network)),
+				.map(|s| tx::OutputScript(s).get_info(network)),
 			witness_script: self.witness_script.as_ref()
-				.map(|s| ::tx::OutputScript(s).get_info(network)),
+				.map(|s| tx::OutputScript(s).get_info(network)),
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
 				for (key, value) in self.bip32_derivation.iter() {
@@ -97,7 +99,7 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 				hd_keypaths
 			},
 			final_script_sig: self.final_script_sig.as_ref()
-				.map(|s| ::tx::InputScript(s).get_info(network)),
+				.map(|s| tx::InputScript(s).get_info(network)),
 			final_script_witness: self.final_script_witness.as_ref()
 				.map(|w| w.iter().map(|p| p.clone().into()).collect()),
 		}
@@ -107,20 +109,20 @@ impl ::GetInfo<PsbtInputInfo> for psbt::Input {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct PsbtOutputInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub redeem_script: Option<::tx::OutputScriptInfo>,
+	pub redeem_script: Option<tx::OutputScriptInfo>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub witness_script: Option<::tx::OutputScriptInfo>,
+	pub witness_script: Option<tx::OutputScriptInfo>,
 	#[serde(skip_serializing_if = "HashMap::is_empty")]
-	pub hd_keypaths: HashMap<::HexBytes, HDPathInfo>,
+	pub hd_keypaths: HashMap<HexBytes, HDPathInfo>,
 }
 
-impl ::GetInfo<PsbtOutputInfo> for psbt::Output {
+impl GetInfo<PsbtOutputInfo> for psbt::Output {
 	fn get_info(&self, network: Network) -> PsbtOutputInfo {
 		PsbtOutputInfo {
 			redeem_script: self.redeem_script.as_ref()
-				.map(|s| ::tx::OutputScript(s).get_info(network)),
+				.map(|s| tx::OutputScript(s).get_info(network)),
 			witness_script: self.witness_script.as_ref()
-				.map(|s| ::tx::OutputScript(s).get_info(network)),
+				.map(|s| tx::OutputScript(s).get_info(network)),
 			hd_keypaths: {
 				let mut hd_keypaths = HashMap::new();
 				for (key, value) in self.bip32_derivation.iter() {
@@ -139,12 +141,12 @@ impl ::GetInfo<PsbtOutputInfo> for psbt::Output {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct PsbtInfo {
-	pub unsigned_tx: ::tx::TransactionInfo,
+	pub unsigned_tx: tx::TransactionInfo,
 	pub inputs: Vec<PsbtInputInfo>,
 	pub outputs: Vec<PsbtOutputInfo>,
 }
 
-impl ::GetInfo<PsbtInfo> for psbt::PartiallySignedTransaction {
+impl GetInfo<PsbtInfo> for psbt::PartiallySignedTransaction {
 	fn get_info(&self, network: Network) -> PsbtInfo {
 		PsbtInfo {
 			unsigned_tx: self.unsigned_tx.get_info(network),

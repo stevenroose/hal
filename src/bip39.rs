@@ -2,10 +2,12 @@ use bip39lib::{Language, Mnemonic};
 use bitcoin::{secp256k1, util::bip32, Network};
 use serde::{Deserialize, Serialize};
 
+use crate::{GetInfo, HexBytes};
+
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct MnemonicInfo {
 	pub mnemonic: String,
-	pub entropy: ::HexBytes,
+	pub entropy: HexBytes,
 	pub entropy_bits: usize,
 	pub language: &'static str,
 	pub passphrase: String,
@@ -35,12 +37,12 @@ impl MnemonicInfo {
 				Language::TraditionalChinese => "traditional-chinese",
 			},
 			passphrase: passphrase.to_owned(),
-			seed: ::GetInfo::get_info(&mnemonic.to_seed(passphrase), network),
+			seed: GetInfo::get_info(&mnemonic.to_seed(passphrase), network),
 		}
 	}
 }
 
-impl ::GetInfo<MnemonicInfo> for Mnemonic {
+impl GetInfo<MnemonicInfo> for Mnemonic {
 	fn get_info(&self, network: Network) -> MnemonicInfo {
 		MnemonicInfo::from_mnemonic_with_passphrase(self, "", network)
 	}
@@ -48,12 +50,12 @@ impl ::GetInfo<MnemonicInfo> for Mnemonic {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct SeedInfo {
-	pub seed: ::HexBytes,
+	pub seed: HexBytes,
 	pub bip32_xpriv: bip32::ExtendedPrivKey,
 	pub bip32_xpub: bip32::ExtendedPubKey,
 }
 
-impl ::GetInfo<SeedInfo> for [u8; 64] {
+impl GetInfo<SeedInfo> for [u8; 64] {
 	fn get_info(&self, network: Network) -> SeedInfo {
 		let xpriv = bip32::ExtendedPrivKey::new_master(network, &self[..]).unwrap();
 		let xpub =

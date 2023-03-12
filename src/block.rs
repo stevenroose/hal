@@ -1,7 +1,8 @@
 use bitcoin::{Block, BlockHash, BlockHeader, Network, TxMerkleNode, Txid};
 use serde::{Deserialize, Serialize};
 
-use tx::TransactionInfo;
+use crate::tx::TransactionInfo;
+use crate::{GetInfo, HexBytes};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct BlockHeaderInfo {
@@ -15,7 +16,7 @@ pub struct BlockHeaderInfo {
 	pub nonce: u32,
 }
 
-impl<'a> ::GetInfo<BlockHeaderInfo> for BlockHeader {
+impl<'a> GetInfo<BlockHeaderInfo> for BlockHeader {
 	fn get_info(&self, _network: Network) -> BlockHeaderInfo {
 		BlockHeaderInfo {
 			block_hash: Some(self.block_hash()),
@@ -38,10 +39,10 @@ pub struct BlockInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub txids: Option<Vec<Txid>>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub raw_transactions: Option<Vec<::HexBytes>>,
+	pub raw_transactions: Option<Vec<HexBytes>>,
 }
 
-impl ::GetInfo<BlockInfo> for Block {
+impl GetInfo<BlockInfo> for Block {
 	fn get_info(&self, network: Network) -> BlockInfo {
 		BlockInfo {
 			header: self.header.get_info(network),

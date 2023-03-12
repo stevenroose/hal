@@ -7,8 +7,8 @@ use bitcoin::{PrivateKey, PublicKey};
 use clap;
 use rand;
 
-use cmd;
 use hal;
+use crate::cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("key", "work with private and public keys")

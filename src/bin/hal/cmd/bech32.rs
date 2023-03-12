@@ -2,9 +2,8 @@ use bitcoin::bech32::{decode, encode, CheckBase32, FromBase32, ToBase32, Variant
 use clap;
 use hex;
 
-use cmd;
 use hal;
-use util;
+use crate::{cmd, util};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("bech32", "encode and decode the bech32 format")

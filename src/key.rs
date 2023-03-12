@@ -1,11 +1,11 @@
 use bitcoin::{Network, PrivateKey, PublicKey};
 use serde::{Deserialize, Serialize};
 
-use address;
+use crate::{address, GetInfo, HexBytes};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct KeyInfo {
-	pub raw_private_key: ::HexBytes,
+	pub raw_private_key: HexBytes,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub wif_private_key: Option<PrivateKey>,
 	pub public_key: PublicKey,
@@ -20,7 +20,7 @@ pub struct PublicKeyInfo {
 	pub addresses: address::Addresses,
 }
 
-impl ::GetInfo<PublicKeyInfo> for PublicKey {
+impl GetInfo<PublicKeyInfo> for PublicKey {
 	fn get_info(&self, network: Network) -> PublicKeyInfo {
 		PublicKeyInfo {
 			public_key: {
@@ -40,7 +40,7 @@ impl ::GetInfo<PublicKeyInfo> for PublicKey {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct SignatureInfo {
-	pub der: ::HexBytes,
-	pub compact: ::HexBytes,
+	pub der: HexBytes,
+	pub compact: HexBytes,
 }
 

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::HexBytes;
+
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MiniscriptKeyType {
@@ -67,11 +69,11 @@ pub struct DescriptorInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub address: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub script_pubkey: Option<::HexBytes>,
+	pub script_pubkey: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub unsigned_script_sig: Option<::HexBytes>,
+	pub unsigned_script_sig: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub witness_script: Option<::HexBytes>,
+	pub witness_script: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub max_satisfaction_weight: Option<usize>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -96,7 +98,7 @@ pub struct MiniscriptInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub max_satisfaction_size_non_segwit: Option<usize>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub script: Option<::HexBytes>,
+	pub script: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub policy: Option<String>,
 }

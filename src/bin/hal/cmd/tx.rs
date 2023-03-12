@@ -4,9 +4,8 @@ use std::io::Write;
 use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
 
-use cmd;
 use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
-use util;
+use crate::{cmd, util};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("tx", "manipulate transactions")

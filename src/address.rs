@@ -1,12 +1,14 @@
 use bitcoin::{self, Address, Network, Script, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
 use serde::{Deserialize, Serialize};
 
+use crate::tx;
+
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct AddressInfo {
 	pub network: Network,
 	#[serde(rename = "type")]
 	pub type_: Option<String>,
-	pub script_pub_key: ::tx::OutputScriptInfo,
+	pub script_pub_key: tx::OutputScriptInfo,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub witness_program_version: Option<usize>,
 	#[serde(skip_serializing_if = "Option::is_none")]

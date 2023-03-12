@@ -8,6 +8,7 @@ repository = "https://github.com/stevenroose/hal/"
 description = "hal - the Bitcoin companion"
 keywords = [ "crypto", "bitcoin" ]
 readme = "README.md"
+edition = "2018"
 
 [lib]
 name = "hal"

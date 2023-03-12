@@ -13,8 +13,7 @@ use bitcoin::{PublicKey, Transaction};
 use miniscript::psbt::PsbtExt;
 use secp256k1;
 
-use cmd;
-use util;
+use crate::{cmd, util};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("psbt", "partially signed Bitcoin transactions")
