@@ -64,6 +64,11 @@ $ cargo install --locked hal
 	- decode: decode a binary transaction to JSON
 
 
+## Minimum Supported Rust Version (MSRV)
+
+`hal` should always compile on **Rust 1.41.1**.
+Note that it should be build using the `Cargo.lock` file, so using `--locked`.
+
 # Extensions
 
 hal allows the use of extensions that can be installed separately.
