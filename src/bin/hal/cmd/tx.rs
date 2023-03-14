@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::io::Write;
 
 use bitcoin::consensus::encode::{deserialize, serialize};
@@ -116,7 +117,7 @@ fn create_input(input: InputInfo) -> TxIn {
 	TxIn {
 		previous_output: outpoint_from_input_info(&input),
 		script_sig: input.script_sig.map(create_script_sig).unwrap_or_default(),
-		sequence: bitcoin::Sequence::from_consensus(input.sequence.unwrap_or_default()),
+		sequence: bitcoin::Sequence::from_height(input.sequence.unwrap_or_default().try_into().expect("Invalid sequence")),
 		witness: match input.witness {
 			Some(ref w) => bitcoin::Witness::from_vec(w.iter().map(|h| h.clone().0).collect()),
 			None => bitcoin::Witness::new(),
@@ -195,7 +196,8 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 
 	Transaction {
 		version: info.version.expect("Field \"version\" is required."),
-		lock_time: bitcoin::LockTime::from_consensus(info.locktime.expect("Field \"locktime\" is required.")).into(),
+		lock_time: bitcoin::LockTime::from_height(info.locktime.expect("Field \"locktime\" is required."))
+			.expect("Field \"lockime\" is invalid").into(),
 		input: info
 			.inputs
 			.expect("Field \"inputs\" is required.")

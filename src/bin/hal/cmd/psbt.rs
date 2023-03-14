@@ -486,8 +486,6 @@ fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
 
 	let tx =  psbt.clone().extract_tx();
 	let mut cache = bitcoin::util::sighash::SighashCache::new(&tx);
-	let msg = psbt.sighash_msg(i, &mut cache, None)
-		.expect("error computing sighash message on psbt");
 
 	let sk = if let Ok(privkey) = PrivateKey::from_str(&priv_key) {
 		privkey.inner
@@ -502,6 +500,8 @@ fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
 		compressed: compressed,
 		inner: pk,
 	};
+	let msg = psbt.sighash_msg(i, &mut cache, None)
+		.expect("error computing sighash message on psbt");
 	let secp_sig = match msg {
 		miniscript::psbt::PsbtSighashMsg::EcdsaSighash(sighash) => {
 			let msg = secp256k1::Message::from_slice(&sighash)
@@ -509,7 +509,7 @@ fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
 			secp.sign_ecdsa(&msg, &sk)
 		},
 		miniscript::psbt::PsbtSighashMsg::TapSighash(_) => {
-			todo!("Signing taproot transactions is not yet suppported")
+			panic!("Signing taproot transactions is not yet suppported")
 		},
 	};
 

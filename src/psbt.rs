@@ -21,7 +21,7 @@ pub fn sighashtype_to_string(sht: psbt::PsbtSighashType) -> String {
 			sighash::EcdsaSighashType::SinglePlusAnyoneCanPay => "SINGLE|ANYONECANPAY",
 		}
 	} else if let Ok(_) = sht.schnorr_hash_ty() {
-		todo!("schnorr sigs are not yet supported");
+		panic!("schnorr sigs are not yet supported");
 	} else {
 		unreachable!();
 	}.to_owned()
