@@ -1,4 +1,4 @@
-use bitcoin::{Address, Network, PublicKey, Script, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
+use bitcoin::{self, Address, Network, Script, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -36,7 +36,7 @@ pub struct Addresses {
 }
 
 impl Addresses {
-	pub fn from_pubkey(pubkey: &PublicKey, network: Network) -> Addresses {
+	pub fn from_pubkey(pubkey: &bitcoin::PublicKey, network: Network) -> Addresses {
 		Addresses {
 			p2pkh: Some(Address::p2pkh(pubkey, network)),
 			p2wpkh: Address::p2wpkh(pubkey, network).ok(),
@@ -47,7 +47,7 @@ impl Addresses {
 
 	pub fn from_script(script: &Script, network: Network) -> Addresses {
 		Addresses {
-			p2sh: Some(Address::p2sh(&script, network)),
+			p2sh: Address::p2sh(&script, network).ok(),
 			p2wsh: Some(Address::p2wsh(&script, network)),
 			p2shwsh: Some(Address::p2shwsh(&script, network)),
 			..Default::default()

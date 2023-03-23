@@ -35,7 +35,7 @@ impl ::GetInfo<InputInfo> for TxIn {
 			prevout: Some(self.previous_output.to_string()),
 			txid: Some(self.previous_output.txid),
 			vout: Some(self.previous_output.vout),
-			sequence: Some(self.sequence),
+			sequence: Some(self.sequence.to_consensus_u32()),
 			script_sig: Some(InputScript(&self.script_sig).get_info(network)),
 			witness: if self.witness.len() > 0 {
 				Some(self.witness.iter().map(|h| h.clone().into()).collect())
@@ -81,7 +81,7 @@ impl<'a> ::GetInfo<OutputScriptInfo> for OutputScript<'a> {
 				}
 				.to_owned(),
 			),
-			address: Address::from_script(&self.0, network),
+			address: Address::from_script(&self.0, network).ok(),
 		}
 	}
 }
@@ -117,12 +117,12 @@ pub struct TransactionInfo {
 
 impl ::GetInfo<TransactionInfo> for Transaction {
 	fn get_info(&self, network: Network) -> TransactionInfo {
-		let weight = self.get_weight() as usize;
+		let weight = self.weight() as usize;
 		TransactionInfo {
 			txid: Some(self.txid()),
 			wtxid: Some(self.wtxid()),
 			version: Some(self.version),
-			locktime: Some(self.lock_time),
+			locktime: Some(self.lock_time.to_u32()),
 			size: Some(serialize(self).len()),
 			weight: Some(weight),
 			vsize: Some(weight / 4),

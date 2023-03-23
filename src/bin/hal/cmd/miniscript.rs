@@ -4,10 +4,9 @@ use clap;
 use hal::miniscript::{
 	DescriptorInfo, MiniscriptInfo, MiniscriptKeyType, Miniscripts, PolicyInfo, ScriptContexts,
 };
-use miniscript::descriptor::Descriptor;
 use miniscript::miniscript::{BareCtx, Legacy, Miniscript, Segwitv0};
 use miniscript::policy::Liftable;
-use miniscript::{policy, DescriptorTrait, MiniscriptKey};
+use miniscript::{Descriptor, policy, MiniscriptKey};
 
 use cmd;
 use util;
@@ -49,7 +48,7 @@ fn exec_descriptor<'a>(matches: &clap::ArgMatches<'a>) {
 			address: desc.address(network).map(|a| a.to_string()).ok(),
 			script_pubkey: Some(desc.script_pubkey().into_bytes().into()),
 			unsigned_script_sig: Some(desc.unsigned_script_sig().into_bytes().into()),
-			witness_script: Some(desc.explicit_script().into_bytes().into()),
+			witness_script: desc.explicit_script().map(|s| s.into_bytes().into()).ok(),
 			max_satisfaction_weight: desc.max_satisfaction_weight().ok(),
 			policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
 		})
@@ -177,9 +176,15 @@ fn get_policy_info<Pk: MiniscriptKey>(
 ) -> Result<PolicyInfo, miniscript::Error>
 where
 	Pk: std::str::FromStr,
-	Pk::Hash: std::str::FromStr,
-	<<Pk as miniscript::MiniscriptKey>::Hash as ::std::str::FromStr>::Err: ::std::fmt::Display,
-	<Pk as ::std::str::FromStr>::Err: ::std::fmt::Display,
+	<Pk as std::str::FromStr>::Err: std::fmt::Display,
+	<Pk as MiniscriptKey>::Sha256: std::str::FromStr,
+	<Pk as MiniscriptKey>::Hash256: std::str::FromStr,
+	<Pk as MiniscriptKey>::Ripemd160: std::str::FromStr,
+	<Pk as MiniscriptKey>::Hash160: std::str::FromStr,
+	<<Pk as MiniscriptKey>::Sha256 as std::str::FromStr>::Err: std::fmt::Display,
+	<<Pk as MiniscriptKey>::Hash256 as std::str::FromStr>::Err: std::fmt::Display,
+	<<Pk as MiniscriptKey>::Ripemd160 as std::str::FromStr>::Err: std::fmt::Display,
+	<<Pk as MiniscriptKey>::Hash160 as std::str::FromStr>::Err: std::fmt::Display,
 {
 	let concrete_pol: Option<policy::Concrete<Pk>> = policy_str.parse().ok();
 	let policy = match concrete_pol {
@@ -193,7 +198,7 @@ where
 		is_unsatisfiable: policy.is_unsatisfiable(),
 		relative_timelocks: policy.relative_timelocks(),
 		n_keys: policy.n_keys(),
-		minimum_n_keys: policy.minimum_n_keys(),
+		minimum_n_keys: policy.minimum_n_keys().ok_or(miniscript::Error::CouldNotSatisfy)?,
 		sorted: policy.clone().sorted().to_string(),
 		normalized: policy.clone().normalized().to_string(),
 		miniscript: concrete_pol.map(|p| Miniscripts {
