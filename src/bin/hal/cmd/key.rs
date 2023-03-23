@@ -1,4 +1,5 @@
 use std::process;
+use std::io::Write;
 use std::str::FromStr;
 
 use bitcoin::secp256k1;
@@ -15,6 +16,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_inspect())
 		.subcommand(cmd_sign())
 		.subcommand(cmd_verify())
+		.subcommand(cmd_negate_pubkey())
 }
 
 pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
@@ -23,6 +25,7 @@ pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("sign", Some(ref m)) => exec_sign(&m),
 		("verify", Some(ref m)) => exec_verify(&m),
+		("negate-pubkey", Some(ref m)) => exec_negate_pubkey(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -200,4 +203,23 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 		eprintln!("Signature is invalid!");
 		process::exit(1);
 	}
+}
+
+fn cmd_negate_pubkey<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("negate-pubkey", "negate the public key")
+		.args(&[cmd::opt_yaml(), cmd::arg("pubkey", "the public key").required(true)])
+}
+
+fn exec_negate_pubkey<'a>(matches: &clap::ArgMatches<'a>) {
+	let s = matches.value_of("pubkey").expect("no public key provided");
+	let key = PublicKey::from_str(&s).expect("invalid public key");
+
+	let secp = secp256k1::Secp256k1::new();
+	let negated = {
+		let mut key = key.key.clone();
+		key.negate_assign(&secp);
+		key
+	};
+
+	write!(::std::io::stdout(), "{}", negated).expect("failed to write stdout");
 }
