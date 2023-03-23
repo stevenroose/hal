@@ -215,11 +215,7 @@ fn exec_negate_pubkey<'a>(matches: &clap::ArgMatches<'a>) {
 	let key = PublicKey::from_str(&s).expect("invalid public key");
 
 	let secp = secp256k1::Secp256k1::new();
-	let negated = {
-		let mut key = key.key.clone();
-		key.negate_assign(&secp);
-		key
-	};
+	let negated = key.inner.negate(&secp);
 
 	write!(::std::io::stdout(), "{}", negated).expect("failed to write stdout");
 }
