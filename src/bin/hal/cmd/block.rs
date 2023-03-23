@@ -3,10 +3,9 @@ use std::io::Write;
 use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Block, BlockHeader};
 
-use cmd;
-use cmd::tx::create_transaction;
-use util;
 use hal::block::{BlockHeaderInfo, BlockInfo};
+use crate::{cmd, util};
+use crate::cmd::tx::create_transaction;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("block", "manipulate blocks")

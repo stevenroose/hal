@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+# v0.9.0  --  2023/03/23
+
+- Enable 2018 edition
+- Set MSRV at 1.41.1
+- Bump bitcoin dependency to v0.29.2
+- Bump secp256k1 dependency to v0.24.3
+- Bump miniscript dependency to v9.0.1
+
 # v0.8.2  --  2022/06/27
 
 - Add a `descriptor` field to `DescriptorInfo`

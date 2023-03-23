@@ -2,8 +2,8 @@ use bitcoin::hashes::Hash;
 use bitcoin::{Address, PublicKey, WPubkeyHash, WScriptHash};
 use clap;
 
-use cmd;
 use hal;
+use crate::cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("address", "work with addresses")

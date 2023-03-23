@@ -4,7 +4,7 @@ use bitcoin::secp256k1;
 use bitcoin::util::bip32;
 use clap;
 
-use cmd;
+use crate::cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("bip32", "BIP-32 key derivation")

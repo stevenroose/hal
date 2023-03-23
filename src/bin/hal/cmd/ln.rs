@@ -1,8 +1,7 @@
 use clap;
 use lightning_invoice::Invoice;
 
-use cmd;
-use util;
+use crate::{cmd, util};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("ln", "everything Lightning").subcommand(

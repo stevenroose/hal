@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::util::address::{Payload, WitnessVersion};
 use bitcoin::{Address, Network};
@@ -5,7 +7,8 @@ use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
 use lightning_invoice::{Currency, Fallback, Invoice, InvoiceDescription, RouteHop};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+
+use crate::{GetInfo, HexBytes};
 
 const WRONG_CID: &'static str = "incorrect short channel ID HRF format";
 
@@ -37,16 +40,16 @@ pub fn fmt_short_channel_id(cid: u64) -> String {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct RouteHopInfo {
-	pub pubkey: ::HexBytes,
+	pub pubkey: HexBytes,
 	pub short_channel_id: u64,
-	pub short_channel_id_hex: ::HexBytes,
+	pub short_channel_id_hex: HexBytes,
 	pub short_channel_id_hrf: String,
 	pub fee_base_msat: u32,
 	pub fee_proportional_millionths: u32,
 	pub cltv_expiry_delta: u16,
 }
 
-impl ::GetInfo<RouteHopInfo> for RouteHop {
+impl GetInfo<RouteHopInfo> for RouteHop {
 	fn get_info(&self, _network: Network) -> RouteHopInfo {
 		let ssid_hex = &self.short_channel_id[..];
 		let ssid = BigEndian::read_u64(&ssid_hex);
@@ -68,7 +71,7 @@ pub struct InvoiceInfo {
 	pub payment_hash: sha256::Hash,
 	pub description: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub payee_pub_key: Option<::HexBytes>,
+	pub payee_pub_key: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub expiry_time: Option<DateTime<Local>>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -82,12 +85,12 @@ pub struct InvoiceInfo {
 	pub amount_pico_btc: Option<u64>,
 
 	// For signed invoices.
-	pub signature: ::HexBytes,
+	pub signature: HexBytes,
 	pub signature_recover_id: i32,
-	pub payee_pubkey: Option<::HexBytes>,
+	pub payee_pubkey: Option<HexBytes>,
 }
 
-impl ::GetInfo<InvoiceInfo> for Invoice {
+impl GetInfo<InvoiceInfo> for Invoice {
 	fn get_info(&self, network: Network) -> InvoiceInfo {
 		let signed_raw = self.clone().into_signed_raw();
 		let (sig_rec, sig) = signed_raw.signature().0.serialize_compact();
@@ -133,7 +136,7 @@ impl ::GetInfo<InvoiceInfo> for Invoice {
 			routes: self
 				.routes()
 				.iter()
-				.map(|r| r.iter().map(|h| ::GetInfo::get_info(h, network)).collect())
+				.map(|r| r.iter().map(|h| GetInfo::get_info(h, network)).collect())
 				.collect(),
 			currency: match self.currency() {
 				Currency::Bitcoin => "bitcoin".to_owned(),

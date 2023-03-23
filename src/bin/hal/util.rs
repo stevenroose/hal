@@ -6,7 +6,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use cmd;
+use crate::cmd;
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub enum CommandInfo {

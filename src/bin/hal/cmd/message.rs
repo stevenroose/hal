@@ -4,8 +4,7 @@ use bitcoin::secp256k1;
 use bitcoin::{Address, AddressType, PrivateKey, PublicKey};
 use clap;
 
-use cmd;
-use util;
+use crate::{cmd, util};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("message", "Bitcoin Signed Messages")

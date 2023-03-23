@@ -8,8 +8,7 @@ use miniscript::miniscript::{BareCtx, Legacy, Miniscript, Segwitv0};
 use miniscript::policy::Liftable;
 use miniscript::{Descriptor, policy, MiniscriptKey};
 
-use cmd;
-use util;
+use crate::{cmd, util};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("miniscript", "work with miniscript (alias: ms)")

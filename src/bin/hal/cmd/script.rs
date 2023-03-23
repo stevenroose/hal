@@ -2,7 +2,7 @@ use bitcoin::Script;
 use clap;
 use hex;
 
-use cmd;
+use crate::cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("script", "manipulate scripts").subcommand(cmd_decode())

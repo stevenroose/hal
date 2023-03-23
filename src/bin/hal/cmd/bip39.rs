@@ -6,8 +6,8 @@ use clap;
 use hex;
 use rand::Rng;
 
-use cmd;
 use hal;
+use crate::cmd;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("bip39", "BIP-39 mnemonics")

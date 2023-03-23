@@ -2,15 +2,17 @@ use bitcoin::consensus::encode::serialize;
 use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut, Txid, Wtxid};
 use serde::{Deserialize, Serialize};
 
+use crate::{GetInfo, HexBytes};
+
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InputScriptInfo {
-	pub hex: Option<::HexBytes>,
+	pub hex: Option<HexBytes>,
 	pub asm: Option<String>,
 }
 
 pub struct InputScript<'a>(pub &'a Script);
 
-impl<'a> ::GetInfo<InputScriptInfo> for InputScript<'a> {
+impl<'a> GetInfo<InputScriptInfo> for InputScript<'a> {
 	fn get_info(&self, _network: Network) -> InputScriptInfo {
 		InputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
@@ -26,10 +28,10 @@ pub struct InputInfo {
 	pub vout: Option<u32>,
 	pub script_sig: Option<InputScriptInfo>,
 	pub sequence: Option<u32>,
-	pub witness: Option<Vec<::HexBytes>>,
+	pub witness: Option<Vec<HexBytes>>,
 }
 
-impl ::GetInfo<InputInfo> for TxIn {
+impl GetInfo<InputInfo> for TxIn {
 	fn get_info(&self, network: Network) -> InputInfo {
 		InputInfo {
 			prevout: Some(self.previous_output.to_string()),
@@ -48,7 +50,7 @@ impl ::GetInfo<InputInfo> for TxIn {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct OutputScriptInfo {
-	pub hex: Option<::HexBytes>,
+	pub hex: Option<HexBytes>,
 	pub asm: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none", rename = "type")]
 	pub type_: Option<String>,
@@ -58,7 +60,7 @@ pub struct OutputScriptInfo {
 
 pub struct OutputScript<'a>(pub &'a Script);
 
-impl<'a> ::GetInfo<OutputScriptInfo> for OutputScript<'a> {
+impl<'a> GetInfo<OutputScriptInfo> for OutputScript<'a> {
 	fn get_info(&self, network: Network) -> OutputScriptInfo {
 		OutputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
@@ -92,7 +94,7 @@ pub struct OutputInfo {
 	pub script_pub_key: Option<OutputScriptInfo>,
 }
 
-impl ::GetInfo<OutputInfo> for TxOut {
+impl GetInfo<OutputInfo> for TxOut {
 	fn get_info(&self, network: Network) -> OutputInfo {
 		OutputInfo {
 			value: Some(self.value),
@@ -115,7 +117,7 @@ pub struct TransactionInfo {
 	pub total_output_value: Option<u64>,
 }
 
-impl ::GetInfo<TransactionInfo> for Transaction {
+impl GetInfo<TransactionInfo> for Transaction {
 	fn get_info(&self, network: Network) -> TransactionInfo {
 		let weight = self.weight() as usize;
 		TransactionInfo {
