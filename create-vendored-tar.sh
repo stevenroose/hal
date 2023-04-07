@@ -1,14 +1,14 @@
 #!/bin/sh
 
 WORKDIR=./vendored-tar
-TARFILE=archived-tar.tar.gz
+TARFILE=$PWD/archived-tar.tar.gz
 
 rm -rf ${WORKDIR}
 mkdir ${WORKDIR}
 
 # Copy all relevant files
 cp -r ./src/ ./Cargo.toml ./Cargo.lock ./LICENSE ./README.md ${WORKDIR}
-cd ${WORKDIR}
+pushd ${WORKDIR}
 
 cargo vendor --locked ./vendor
 
@@ -21,8 +21,7 @@ replace-with = "vendored-sources"
 directory = "vendor"
 EOF
 
-tar -czf ${TARFILE} ./*
+tar -czf ${TARFILE} .
 
-cd ..
-mv ${WORKDIR}/${TARFILE} .
+popd
 rm -rf ${WORKDIR}
