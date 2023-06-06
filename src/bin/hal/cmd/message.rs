@@ -4,7 +4,7 @@ use bitcoin::secp256k1;
 use bitcoin::{Address, AddressType, PrivateKey, PublicKey};
 use clap;
 
-use crate::{cmd, util};
+use crate::{SECP, cmd, util};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("message", "Bitcoin Signed Messages")
@@ -57,9 +57,9 @@ fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
 	let msg = util::arg_or_stdin(matches, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
-	let secp = secp256k1::Secp256k1::new();
-	let signature =
-		secp.sign_ecdsa_recoverable(&secp256k1::Message::from_slice(&hash).unwrap(), &privkey.inner);
+	let signature = SECP.sign_ecdsa_recoverable(
+		&secp256k1::Message::from_slice(&hash).unwrap(), &privkey.inner,
+	);
 
 	let (recid, raw) = signature.serialize_compact();
 	let mut serialized = [0u8; 65];
@@ -123,9 +123,8 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	let msg = util::arg_or_stdin(matches, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
-	let secp = secp256k1::Secp256k1::verification_only();
 	let pubkey = PublicKey {
-		inner: secp
+		inner: SECP
 			.recover_ecdsa(&secp256k1::Message::from_slice(&hash).unwrap(), &signature)
 			.expect("invalid signature"),
 		compressed: compressed,
@@ -196,8 +195,7 @@ fn exec_recover<'a>(matches: &clap::ArgMatches<'a>) {
 	let msg = matches.value_of("message").expect("no message given");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
-	let secp = secp256k1::Secp256k1::verification_only();
-	let pubkey = secp
+	let pubkey = SECP
 		.recover_ecdsa(&secp256k1::Message::from_slice(&hash).unwrap(), &signature)
 		.expect("invalid signature");
 

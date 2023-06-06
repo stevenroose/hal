@@ -3,6 +3,8 @@ extern crate bitcoin;
 extern crate byteorder;
 extern crate chrono;
 extern crate hex;
+#[macro_use]
+extern crate lazy_static;
 extern crate lightning_invoice;
 extern crate miniscript as miniscriptlib;
 extern crate secp256k1;
@@ -21,6 +23,11 @@ pub mod psbt;
 pub mod tx;
 
 use bitcoin::Network;
+
+lazy_static! {
+	/// A global secp256k1 context.
+	pub static ref SECP: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
+}
 
 /// Utility struct to serialize byte strings as hex.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]

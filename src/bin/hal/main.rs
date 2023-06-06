@@ -25,6 +25,8 @@ pub mod cmd;
 mod process_builder;
 pub mod util;
 
+pub use hal::SECP;
+
 /// Setup logging with the given log level.
 fn setup_logger(lvl: log::LevelFilter) {
 	fern::Dispatch::new()
