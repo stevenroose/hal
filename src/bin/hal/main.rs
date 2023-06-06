@@ -1,5 +1,7 @@
 extern crate bip39;
 extern crate bitcoin;
+#[macro_use]
+extern crate lazy_static;
 extern crate lightning_invoice;
 #[macro_use]
 extern crate log;

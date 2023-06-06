@@ -157,6 +157,18 @@ pub fn find_closest(cmd: &str) -> Option<String> {
 		.map(|slot| slot.1)
 }
 
+/// Return true if more than one of the input booleans is true.
+pub fn more_than_one(bools: &[bool]) -> bool {
+	let mut one = false;
+	for b in bools {
+		if *b && one {
+			return true;
+		}
+		one |= *b;
+	}
+	false
+}
+
 #[test]
 fn test_lev_distance() {
 	use std::char::{from_u32, MAX};
