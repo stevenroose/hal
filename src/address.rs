@@ -1,6 +1,7 @@
 use bitcoin::{self, Address, Network, Script, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
 use serde::{Deserialize, Serialize};
 
+use crate::SECP;
 use crate::tx;
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -35,6 +36,8 @@ pub struct Addresses {
 	pub p2wsh: Option<Address>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub p2shwsh: Option<Address>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub p2tr: Option<Address>,
 }
 
 impl Addresses {
@@ -43,6 +46,7 @@ impl Addresses {
 			p2pkh: Some(Address::p2pkh(pubkey, network)),
 			p2wpkh: Address::p2wpkh(pubkey, network).ok(),
 			p2shwpkh: Address::p2shwpkh(pubkey, network).ok(),
+			p2tr: Some(Address::p2tr(&SECP, pubkey.inner.into(), None, network)),
 			..Default::default()
 		}
 	}
@@ -52,6 +56,10 @@ impl Addresses {
 			p2sh: Address::p2sh(&script, network).ok(),
 			p2wsh: Some(Address::p2wsh(&script, network)),
 			p2shwsh: Some(Address::p2shwsh(&script, network)),
+			// NB to make a p2tr here we need a NUMS internal key and it's
+			// probably not safe to pick one ourselves. AFAIK there is no
+			// standard NUMS point for this purpose.
+			// (Though BIP341 suggests one..)
 			..Default::default()
 		}
 	}
