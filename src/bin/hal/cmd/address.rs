@@ -30,19 +30,19 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 	let network = cmd::network(matches);
 
-	let created = if let Some(pubkey_hex) = matches.value_of("pubkey") {
+	if let Some(pubkey_hex) = matches.value_of("pubkey") {
 		let pubkey: PublicKey = pubkey_hex.parse().expect("invalid pubkey");
-		hal::address::Addresses::from_pubkey(&pubkey, network)
+		let addr = hal::address::Addresses::from_pubkey(&pubkey, network);
+		cmd::print_output(matches, &addr)
 	} else if let Some(script_hex) = matches.value_of("script") {
 		let script_bytes = hex::decode(script_hex).expect("invalid script hex");
 		let script = script_bytes.into();
 
-		hal::address::Addresses::from_script(&script, network)
+		let addr = hal::address::Addresses::from_script(&script, network);
+		cmd::print_output(matches, &addr)
 	} else {
-		panic!("Can't create addresses without a pubkey");
-	};
-
-	cmd::print_output(matches, &created)
+		cmd_create().print_help().unwrap();
+	}
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
