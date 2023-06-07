@@ -1,5 +1,9 @@
 #!/bin/bash
 
+BASEDIR=$(git rev-parse --show-toplevel)
+cd "$BASEDIR"
+PROJ=$(basename ${BASEDIR})
+
 WORKDIR=./vendored-tar
 TAG=$(git describe --tags)
 echo "On tag ${TAG}"
@@ -7,7 +11,7 @@ echo "On tag ${TAG}"
 if [[ "${TAG}" =~ ^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(|-.*)$ ]]; then
     TAG=${TAG:1}
 fi
-TARFILE=$PWD/hal-${TAG}-vendored.tar.gz
+TARFILE=${PWD}/${PROJ}-${TAG}-vendored.tar.gz
 
 
 echo Creating tarball ${TARFILE}
