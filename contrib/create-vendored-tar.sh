@@ -1,7 +1,16 @@
-#!/bin/sh
+#!/bin/bash
 
 WORKDIR=./vendored-tar
-TARFILE=$PWD/archived-tar.tar.gz
+TAG=$(git describe --tags)
+echo "On tag ${TAG}"
+# Remove the v prefix from semver versions.
+if [[ "${TAG}" =~ ^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(|-.*)$ ]]; then
+    TAG=${TAG:1}
+fi
+TARFILE=$PWD/hal-${TAG}-vendored.tar.gz
+
+
+echo Creating tarball ${TARFILE}
 
 rm -rf ${WORKDIR}
 mkdir ${WORKDIR}
@@ -25,3 +34,6 @@ tar -czf ${TARFILE} .
 
 popd
 rm -rf ${WORKDIR}
+
+# Sign tarball with
+# $ gpg --detach-sign --armor <tarbar>
