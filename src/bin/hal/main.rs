@@ -40,7 +40,7 @@ fn setup_logger(lvl: log::LevelFilter) {
 }
 
 /// Create the main app object.
-fn init_app<'a, 'b>() -> clap::App<'a, 'b> {
+fn init_app() -> clap::App<'static, 'static> {
 	clap::App::new("hal")
 		.version(clap::crate_version!())
 		.author("Steven Roose <steven@stevenroose.org>")

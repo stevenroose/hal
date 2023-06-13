@@ -14,7 +14,7 @@ pub mod tx;
 use bitcoin::Network;
 
 /// Build a list of all built-in subcommands.
-pub fn subcommands<'a>() -> Vec<clap::App<'a, 'a>> {
+pub fn subcommands() -> Vec<clap::App<'static, 'static>> {
 	vec![
 		address::subcommand(),
 		bech32::subcommand(),
@@ -32,19 +32,19 @@ pub fn subcommands<'a>() -> Vec<clap::App<'a, 'a>> {
 }
 
 /// Construct a new command option.
-pub fn opt<'a>(name: &'static str, help: &'static str) -> clap::Arg<'a, 'a> {
+pub fn opt<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
 	clap::Arg::with_name(name).long(name).help(help)
 }
 
 /// Construct a new positional argument.
-pub fn arg<'a>(name: &'static str, help: &'static str) -> clap::Arg<'a, 'a> {
+pub fn arg<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
 	clap::Arg::with_name(name).help(help).takes_value(true)
 }
 
 /// Create a new subcommand group using the template that sets all the common settings.
 /// This is not intended for actual commands, but for subcommands that host a bunch of other
 /// subcommands.
-pub fn subcommand_group<'a>(name: &'static str, about: &'static str) -> clap::App<'a, 'a> {
+pub fn subcommand_group<'a>(name: &'a str, about: &'a str) -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name(name).about(about).settings(&[
 		clap::AppSettings::SubcommandRequiredElseHelp,
 		clap::AppSettings::DisableHelpSubcommand,
@@ -54,13 +54,13 @@ pub fn subcommand_group<'a>(name: &'static str, about: &'static str) -> clap::Ap
 }
 
 /// Create a new subcommand using the template that sets all the common settings.
-pub fn subcommand<'a>(name: &'static str, about: &'static str) -> clap::App<'a, 'a> {
+pub fn subcommand<'a>(name: &'a str, about: &'a str) -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name(name)
 		.about(about)
 		.setting(clap::AppSettings::DisableHelpSubcommand)
 }
 
-pub fn opts_networks<'a>() -> Vec<clap::Arg<'a, 'a>> {
+pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 	vec![
 		clap::Arg::with_name("testnet")
 			.long("testnet")
@@ -76,7 +76,7 @@ pub fn opts_networks<'a>() -> Vec<clap::Arg<'a, 'a>> {
 	]
 }
 
-pub fn network<'a>(matches: &clap::ArgMatches<'a>) -> Network {
+pub fn network(matches: &clap::ArgMatches) -> Network {
 	if matches.is_present("testnet") {
 		Network::Testnet
 	} else if matches.is_present("regtest") {
@@ -86,7 +86,7 @@ pub fn network<'a>(matches: &clap::ArgMatches<'a>) -> Network {
 	}
 }
 
-pub fn opt_yaml<'a>() -> clap::Arg<'a, 'a> {
+pub fn opt_yaml() -> clap::Arg<'static, 'static> {
 	clap::Arg::with_name("yaml")
 		.long("yaml")
 		.short("y")
@@ -95,7 +95,7 @@ pub fn opt_yaml<'a>() -> clap::Arg<'a, 'a> {
 		.required(false)
 }
 
-pub fn print_output<'a, T: serde::Serialize>(matches: &clap::ArgMatches<'a>, out: &T) {
+pub fn print_output<T: serde::Serialize>(matches: &clap::ArgMatches, out: &T) {
 	if matches.is_present("yaml") {
 		serde_yaml::to_writer(::std::io::stdout(), &out).unwrap();
 	} else {
