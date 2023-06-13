@@ -152,7 +152,7 @@ fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
 		.map(|x| MiniscriptInfo::from_bare(x, MiniscriptKeyType::PublicKey, Some(script)))
 		.ok();
 	if segwit_info.is_none() && legacy_info.is_none() && bare_info.is_none() {
-		panic!("Invalid Miniscript under all script contexts")
+		exit!("Invalid Miniscript under all script contexts")
 	}
 
 	let comb_info =
@@ -239,7 +239,7 @@ fn exec_policy<'a>(args: &clap::ArgMatches<'a>) {
 		// Then try with strings.
 		match get_policy_info::<String>(policy_str, MiniscriptKeyType::String) {
 			Ok(info) => args.print_output(&info),
-			Err(e) => panic!("Invalid policy: {}", e),
+			Err(e) => exit!("Invalid policy: {}", e),
 		}
 	}
 }

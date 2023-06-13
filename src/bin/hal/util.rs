@@ -6,7 +6,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use crate::cmd;
+use crate::prelude::*;
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub enum CommandInfo {
@@ -45,7 +45,7 @@ pub fn arg_or_stdin<'a>(args: &'a clap::ArgMatches<'a>, arg: &str) -> Cow<'a, st
 		let _ = stdin_lock.read_to_end(&mut input);
 		while stdin_lock.read_to_end(&mut input).unwrap_or(0) > 0 {}
 		if input.is_empty() {
-			panic!("no '{}' argument given", arg);
+			exit!("no '{}' argument given", arg);
 		}
 		String::from_utf8(input).expect(&format!("invalid utf8 on stdin for '{}'", arg))
 			.trim().to_owned().into()

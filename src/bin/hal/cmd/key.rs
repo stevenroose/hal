@@ -99,7 +99,7 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 	} else if let Ok(sk) = secp256k1::SecretKey::from_str(&raw) {
 		sk.get_info(args.network())
 	} else {
-		panic!("invalid WIF/hex private key: {}", raw);
+		exit!("invalid WIF/hex private key: {}", raw);
 	};
 
 	args.print_output(&info)

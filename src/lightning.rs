@@ -13,21 +13,21 @@ use crate::{GetInfo, HexBytes};
 const WRONG_CID: &'static str = "incorrect short channel ID HRF format";
 
 /// Parse a short channel is in the form of `${blockheight)x$(txindex}x${outputindex}`.
-pub fn parse_short_channel_id(cid: &str) -> u64 {
+pub fn parse_short_channel_id(cid: &str) -> Result<u64, &'static str> {
 	let mut split = cid.split("x");
 	let blocknum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
 	if blocknum & 0xFFFFFF != blocknum {
-		panic!("{}", WRONG_CID);
+		return Err(WRONG_CID);
 	}
 	let txnum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
 	if txnum & 0xFFFFFF != txnum {
-		panic!("{}", WRONG_CID);
+		return Err(WRONG_CID);
 	}
 	let outnum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
 	if outnum & 0xFFFF != outnum {
-		panic!("{}", WRONG_CID);
+		return Err(WRONG_CID);
 	}
-	blocknum << 40 | txnum << 16 | outnum
+	Ok(blocknum << 40 | txnum << 16 | outnum)
 }
 
 /// Parse a short channel is in the form of `${blockheight)x$(txindex}x${outputindex}`.

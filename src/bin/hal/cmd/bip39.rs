@@ -39,17 +39,17 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 	let word_count = args.value_of("words").unwrap_or("24").parse::<usize>()
 		.expect("invalid number of words");
 	if word_count < 12 || word_count % 6 != 0 || word_count > 24 {
-		panic!("invalid word count: {}", word_count);
+		exit!("invalid word count: {}", word_count);
 	}
 	let nb_entropy_bytes = (word_count / 3) * 4;
 
 	let mut entropy;
 	match (args.is_present("entropy"), args.is_present("stdin")) {
-		(true, true) => panic!("can't provide --entropy and --stdin"),
+		(true, true) => exit!("can't provide --entropy and --stdin"),
 		(true, false) => {
 			let entropy_hex = args.value_of("entropy").unwrap();
 			if entropy_hex.len() != nb_entropy_bytes * 2 {
-				panic!(
+				exit!(
 					"invalid entropy length for {} word mnemonic, need {} bytes",
 					word_count, nb_entropy_bytes
 				);

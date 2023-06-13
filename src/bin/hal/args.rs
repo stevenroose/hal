@@ -3,6 +3,8 @@ use std::borrow::Borrow;
 
 use bitcoin::Network;
 
+use crate::exit;
+
 /// Construct a new command option.
 pub fn opt<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
 	clap::Arg::with_name(name).long(name).help(help)

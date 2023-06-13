@@ -86,8 +86,8 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let block = Block {
 		header: create_block_header(info.header),
 		txdata: match (info.transactions, info.raw_transactions) {
-			(Some(_), Some(_)) => panic!("Can't provide transactions both in JSON and raw."),
-			(None, None) => panic!("No transactions provided."),
+			(Some(_), Some(_)) => exit!("Can't provide transactions both in JSON and raw."),
+			(None, None) => exit!("No transactions provided."),
 			(Some(infos), None) => infos.into_iter().map(create_transaction).collect(),
 			(None, Some(raws)) => raws
 				.into_iter()

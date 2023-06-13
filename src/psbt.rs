@@ -12,7 +12,7 @@ pub struct HDPathInfo {
 	pub path: bip32::DerivationPath,
 }
 
-pub fn sighashtype_to_string(sht: psbt::PsbtSighashType) -> String {
+pub fn sighashtype_to_string(sht: psbt::PsbtSighashType) -> &'static str {
 	if let Ok(t) = sht.ecdsa_hash_ty() {
 		match t {
 			sighash::EcdsaSighashType::All => "ALL",
@@ -22,18 +22,32 @@ pub fn sighashtype_to_string(sht: psbt::PsbtSighashType) -> String {
 			sighash::EcdsaSighashType::NonePlusAnyoneCanPay => "NONE|ANYONECANPAY",
 			sighash::EcdsaSighashType::SinglePlusAnyoneCanPay => "SINGLE|ANYONECANPAY",
 		}
-	} else if let Ok(_) = sht.schnorr_hash_ty() {
-		panic!("schnorr sigs are not yet supported");
+	} else if let Ok(t) = sht.schnorr_hash_ty() {
+		match t {
+            sighash::SchnorrSighashType::Default => "SIGHASH_DEFAULT",
+            sighash::SchnorrSighashType::All => "SIGHASH_ALL",
+            sighash::SchnorrSighashType::None => "SIGHASH_NONE",
+            sighash::SchnorrSighashType::Single => "SIGHASH_SINGLE",
+            sighash::SchnorrSighashType::AllPlusAnyoneCanPay => "SIGHASH_ALL|SIGHASH_ANYONECANPAY",
+            sighash::SchnorrSighashType::NonePlusAnyoneCanPay => "SIGHASH_NONE|SIGHASH_ANYONECANPAY",
+            sighash::SchnorrSighashType::SinglePlusAnyoneCanPay => "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY",
+		}
 	} else {
 		unreachable!();
-	}.to_owned()
+	}
 }
 
 pub fn sighashtype_values() -> &'static [&'static str] {
 	&["ALL", "NONE", "SINGLE", "ALL|ANYONECANPAY", "NONE|ANYONECANPAY", "SINGLE|ANYONECANPAY"]
 }
 
-pub fn ecdsa_sighashtype_from_string(sht: &str) -> psbt::PsbtSighashType {
+pub fn ecdsa_sighashtype_from_string(sht: &str) -> Result<psbt::PsbtSighashType, &'static str> {
+	lazy_static! {
+		static ref ERR: &'static str = Box::leak(format!(
+			"invalid ecdsa SIGHASH type value -- possible values: {:?}", &sighashtype_values(),
+		).into_boxed_str());
+	}
+
 	use bitcoin::EcdsaSighashType::*;
 	let ecdsa_sighash = match sht {
 		"ALL" => All,
@@ -42,9 +56,9 @@ pub fn ecdsa_sighashtype_from_string(sht: &str) -> psbt::PsbtSighashType {
 		"ALL|ANYONECANPAY" => AllPlusAnyoneCanPay,
 		"NONE|ANYONECANPAY" => NonePlusAnyoneCanPay,
 		"SINGLE|ANYONECANPAY" => SinglePlusAnyoneCanPay,
-		_ => panic!("invalid ecdsa SIGHASH type value -- possible values: {:?}", &sighashtype_values()),
+		_ => return Err(&ERR),
 	};
-	psbt::PsbtSighashType::from(ecdsa_sighash)
+	Ok(psbt::PsbtSighashType::from(ecdsa_sighash))
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -81,7 +95,7 @@ impl GetInfo<PsbtInputInfo> for psbt::Input {
 				}
 				partial_sigs
 			},
-			sighash_type: self.sighash_type.map(sighashtype_to_string),
+			sighash_type: self.sighash_type.map(|s| sighashtype_to_string(s).to_owned()),
 			redeem_script: self.redeem_script.as_ref()
 				.map(|s| tx::OutputScript(s).get_info(network)),
 			witness_script: self.witness_script.as_ref()

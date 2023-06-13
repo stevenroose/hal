@@ -58,7 +58,7 @@ fn file_or_raw(flag: &str) -> (Vec<u8>, PsbtSource) {
 		file.read_to_end(&mut buf).expect("error reading file");
 		(buf, PsbtSource::File)
 	} else {
-		panic!("Can't load PSBT: invalid hex, base64 or unknown file");
+		exit!("Can't load PSBT: invalid hex, base64 or unknown file");
 	}
 }
 
@@ -223,7 +223,7 @@ fn parse_hd_keypath_triplet(
 		let hex = triplet.next().expect("invalid HD keypath triplet: missing fingerprint");
 		let raw = hex::decode(&hex).expect("invalid HD keypath fingerprint hex");
 		if raw.len() != 4 {
-			panic!("invalid HD keypath fingerprint size: {} instead of 4", raw.len());
+			exit!("invalid HD keypath fingerprint size: {} instead of 4", raw.len());
 		}
 		raw[..].into()
 	};
@@ -260,13 +260,13 @@ fn edit_input<'a>(
 	if let Some(pairs) = args.values_of("partial-sigs-add") {
 		for (pk, sig) in pairs.map(parse_partial_sig_pair) {
 			if input.partial_sigs.insert(pk, sig).is_some() {
-				panic!("public key {} is already in partial sigs", &pk);
+				exit!("public key {} is already in partial sigs", &pk);
 			}
 		}
 	}
 
 	if let Some(sht) = args.value_of("sighash-type") {
-		input.sighash_type = Some(hal::psbt::ecdsa_sighashtype_from_string(&sht));
+		input.sighash_type = Some(hal::psbt::ecdsa_sighashtype_from_string(&sht).expect("invalid sighash string"));
 	}
 
 	if let Some(hex) = args.value_of("redeem-script") {
@@ -285,7 +285,7 @@ fn edit_input<'a>(
 	if let Some(triplets) = args.values_of("hd-keypaths-add") {
 		for (pk, pair) in triplets.map(parse_hd_keypath_triplet) {
 			if input.bip32_derivation.insert(pk, pair).is_some() {
-				panic!("public key {} is already in HD keypaths", &pk);
+				exit!("public key {} is already in HD keypaths", &pk);
 			}
 		}
 	}
@@ -325,7 +325,7 @@ fn edit_output<'a>(
 	if let Some(triplets) = args.values_of("hd-keypaths-add") {
 		for (pk, pair) in triplets.map(parse_hd_keypath_triplet) {
 			if output.bip32_derivation.insert(pk, pair).is_some() {
-				panic!("public key {} is already in HD keypaths", &pk);
+				exit!("public key {} is already in HD keypaths", &pk);
 			}
 		}
 	}
@@ -338,8 +338,8 @@ fn exec_edit<'a>(args: &clap::ArgMatches<'a>) {
 		deserialize(&raw).expect("invalid PSBT format");
 
 	match (args.value_of("input-idx"), args.value_of("output-idx")) {
-		(None, None) => panic!("no input or output index provided"),
-		(Some(_), Some(_)) => panic!("can only edit an input or an output at a time"),
+		(None, None) => exit!("no input or output index provided"),
+		(Some(_), Some(_)) => exit!("can only edit an input or an output at a time"),
 		(Some(idx), _) => {
 			edit_input(idx.parse().expect("invalid input index"), &args, &mut psbt)
 		}

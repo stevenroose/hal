@@ -90,11 +90,11 @@ fn outpoint_from_input_info(input: &InputInfo) -> OutPoint {
 	let vout = input.vout;
 
 	match (prevout, txid, vout) {
-		(Some(p), Some(t), _) if t != p.txid => panic!("prevout and txid don't match"),
-		(Some(p), _, Some(v)) if v != p.vout => panic!("prevout and vout don't match"),
+		(Some(p), Some(t), _) if t != p.txid => exit!("prevout and txid don't match"),
+		(Some(p), _, Some(v)) if v != p.vout => exit!("prevout and vout don't match"),
 		(Some(p), _, _) => p,
 		(None, Some(t), Some(v)) => OutPoint::new(t, v),
-		_ => panic!("inputs should specify either the prevout or both the txid and vout"),
+		_ => exit!("inputs should specify either the prevout or both the txid and vout"),
 	}
 }
 
@@ -106,9 +106,9 @@ fn create_script_sig(ss: InputScriptInfo) -> Script {
 
 		hex.0.into()
 	} else if let Some(_) = ss.asm {
-		panic!("Decoding script assembly is not yet supported.");
+		exit!("Decoding script assembly is not yet supported.");
 	} else {
-		panic!("No scriptSig info provided.");
+		exit!("No scriptSig info provided.");
 	}
 }
 
@@ -133,7 +133,7 @@ fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network
 	if let Some(ref addr) = spk.address {
 		// Error if another network had already been used.
 		if used_network.replace(addr.network).unwrap_or(addr.network) != addr.network {
-			panic!("Addresses for different networks are used in the output scripts.");
+			exit!("Addresses for different networks are used in the output scripts.");
 		}
 	}
 
@@ -153,11 +153,11 @@ fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network
 		}
 
 		//TODO(stevenroose) support script disassembly
-		panic!("Decoding script assembly is not yet supported.");
+		exit!("Decoding script assembly is not yet supported.");
 	} else if let Some(address) = spk.address {
 		address.script_pubkey()
 	} else {
-		panic!("No scriptPubKey info provided.");
+		exit!("No scriptPubKey info provided.");
 	}
 }
 

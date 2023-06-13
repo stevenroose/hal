@@ -14,6 +14,8 @@ use std::process::Command;
 use jobserver::Client;
 use shell_escape::escape;
 
+use crate::prelude::*;
+
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
 pub struct ProcessBuilder {
@@ -152,7 +154,7 @@ impl ProcessBuilder {
 		let exit = command.status().expect(&format!("could not execute process {}", self));
 
 		if !exit.success() {
-			panic!("process didn't exit successfully: {}", self);
+			exit!("process didn't exit successfully: {}", self);
 		}
 	}
 
@@ -182,7 +184,7 @@ impl ProcessBuilder {
 		let output = command.output().expect(&format!("could not execute process {}", self));
 
 		if !output.status.success() {
-			panic!("process didn't exit successfully: {}", self);
+			exit!("process didn't exit successfully: {}", self);
 		}
 	}
 

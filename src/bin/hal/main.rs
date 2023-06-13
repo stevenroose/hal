@@ -18,20 +18,27 @@ extern crate shell_escape;
 
 extern crate hal;
 
-use std::env;
-use std::panic;
-use std::process;
+use std::{env, panic, process};
 
 pub mod args;
 pub mod cmd;
 mod process_builder;
 pub mod util;
 
-
 pub mod prelude {
 	pub use crate::{args, cmd, util};
 	pub use crate::args::ArgMatchesExt;
 	pub use hal::SECP;
+	pub use super::exit;
+}
+
+
+#[macro_export]
+macro_rules! exit {
+	($($arg:tt)*) => {{
+		eprintln!($($arg)*);
+		std::process::exit(1);
+	}}
 }
 
 /// Setup logging with the given log level.
@@ -138,9 +145,9 @@ fn main() {
 				Some(command) => command,
 				None => {
 					if let Some(closest) = util::find_closest(cmd) {
-						panic!("no such subcommand: `{}`\n\n\tDid you mean `{}`?\n", cmd, closest);
+						exit!("no such subcommand: `{}`\n\n\tDid you mean `{}`?\n", cmd, closest);
 					}
-					panic!("no such subcommand: `{}`", cmd);
+					exit!("no such subcommand: `{}`", cmd);
 				}
 			};
 

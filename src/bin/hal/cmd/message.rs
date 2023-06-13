@@ -94,7 +94,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 		if let Err(e) = signer_pubk_res {
 			error!("Error parsing signer as public key: {}", e);
 		}
-		panic!("Failed to parse signer.");
+		exit!("Failed to parse signer.");
 	}
 	if signer_addr_res.is_ok() && signer_pubk_res.is_ok() {
 		debug!("Rare/impossible case that signer can both be parsed as pubkey and address.");
@@ -108,11 +108,11 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 			debug!("Signature is both valid hex and base64, assuming it's hex.");
 			b
 		}
-		(Err(e1), Err(e2)) => panic!("Invalid signature: \"{}\"; \"{}\"", e1, e2),
+		(Err(e1), Err(e2)) => exit!("Invalid signature: \"{}\"; \"{}\"", e1, e2),
 	};
 
 	if sig_bytes.len() != 65 {
-		panic!("Invalid signature: length is {} instead of 65 bytes", sig_bytes.len());
+		exit!("Invalid signature: length is {} instead of 65 bytes", sig_bytes.len());
 	}
 	let recid = secp256k1::ecdsa::RecoveryId::from_i32(((sig_bytes[0] - 27) & 0x03) as i32)
 		.expect("invalid recoverable signature (invalid recid)");
@@ -133,11 +133,11 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 	if let Ok(pk) = signer_pubk_res {
 		if pubkey != pk {
-			panic!("Signed for pubkey {}, expected {}", pubkey, pk);
+			exit!("Signed for pubkey {}, expected {}", pubkey, pk);
 		}
 	} else if let Ok(expected) = signer_addr_res {
 		let addr = match expected.address_type() {
-			None => panic!("Unknown address type provided"),
+			None => exit!("Unknown address type provided"),
 			Some(AddressType::P2pkh) => Address::p2pkh(&pubkey, network),
 			Some(AddressType::P2wpkh) => {
 				Address::p2wpkh(&pubkey, network).expect("Uncompressed key in Segwit")
@@ -145,11 +145,11 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 			Some(AddressType::P2sh) => {
 				Address::p2shwpkh(&pubkey, network).expect("Uncompressed key in Segwit")
 			}
-			Some(tp) => panic!("Address of type {} can't sign messages.", tp),
+			Some(tp) => exit!("Address of type {} can't sign messages.", tp),
 		};
 		// We need to use to_string because regtest and testnet addresses are the same.
 		if addr.to_string() != expected.to_string() {
-			panic!(
+			exit!(
 				"Signed for address {:?}, expected {:?} ({})",
 				addr,
 				expected,
@@ -180,11 +180,11 @@ fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {
 			debug!("Signature is both valid hex and base64, assuming it's hex.");
 			b
 		}
-		(Err(e1), Err(e2)) => panic!("Invalid signature: \"{}\"; \"{}\"", e1, e2),
+		(Err(e1), Err(e2)) => exit!("Invalid signature: \"{}\"; \"{}\"", e1, e2),
 	};
 
 	if sig_bytes.len() != 65 {
-		panic!("Invalid signature: length is {} instead of 65 bytes", sig_bytes.len());
+		exit!("Invalid signature: length is {} instead of 65 bytes", sig_bytes.len());
 	}
 	let recid = secp256k1::ecdsa::RecoveryId::from_i32((sig_bytes[0] - 27 & 0x03) as i32)
 		.expect("invalid recoverable signature (invalid recid)");
