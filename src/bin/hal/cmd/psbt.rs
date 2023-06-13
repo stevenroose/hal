@@ -13,7 +13,7 @@ use bitcoin::{PublicKey, Transaction};
 use miniscript::psbt::PsbtExt;
 use secp256k1;
 
-use crate::{cmd, util};
+use crate::{SECP, cmd, util};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("psbt", "partially signed Bitcoin transactions")
@@ -382,8 +382,7 @@ fn exec_finalize<'a>(matches: &clap::ArgMatches<'a>) {
 	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
 
 	// Create a secp context, should there be one with static lifetime?
-	let secp = &secp256k1::Secp256k1::verification_only();
-	let psbt = psbt.finalize(secp).expect("failed to finalize");
+	let psbt = psbt.finalize(&SECP).expect("failed to finalize");
 
 	let finalized_raw = serialize(&psbt.extract_tx());
 	if matches.is_present("raw-stdout") {
@@ -493,8 +492,7 @@ fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
 	} else {
 		panic!("invalid WIF/hex private key: {}", priv_key);
 	};
-	let secp = secp256k1::Secp256k1::signing_only();
-	let pk = secp256k1::PublicKey::from_secret_key(&secp, &sk);
+	let pk = secp256k1::PublicKey::from_secret_key(&SECP, &sk);
 	let pk = bitcoin::PublicKey {
 		compressed: compressed,
 		inner: pk,
@@ -505,7 +503,7 @@ fn exec_rawsign<'a>(matches: &clap::ArgMatches<'a>) {
 		miniscript::psbt::PsbtSighashMsg::EcdsaSighash(sighash) => {
 			let msg = secp256k1::Message::from_slice(&sighash)
 				.expect("error computing sighash message on psbt");
-			secp.sign_ecdsa(&msg, &sk)
+			SECP.sign_ecdsa(&msg, &sk)
 		},
 		miniscript::psbt::PsbtSighashMsg::TapSighash(_) => {
 			panic!("Signing taproot transactions is not yet suppported")

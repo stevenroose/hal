@@ -19,10 +19,11 @@ name = "hal"
 path = "src/bin/hal/main.rs"
 
 [dependencies]
-clap = "2.32"
-log = "0.4.5"
-fern = "0.5.6"
 chrono = { version = "0.4.6", features = ["serde"] }
+clap = "2.32"
+fern = "0.5.6"
+lazy_static = "1.4"
+log = "0.4.5"
 rand = "0.4"
 
 base64-compat = "1.0.0"

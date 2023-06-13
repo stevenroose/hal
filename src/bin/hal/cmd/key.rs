@@ -7,8 +7,9 @@ use bitcoin::{PrivateKey, PublicKey};
 use clap;
 use rand;
 
-use hal;
-use crate::cmd;
+use hal::{self, GetInfo};
+
+use crate::{SECP, cmd};
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("key", "work with private and public keys")
@@ -40,29 +41,15 @@ fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 	let network = cmd::network(matches);
 
-	let secp = secp256k1::Secp256k1::signing_only();
 	let entropy: [u8; 32] = rand::random();
 	let secret_key = secp256k1::SecretKey::from_slice(&entropy[..]).unwrap();
-
 	let privkey = bitcoin::PrivateKey {
 		compressed: true,
 		network: network,
 		inner: secret_key,
 	};
-	let pubkey = privkey.public_key(&secp);
 
-	let info = hal::key::KeyInfo {
-		raw_private_key: (&secret_key[..]).into(),
-		wif_private_key: Some(privkey),
-		public_key: pubkey,
-		uncompressed_public_key: {
-			let mut uncompressed = pubkey.clone();
-			uncompressed.compressed = false;
-			uncompressed
-		},
-		addresses: hal::address::Addresses::from_pubkey(&pubkey, network),
-	};
-
+	let info = privkey.get_info(network);
 	cmd::print_output(matches, &info)
 }
 
@@ -75,37 +62,9 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 	let raw = matches.value_of("key").expect("no key provided");
 
 	let info = if let Ok(privkey) = PrivateKey::from_str(&raw) {
-		let network = privkey.network;
-		let pubkey = privkey.public_key(&secp256k1::Secp256k1::new());
-
-		hal::key::KeyInfo {
-			raw_private_key: (&privkey.inner[..]).into(),
-			wif_private_key: Some(privkey),
-			public_key: pubkey,
-			uncompressed_public_key: {
-				let mut uncompressed = pubkey.clone();
-				uncompressed.compressed = false;
-				uncompressed
-			},
-			addresses: hal::address::Addresses::from_pubkey(&pubkey, network),
-		}
+		privkey.get_info(privkey.network)
 	} else if let Ok(sk) = secp256k1::SecretKey::from_str(&raw) {
-		let pubkey = secp256k1::PublicKey::from_secret_key(&secp256k1::Secp256k1::new(), &sk);
-		let btc_pubkey = PublicKey {
-			compressed: true,
-			inner: pubkey.clone(),
-		};
-		let network = cmd::network(matches);
-		hal::key::KeyInfo {
-			raw_private_key: sk[..].into(),
-			wif_private_key: None,
-			public_key: btc_pubkey,
-			uncompressed_public_key: PublicKey {
-				compressed: false,
-				inner: pubkey,
-			},
-			addresses: hal::address::Addresses::from_pubkey(&btc_pubkey, network),
-		}
+		sk.get_info(cmd::network(matches))
 	} else {
 		panic!("invalid WIF/hex private key: {}", raw);
 	};
@@ -139,8 +98,7 @@ fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
 		}
 	};
 
-	let secp = secp256k1::Secp256k1::signing_only();
-	let signature = secp.sign_ecdsa(&msg, &privkey);
+	let signature = SECP.sign_ecdsa(&msg, &privkey);
 
 	let info = hal::key::SignatureInfo {
 		der: signature.serialize_der().as_ref().into(),
@@ -180,14 +138,13 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 		}
 	};
 
-	let secp = secp256k1::Secp256k1::verification_only();
-	let valid = secp.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok();
+	let valid = SECP.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok();
 
 	// Perhaps the user should have passed --reverse.
 	if !valid && !matches.is_present("no-try-reverse") {
 		msg_bytes.reverse();
 		let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
-		if secp.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok() {
+		if SECP.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok() {
 			eprintln!("Signature is valid for the reverse message.");
 			if matches.is_present("reverse") {
 				eprintln!("Try dropping the --reverse");
@@ -214,8 +171,7 @@ fn exec_negate_pubkey<'a>(matches: &clap::ArgMatches<'a>) {
 	let s = matches.value_of("pubkey").expect("no public key provided");
 	let key = PublicKey::from_str(&s).expect("invalid public key");
 
-	let secp = secp256k1::Secp256k1::new();
-	let negated = key.inner.negate(&secp);
+	let negated = key.inner.negate(&SECP);
 
 	write!(::std::io::stdout(), "{}", negated).expect("failed to write stdout");
 }

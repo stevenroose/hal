@@ -1,8 +1,9 @@
 use bip39lib::{Language, Mnemonic};
-use bitcoin::{secp256k1, util::bip32, Network};
+use bitcoin::Network;
+use bitcoin::util::bip32;
 use serde::{Deserialize, Serialize};
 
-use crate::{GetInfo, HexBytes};
+use crate::{SECP, GetInfo, HexBytes};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct MnemonicInfo {
@@ -59,7 +60,7 @@ impl GetInfo<SeedInfo> for [u8; 64] {
 	fn get_info(&self, network: Network) -> SeedInfo {
 		let xpriv = bip32::ExtendedPrivKey::new_master(network, &self[..]).unwrap();
 		let xpub =
-			bip32::ExtendedPubKey::from_priv(&secp256k1::Secp256k1::signing_only(), &xpriv);
+			bip32::ExtendedPubKey::from_priv(&SECP, &xpriv);
 		SeedInfo {
 			seed: self.to_vec().into(),
 			bip32_xpriv: xpriv,
