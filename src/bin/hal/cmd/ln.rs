@@ -10,9 +10,9 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	)
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
-		("invoice", Some(ref matches)) => match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
+		("invoice", Some(ref args)) => match args.subcommand() {
 			("decode", Some(ref m)) => exec_invoice_decode(&m),
 			(_, _) => unreachable!("clap prints help"),
 		},
@@ -26,12 +26,12 @@ fn cmd_invoice_decode<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml(), cmd::arg("invoice", "the invoice in bech32").required(false)])
 }
 
-fn exec_invoice_decode<'a>(matches: &clap::ArgMatches<'a>) {
+fn exec_invoice_decode<'a>(args: &clap::ArgMatches<'a>) {
 	::lightning_invoice::check_platform();
 
-	let invoice_str = util::arg_or_stdin(matches, "invoice");
+	let invoice_str = util::arg_or_stdin(args, "invoice");
 	let invoice: Invoice = invoice_str.as_ref().parse().expect("invalid invoice encoding");
 
-	let info = hal::GetInfo::get_info(&invoice, cmd::network(matches));
-	cmd::print_output(matches, &info)
+	let info = hal::GetInfo::get_info(&invoice, cmd::network(args));
+	cmd::print_output(args, &info)
 }

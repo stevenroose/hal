@@ -11,8 +11,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_inspect())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("derive", Some(ref m)) => exec_derive(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		(_, _) => unreachable!("clap prints help"),
@@ -26,10 +26,10 @@ fn cmd_derive<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
-	let path_str = matches.value_of("derivation-path").unwrap();
+fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
+	let path_str = args.value_of("derivation-path").unwrap();
 	let path: bip32::DerivationPath = path_str.parse().expect("error parsing derivation path");
-	let key_str = matches.value_of("ext-key").unwrap();
+	let key_str = args.value_of("ext-key").unwrap();
 
 	let master_fingerprint;
 	let mut derived_xpriv = None;
@@ -62,7 +62,7 @@ fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
 		),
 	};
 
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
@@ -71,8 +71,8 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 	)
 }
 
-fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
-	let key_str = matches.value_of("ext-key").unwrap();
+fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
+	let key_str = args.value_of("ext-key").unwrap();
 
 	let mut xpriv = None;
 
@@ -100,5 +100,5 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 		),
 	};
 
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }

@@ -25,8 +25,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_pubkey_combine())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("generate", Some(ref m)) => exec_generate(&m),
 		("derive", Some(ref m)) => exec_derive(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
@@ -46,8 +46,8 @@ fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml()])
 }
 
-fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
-	let network = cmd::network(matches);
+fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
+	let network = cmd::network(args);
 
 	let entropy: [u8; 32] = rand::random();
 	let secret_key = secp256k1::SecretKey::from_slice(&entropy[..]).unwrap();
@@ -58,7 +58,7 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 
 	let info = privkey.get_info(network);
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }
 
 fn cmd_derive<'a>() -> clap::App<'a, 'a> {
@@ -67,11 +67,11 @@ fn cmd_derive<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml(), cmd::arg("privkey", "the secret key").required(true)])
 }
 
-fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
-	let network = cmd::network(matches);
+fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
+	let network = cmd::network(args);
 
 	let privkey = {
-		let s = matches.value_of("privkey").expect("no private key provided");
+		let s = args.value_of("privkey").expect("no private key provided");
 		bitcoin::PrivateKey::from_str(&s).unwrap_or_else(|_| {
 			bitcoin::PrivateKey {
 				compressed: true,
@@ -83,7 +83,7 @@ fn exec_derive<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 
 	let info = privkey.get_info(network);
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
@@ -91,18 +91,18 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml(), cmd::arg("key", "the key").required(true)])
 }
 
-fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
-	let raw = matches.value_of("key").expect("no key provided");
+fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
+	let raw = args.value_of("key").expect("no key provided");
 
 	let info = if let Ok(privkey) = PrivateKey::from_str(&raw) {
 		privkey.get_info(privkey.network)
 	} else if let Ok(sk) = secp256k1::SecretKey::from_str(&raw) {
-		sk.get_info(cmd::network(matches))
+		sk.get_info(cmd::network(args))
 	} else {
 		panic!("invalid WIF/hex private key: {}", raw);
 	};
 
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }
 
 fn cmd_sign<'a>() -> clap::App<'a, 'a> {
@@ -119,18 +119,18 @@ fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
-	let network = cmd::network(matches);
+fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
+	let network = cmd::network(args);
 
-	let msg_hex = matches.value_of("message").expect("no message given");
+	let msg_hex = args.value_of("message").expect("no message given");
 	let mut msg_bytes = hex::decode(&msg_hex).expect("invalid hex message");
-	if matches.is_present("reverse") {
+	if args.is_present("reverse") {
 		msg_bytes.reverse();
 	}
 	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
 
 	let privkey = {
-		let s = matches.value_of("privkey").expect("no private key provided");
+		let s = args.value_of("privkey").expect("no private key provided");
 		bitcoin::PrivateKey::from_str(&s).unwrap_or_else(|_| {
 			bitcoin::PrivateKey {
 				compressed: true,
@@ -141,7 +141,7 @@ fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 
 	let signature = SECP.sign_ecdsa(&msg, &privkey.inner);
-	cmd::print_output(matches, &signature.get_info(network))
+	cmd::print_output(args, &signature.get_info(network))
 }
 
 fn cmd_verify<'a>() -> clap::App<'a, 'a> {
@@ -160,17 +160,17 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
-	let msg_hex = matches.value_of("message").expect("no message given");
+fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
+	let msg_hex = args.value_of("message").expect("no message given");
 	let mut msg_bytes = hex::decode(&msg_hex).expect("invalid hex message");
-	if matches.is_present("reverse") {
+	if args.is_present("reverse") {
 		msg_bytes.reverse();
 	}
 	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
-	let pubkey_hex = matches.value_of("pubkey").expect("no public key provided");
+	let pubkey_hex = args.value_of("pubkey").expect("no public key provided");
 	let pubkey = pubkey_hex.parse::<PublicKey>().expect("invalid public key");
 	let sig = {
-		let hex = matches.value_of("signature").expect("no signature provided");
+		let hex = args.value_of("signature").expect("no signature provided");
 		let bytes = hex::decode(&hex).expect("invalid signature: not hex");
 		if bytes.len() == 64 {
 			secp256k1::ecdsa::Signature::from_compact(&bytes).expect("invalid signature")
@@ -182,13 +182,13 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	let valid = SECP.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok();
 
 	// Perhaps the user should have passed --reverse.
-	if !valid && !matches.is_present("no-try-reverse") {
+	if !valid && !args.is_present("no-try-reverse") {
 		msg_bytes.reverse();
 		let msg = secp256k1::Message::from_slice(&msg_bytes[..])
 			.expect("invalid message to be signed");
 		if SECP.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok() {
 			eprintln!("Signature is valid for the reverse message.");
-			if matches.is_present("reverse") {
+			if args.is_present("reverse") {
 				eprintln!("Try dropping the --reverse");
 			} else {
 				eprintln!("If the message is a Bitcoin SHA256 hash, try --reverse");
@@ -209,8 +209,8 @@ fn cmd_negate_pubkey<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml(), cmd::arg("pubkey", "the public key").required(true)])
 }
 
-fn exec_negate_pubkey<'a>(matches: &clap::ArgMatches<'a>) {
-	let s = matches.value_of("pubkey").expect("no public key provided");
+fn exec_negate_pubkey<'a>(args: &clap::ArgMatches<'a>) {
+	let s = args.value_of("pubkey").expect("no public key provided");
 	let key = PublicKey::from_str(&s).expect("invalid public key");
 
 	let negated = key.inner.negate(&SECP);
@@ -228,14 +228,14 @@ fn cmd_pubkey_tweak_add<'a>() -> clap::App<'a, 'a> {
 	)
 }
 
-fn exec_pubkey_tweak_add<'a>(matches: &clap::ArgMatches<'a>) {
+fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
 	let point = {
-		let hex = matches.value_of("point").expect("no point provided");
+		let hex = args.value_of("point").expect("no point provided");
 		hex.parse::<PublicKey>().expect("invalid point")
 	};
 
 	let scalar = {
-		let hex = matches.value_of("scalar").expect("no scalar given");
+		let hex = args.value_of("scalar").expect("no scalar given");
 		let bytes = <[u8; 32]>::from_hex(hex).expect("invalid scalar hex");
 		secp256k1::Scalar::from_be_bytes(bytes).expect("invalid scalar")
 	};
@@ -259,14 +259,14 @@ fn cmd_pubkey_combine<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_pubkey_combine<'a>(matches: &clap::ArgMatches<'a>) {
+fn exec_pubkey_combine<'a>(args: &clap::ArgMatches<'a>) {
 	let pk1 = {
-		let hex = matches.value_of("pubkey1").expect("no first public key provided");
+		let hex = args.value_of("pubkey1").expect("no first public key provided");
 		hex.parse::<PublicKey>().expect("invalid first public key")
 	};
 
 	let pk2 = {
-		let hex = matches.value_of("pubkey2").expect("no second public key provided");
+		let hex = args.value_of("pubkey2").expect("no second public key provided");
 		hex.parse::<PublicKey>().expect("invalid second public key")
 	};
 

@@ -19,7 +19,6 @@ extern crate shell_escape;
 extern crate hal;
 
 use std::env;
-use std::io::{self, Write};
 use std::panic;
 use std::process;
 
@@ -100,15 +99,15 @@ fn main() {
 
 	let external_help = external_help();
 	let app = init_app().after_help(external_help.as_str());
-	let matches = app.clone().get_matches();
+	let args = app.clone().get_matches();
 
 	// Enable logging in verbose mode.
-	match matches.is_present("verbose") {
+	match args.is_present("verbose") {
 		true => setup_logger(log::LevelFilter::Trace),
 		false => setup_logger(log::LevelFilter::Warn),
 	}
 
-	match matches.subcommand() {
+	match args.subcommand() {
 		("address", Some(ref m)) => cmd::address::execute(&m),
 		("bech32", Some(ref m)) => cmd::bech32::execute(&m),
 		("block", Some(ref m)) => cmd::block::execute(&m),

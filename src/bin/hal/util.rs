@@ -34,8 +34,8 @@ impl CommandInfo {
 }
 
 /// Get the named argument from the CLI arguments or try read from stdin if not provided.
-pub fn arg_or_stdin<'a>(matches: &'a clap::ArgMatches<'a>, arg: &str) -> Cow<'a, str> {
-	if let Some(s) = matches.value_of(arg) {
+pub fn arg_or_stdin<'a>(args: &'a clap::ArgMatches<'a>, arg: &str) -> Cow<'a, str> {
+	if let Some(s) = args.value_of(arg) {
 		s.into()
 	} else {
 		// Read from stdin.

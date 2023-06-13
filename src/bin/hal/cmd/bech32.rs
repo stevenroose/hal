@@ -11,8 +11,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_decode())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("encode", Some(ref m)) => exec_encode(&m),
 		("decode", Some(ref m)) => exec_decode(&m),
 		(_, _) => unreachable!("clap prints help"),
@@ -33,13 +33,13 @@ fn cmd_encode<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_encode<'a>(matches: &clap::ArgMatches<'a>) {
-	let hrp = matches.value_of("hrp").expect("missing required argument");
-	let hex = util::arg_or_stdin(matches, "payload-hex");
+fn exec_encode<'a>(args: &clap::ArgMatches<'a>) {
+	let hrp = args.value_of("hrp").expect("missing required argument");
+	let hex = util::arg_or_stdin(args, "payload-hex");
 
 	let payload: Vec<u8> = hex::decode(hex.as_ref()).expect("invalid hex");
 
-	let payload_base32 = if matches.is_present("no-convert") {
+	let payload_base32 = if args.is_present("no-convert") {
 		payload.check_base32().expect("invalid base32 payload")
 	} else {
 		payload.to_base32()
@@ -58,7 +58,7 @@ fn exec_encode<'a>(matches: &clap::ArgMatches<'a>) {
 		},
 	};
 
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }
 
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
@@ -74,8 +74,8 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
-	let s = util::arg_or_stdin(matches, "string");
+fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
+	let s = util::arg_or_stdin(args, "string");
 
 	let (hrp, payload_base32, _variant) = decode(&s).expect("decode failure");
 	let payload_as_u8: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
@@ -84,7 +84,7 @@ fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
 		bech32: s.to_string(),
 		hrp,
 		payload: payload_as_u8.into(),
-		payload_bytes: if matches.is_present("convert-bits") {
+		payload_bytes: if args.is_present("convert-bits") {
 			let converted =
 				Vec::<u8>::from_base32(&payload_base32).expect("error converting payload to 8-bit");
 			Some(converted.into())
@@ -93,5 +93,5 @@ fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
 		},
 	};
 
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }

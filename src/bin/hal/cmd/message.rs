@@ -14,8 +14,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_recover())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("hash", Some(ref m)) => exec_hash(&m),
 		("sign", Some(ref m)) => exec_sign(&m),
 		("verify", Some(ref m)) => exec_verify(&m),
@@ -31,16 +31,16 @@ fn cmd_hash<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_hash<'a>(matches: &clap::ArgMatches<'a>) {
+fn exec_hash<'a>(args: &clap::ArgMatches<'a>) {
 	use bitcoin::hashes::Hash;
-	let msg = matches.value_of("message").expect("no message provided");
+	let msg = args.value_of("message").expect("no message provided");
 	let res = hal::message::MessageHash {
 		sha256: bitcoin::hashes::sha256::Hash::hash(msg.as_bytes()),
 		sha256d: bitcoin::hashes::sha256d::Hash::hash(msg.as_bytes()),
 		sign_hash: bitcoin::util::misc::signed_msg_hash(&msg),
 	};
 
-	cmd::print_output(matches, &res)
+	cmd::print_output(args, &res)
 }
 
 fn cmd_sign<'a>() -> clap::App<'a, 'a> {
@@ -50,11 +50,11 @@ fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_sign<'a>(matches: &clap::ArgMatches<'a>) {
-	let wif = matches.value_of("key").expect("no key provided");
+fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
+	let wif = args.value_of("key").expect("no key provided");
 	let privkey: PrivateKey = wif.parse().expect("invalid WIF format");
 
-	let msg = util::arg_or_stdin(matches, "message");
+	let msg = util::arg_or_stdin(args, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
 	let signature = SECP.sign_ecdsa_recoverable(
@@ -83,8 +83,8 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 		])
 }
 
-fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
-	let signer = matches.value_of("signer").expect("no signer provided");
+fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
+	let signer = args.value_of("signer").expect("no signer provided");
 	let signer_addr_res = Address::from_str(&signer);
 	let signer_pubk_res = PublicKey::from_str(&signer);
 	if signer_addr_res.is_err() && signer_pubk_res.is_err() {
@@ -100,7 +100,7 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 		debug!("Rare/impossible case that signer can both be parsed as pubkey and address.");
 	}
 
-	let sig = matches.value_of("signature").expect("no signature provided");
+	let sig = args.value_of("signature").expect("no signature provided");
 	let sig_bytes = match (hex::decode(&sig), base64::decode(&sig)) {
 		(Ok(b), Err(_)) => b,
 		(Err(_), Ok(b)) => b,
@@ -120,7 +120,7 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 	let signature = secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_bytes[1..], recid)
 		.expect("invalid recoverable signature");
 
-	let msg = util::arg_or_stdin(matches, "message");
+	let msg = util::arg_or_stdin(args, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
 	let pubkey = PublicKey {
@@ -130,7 +130,7 @@ fn exec_verify<'a>(matches: &clap::ArgMatches<'a>) {
 		compressed: compressed,
 	};
 
-	let network = cmd::network(matches);
+	let network = cmd::network(args);
 	if let Ok(pk) = signer_pubk_res {
 		if pubkey != pk {
 			panic!("Signed for pubkey {}, expected {}", pubkey, pk);
@@ -171,8 +171,8 @@ fn cmd_recover<'a>() -> clap::App<'a, 'a> {
 		])
 }
 
-fn exec_recover<'a>(matches: &clap::ArgMatches<'a>) {
-	let sig = matches.value_of("signature").expect("no signature provided");
+fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {
+	let sig = args.value_of("signature").expect("no signature provided");
 	let sig_bytes = match (hex::decode(&sig), base64::decode(&sig)) {
 		(Ok(b), Err(_)) => b,
 		(Err(_), Ok(b)) => b,
@@ -192,7 +192,7 @@ fn exec_recover<'a>(matches: &clap::ArgMatches<'a>) {
 	let signature = secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_bytes[1..], recid)
 		.expect("invalid recoverable signature");
 
-	let msg = matches.value_of("message").expect("no message given");
+	let msg = args.value_of("message").expect("no message given");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
 	let pubkey = SECP
@@ -203,6 +203,6 @@ fn exec_recover<'a>(matches: &clap::ArgMatches<'a>) {
 		inner: pubkey,
 		compressed: compressed,
 	};
-	let info = hal::GetInfo::get_info(&bitcoin_key, cmd::network(matches));
-	cmd::print_output(matches, &info)
+	let info = hal::GetInfo::get_info(&bitcoin_key, cmd::network(args));
+	cmd::print_output(args, &info)
 }

@@ -13,8 +13,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_decode())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("create", Some(ref m)) => exec_create(&m),
 		("decode", Some(ref m)) => exec_decode(&m),
 		(_, _) => unreachable!("clap prints help"),
@@ -212,13 +212,13 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 	}
 }
 
-fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
-	let info = serde_json::from_str::<TransactionInfo>(&util::arg_or_stdin(matches, "tx-info"))
+fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
+	let info = serde_json::from_str::<TransactionInfo>(&util::arg_or_stdin(args, "tx-info"))
 		.expect("invalid JSON provided");
 
 	let tx = create_transaction(info);
 	let tx_bytes = serialize(&tx);
-	if matches.is_present("raw-stdout") {
+	if args.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&tx_bytes).unwrap();
 	} else {
 		print!("{}", hex::encode(&tx_bytes));
@@ -231,11 +231,11 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml(), cmd::arg("raw-tx", "the raw transaction in hex").required(false)])
 }
 
-fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
-	let hex_tx = util::arg_or_stdin(matches, "raw-tx");
+fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
+	let hex_tx = util::arg_or_stdin(args, "raw-tx");
 	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw tx");
 	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
 
-	let info = hal::GetInfo::get_info(&tx, cmd::network(matches));
-	cmd::print_output(matches, &info)
+	let info = hal::GetInfo::get_info(&tx, cmd::network(args));
+	cmd::print_output(args, &info)
 }

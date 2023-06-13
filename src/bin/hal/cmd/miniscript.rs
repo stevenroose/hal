@@ -19,8 +19,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_policy())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("descriptor", Some(ref m)) => exec_descriptor(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("parse", Some(ref m)) => exec_parse(&m),
@@ -35,9 +35,9 @@ fn cmd_descriptor<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::arg("descriptor", "the output descriptor to inspect").required(false)])
 }
 
-fn exec_descriptor<'a>(matches: &clap::ArgMatches<'a>) {
-	let desc_str = util::arg_or_stdin(matches, "descriptor");
-	let network = cmd::network(matches);
+fn exec_descriptor<'a>(args: &clap::ArgMatches<'a>) {
+	let desc_str = util::arg_or_stdin(args, "descriptor");
+	let network = cmd::network(args);
 
 	let info = desc_str
 		.parse::<Descriptor<bitcoin::PublicKey>>()
@@ -66,7 +66,7 @@ fn exec_descriptor<'a>(matches: &clap::ArgMatches<'a>) {
 			})
 		})
 		.expect("invalid miniscript");
-	cmd::print_output(matches, &info);
+	cmd::print_output(args, &info);
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
@@ -77,8 +77,8 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 	.required(false)])
 }
 
-fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
-	let input = util::arg_or_stdin(matches, "miniscript");
+fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
+	let input = util::arg_or_stdin(args, "miniscript");
 	let miniscript_str = input.as_ref();
 
 	// First try with pubkeys.
@@ -124,7 +124,7 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
 			.unwrap()
 	};
-	cmd::print_output(matches, &info);
+	cmd::print_output(args, &info);
 }
 
 fn cmd_parse<'a>() -> clap::App<'a, 'a> {
@@ -133,8 +133,8 @@ fn cmd_parse<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::arg("script", "hex script to parse").required(false)])
 }
 
-fn exec_parse<'a>(matches: &clap::ArgMatches<'a>) {
-	let script_hex = util::arg_or_stdin(matches, "script");
+fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
+	let script_hex = util::arg_or_stdin(args, "script");
 	let script = Script::from(Vec::<u8>::from_hex(&script_hex).expect("invalid hex script"));
 
 	let segwit_info = Miniscript::<_, Segwitv0>::parse_insane(&script)
@@ -158,7 +158,7 @@ fn exec_parse<'a>(matches: &clap::ArgMatches<'a>) {
 	let comb_info =
 		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, legacy_info), segwit_info)
 			.unwrap();
-	cmd::print_output(matches, &comb_info);
+	cmd::print_output(args, &comb_info);
 }
 
 fn cmd_policy<'a>() -> clap::App<'a, 'a> {
@@ -226,19 +226,19 @@ where
 	})
 }
 
-fn exec_policy<'a>(matches: &clap::ArgMatches<'a>) {
-	let input = util::arg_or_stdin(matches, "policy");
+fn exec_policy<'a>(args: &clap::ArgMatches<'a>) {
+	let input = util::arg_or_stdin(args, "policy");
 	let policy_str = input.as_ref();
 
 	// First try a concrete policy with pubkeys.
 	if let Ok(info) =
 		get_policy_info::<bitcoin::PublicKey>(policy_str, MiniscriptKeyType::PublicKey)
 	{
-		cmd::print_output(matches, &info)
+		cmd::print_output(args, &info)
 	} else {
 		// Then try with strings.
 		match get_policy_info::<String>(policy_str, MiniscriptKeyType::String) {
-			Ok(info) => cmd::print_output(matches, &info),
+			Ok(info) => cmd::print_output(args, &info),
 			Err(e) => panic!("Invalid policy: {}", e),
 		}
 	}

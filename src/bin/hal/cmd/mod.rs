@@ -76,10 +76,10 @@ pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 	]
 }
 
-pub fn network(matches: &clap::ArgMatches) -> Network {
-	if matches.is_present("testnet") {
+pub fn network(args: &clap::ArgMatches) -> Network {
+	if args.is_present("testnet") {
 		Network::Testnet
-	} else if matches.is_present("regtest") {
+	} else if args.is_present("regtest") {
 		Network::Regtest
 	} else {
 		Network::Bitcoin
@@ -95,8 +95,8 @@ pub fn opt_yaml() -> clap::Arg<'static, 'static> {
 		.required(false)
 }
 
-pub fn print_output<T: serde::Serialize>(matches: &clap::ArgMatches, out: &T) {
-	if matches.is_present("yaml") {
+pub fn print_output<T: serde::Serialize>(args: &clap::ArgMatches, out: &T) {
+	if args.is_present("yaml") {
 		serde_yaml::to_writer(::std::io::stdout(), &out).unwrap();
 	} else {
 		serde_json::to_writer_pretty(::std::io::stdout(), &out).unwrap();

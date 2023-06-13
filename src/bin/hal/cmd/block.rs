@@ -13,8 +13,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_decode())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("create", Some(ref m)) => exec_create(&m),
 		("decode", Some(ref m)) => exec_decode(&m),
 		(_, _) => unreachable!("clap prints help"),
@@ -75,8 +75,8 @@ fn create_block_header(info: BlockHeaderInfo) -> BlockHeader {
 	}
 }
 
-fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
-	let info = serde_json::from_str::<BlockInfo>(&util::arg_or_stdin(matches, "block-info"))
+fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
+	let info = serde_json::from_str::<BlockInfo>(&util::arg_or_stdin(args, "block-info"))
 		.expect("invaid json JSON input");
 
 	if info.txids.is_some() {
@@ -97,7 +97,7 @@ fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 	};
 
 	let block_bytes = serialize(&block);
-	if matches.is_present("raw-stdout") {
+	if args.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&block_bytes).unwrap();
 	} else {
 		print!("{}", hex::encode(&block_bytes));
@@ -112,21 +112,21 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_decode<'a>(matches: &clap::ArgMatches<'a>) {
-	let hex_tx = util::arg_or_stdin(matches, "raw-block");
+fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
+	let hex_tx = util::arg_or_stdin(args, "raw-block");
 	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw block hex");
 	let block: Block = deserialize(&raw_tx).expect("invalid block format");
 
-	if matches.is_present("txids") {
+	if args.is_present("txids") {
 		let info = hal::block::BlockInfo {
-			header: hal::GetInfo::get_info(&block.header, cmd::network(matches)),
+			header: hal::GetInfo::get_info(&block.header, cmd::network(args)),
 			txids: Some(block.txdata.iter().map(|t| t.txid()).collect()),
 			transactions: None,
 			raw_transactions: None,
 		};
-		cmd::print_output(matches, &info)
+		cmd::print_output(args, &info)
 	} else {
-		let info = hal::GetInfo::get_info(&block, cmd::network(matches));
-		cmd::print_output(matches, &info)
+		let info = hal::GetInfo::get_info(&block, cmd::network(args));
+		cmd::print_output(args, &info)
 	}
 }

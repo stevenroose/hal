@@ -15,8 +15,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_get_seed())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("generate", Some(ref m)) => exec_generate(&m),
 		("get-seed", Some(ref m)) => exec_get_seed(&m),
 		(_, _) => unreachable!("clap prints help"),
@@ -33,10 +33,10 @@ fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml()])
 }
 
-fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
-	let network = cmd::network(matches);
+fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
+	let network = cmd::network(args);
 
-	let word_count = matches.value_of("words").unwrap_or("24").parse::<usize>()
+	let word_count = args.value_of("words").unwrap_or("24").parse::<usize>()
 		.expect("invalid number of words");
 	if word_count < 12 || word_count % 6 != 0 || word_count > 24 {
 		panic!("invalid word count: {}", word_count);
@@ -44,10 +44,10 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 	let nb_entropy_bytes = (word_count / 3) * 4;
 
 	let mut entropy;
-	match (matches.is_present("entropy"), matches.is_present("stdin")) {
+	match (args.is_present("entropy"), args.is_present("stdin")) {
 		(true, true) => panic!("can't provide --entropy and --stdin"),
 		(true, false) => {
-			let entropy_hex = matches.value_of("entropy").unwrap();
+			let entropy_hex = args.value_of("entropy").unwrap();
 			if entropy_hex.len() != nb_entropy_bytes * 2 {
 				panic!(
 					"invalid entropy length for {} word mnemonic, need {} bytes",
@@ -73,7 +73,7 @@ fn exec_generate<'a>(matches: &clap::ArgMatches<'a>) {
 
 	assert!(entropy.len() == nb_entropy_bytes);
 	let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy).unwrap();
-	cmd::print_output(matches, &hal::GetInfo::get_info(&mnemonic, network))
+	cmd::print_output(args, &hal::GetInfo::get_info(&mnemonic, network))
 }
 
 fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
@@ -89,17 +89,17 @@ fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
 	.args(&cmd::opts_networks())
 }
 
-fn exec_get_seed<'a>(matches: &clap::ArgMatches<'a>) {
-	let network = cmd::network(matches);
+fn exec_get_seed<'a>(args: &clap::ArgMatches<'a>) {
+	let network = cmd::network(args);
 
-	let mnemonic = matches.value_of("mnemonic").expect("no mnemonic provided");
+	let mnemonic = args.value_of("mnemonic").expect("no mnemonic provided");
 	let mnemonic = Mnemonic::parse(mnemonic)
 		.expect("invalid mnemonic phrase");
 
 	let info = ::hal::bip39::MnemonicInfo::from_mnemonic_with_passphrase(
 		&mnemonic,
-		matches.value_of("passphrase").unwrap_or(""),
+		args.value_of("passphrase").unwrap_or(""),
 		network,
 	);
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }

@@ -32,8 +32,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_inspect())
 }
 
-pub fn execute<'a>(matches: &clap::ArgMatches<'a>) {
-	match matches.subcommand() {
+pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
+	match args.subcommand() {
 		("create", Some(ref m)) => exec_create(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		(_, _) => unreachable!("clap prints help"),
@@ -61,14 +61,14 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	])
 }
 
-fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
-	let network = cmd::network(matches);
+fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
+	let network = cmd::network(args);
 
-	if let Some(pubkey_hex) = matches.value_of("pubkey") {
+	if let Some(pubkey_hex) = args.value_of("pubkey") {
 		let pubkey = pubkey_hex.parse::<PublicKey>().expect("invalid pubkey");
 		let addr = hal::address::Addresses::from_pubkey(&pubkey, network);
-		cmd::print_output(matches, &addr)
-	} else if let Some(script_hex) = matches.value_of("script") {
+		cmd::print_output(args, &addr)
+	} else if let Some(script_hex) = args.value_of("script") {
 		let script_bytes = hex::decode(script_hex).expect("invalid script hex");
 		let script = script_bytes.into();
 
@@ -76,19 +76,19 @@ fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 
 		// If the user provided NUMS information we can add a p2tr address.
 		if util::more_than_one(&[
-			matches.is_present("nums-internal-key-h"),
-			matches.is_present("nums-internal-key"),
-			matches.is_present("nums-internal-key-entropy"),
+			args.is_present("nums-internal-key-h"),
+			args.is_present("nums-internal-key"),
+			args.is_present("nums-internal-key-entropy"),
 		]) {
 			println!("Use only either nums-h, nums-internal-key or nums-internal-key-entropy.\n");
 			cmd_create().print_help().unwrap();
 			std::process::exit(1);
 		}
-		let nums: Option<secp256k1::PublicKey> = if matches.is_present("nums-internal-key-h") {
+		let nums: Option<secp256k1::PublicKey> = if args.is_present("nums-internal-key-h") {
 			Some(*NUMS_H)
-		} else if let Some(int) = matches.value_of("nums-internal-key") {
+		} else if let Some(int) = args.value_of("nums-internal-key") {
 			Some(int.parse().expect("invalid nums internal key"))
-		} else if let Some(ent) = matches.value_of("nums-internal-key-entropy") {
+		} else if let Some(ent) = args.value_of("nums-internal-key-entropy") {
 			let scalar = <[u8; 32]>::from_hex(ent)
 				.expect("invalid entropy format: must be 32-byte hex");
 			Some(nums(secp256k1::Scalar::from_be_bytes(scalar).expect("invalid NUMS entropy")))
@@ -100,7 +100,7 @@ fn exec_create<'a>(matches: &clap::ArgMatches<'a>) {
 			ret.p2tr = Some(Address::from_script(&spk, network).unwrap());
 		}
 
-		cmd::print_output(matches, &ret)
+		cmd::print_output(args, &ret)
 	} else {
 		cmd_create().print_help().unwrap();
 		std::process::exit(1);
@@ -112,8 +112,8 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 		.args(&[cmd::opt_yaml(), cmd::arg("address", "the address").required(true)])
 }
 
-fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
-	let address_str = matches.value_of("address").expect("no address provided");
+fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
+	let address_str = args.value_of("address").expect("no address provided");
 	let address: Address = address_str.parse().expect("invalid address format");
 	let script_pk = address.script_pubkey();
 
@@ -168,5 +168,5 @@ fn exec_inspect<'a>(matches: &clap::ArgMatches<'a>) {
 		}
 	}
 
-	cmd::print_output(matches, &info)
+	cmd::print_output(args, &info)
 }
