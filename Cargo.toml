@@ -20,7 +20,7 @@ path = "src/bin/hal/main.rs"
 
 [dependencies]
 chrono = { version = "0.4.6", features = ["serde"] }
-clap = "2.32"
+clap = "=2.33.3"
 fern = "0.5.6"
 lazy_static = "1.4"
 log = "0.4.5"

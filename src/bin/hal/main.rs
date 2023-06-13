@@ -52,8 +52,7 @@ fn init_app() -> clap::App<'static, 'static> {
 			clap::AppSettings::AllowExternalSubcommands,
 			clap::AppSettings::DisableHelpSubcommand,
 			clap::AppSettings::AllArgsOverrideSelf,
-			//TODO(stevenroose) re-enable after https://github.com/clap-rs/clap/pull/1412/
-			//clap::AppSettings::SubcommandRequiredElseHelp,
+			clap::AppSettings::SubcommandRequiredElseHelp,
 		])
 		.subcommands(cmd::subcommands())
 		.arg(
@@ -110,11 +109,6 @@ fn main() {
 	}
 
 	match matches.subcommand() {
-		("", _) => {
-			app.write_help(&mut io::stderr()).unwrap();
-			io::stderr().write(b"\n").unwrap();
-			process::exit(1);
-		}
 		("address", Some(ref m)) => cmd::address::execute(&m),
 		("bech32", Some(ref m)) => cmd::bech32::execute(&m),
 		("block", Some(ref m)) => cmd::block::execute(&m),
