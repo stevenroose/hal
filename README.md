@@ -35,8 +35,11 @@ $ cargo install --locked hal
 
 - key
 	- generate: generate a random keypair
+	- derive: generate a public key from a private key
 	- inspect: inspect private keys
 	- verify: verify signatures
+	- pubkey-tweak-add: add a scalar to a point
+	- pubkey-combine: add two points together
 
 - ln
 	- invoice

@@ -84,3 +84,11 @@ pub struct SignatureInfo {
 	pub compact: HexBytes,
 }
 
+impl GetInfo<SignatureInfo> for secp256k1::ecdsa::Signature {
+	fn get_info(&self, _network: Network) -> SignatureInfo {
+		SignatureInfo {
+			der: self.serialize_der().as_ref().into(),
+			compact: self.serialize_compact().to_vec().into(),
+		}
+	}
+}
