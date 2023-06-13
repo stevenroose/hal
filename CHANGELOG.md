@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+
+# v0.9.1  --  2023-06-13
+
+- Add `p2tr` to address output
+- Add `xonly_pubkey` to public key output
+- Add taproot related arguments to `address create` command
+- Add `key derive` command
+- Add `key pubkey-tweak-add` command
+- Add `key pubkey combine` command
+
 # v0.9.0  --  2023/03/23
 
 - Enable 2018 edition
@@ -22,7 +32,7 @@ CHANGELOG
 
 - Update bitcoin dependency to v0.27.0
 - Update miniscript dependency to v6.0.1
-- Add TxInfo::total_output_value
+- Add `TxInfo::total_output_value`
 - Reinstate compatibility with Rust 1.32
 - Add `psbt rawsign` command
 - Fix bug in `miniscript inspect`
