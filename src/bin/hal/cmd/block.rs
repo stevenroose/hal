@@ -4,7 +4,7 @@ use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Block, BlockHeader};
 
 use hal::block::{BlockHeaderInfo, BlockInfo};
-use crate::{cmd, util};
+use crate::prelude::*;
 use crate::cmd::tx::create_transaction;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
@@ -24,8 +24,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a raw block from JSON")
 		.args(&[
-			cmd::arg("block-info", "the block info in JSON").required(false),
-			cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+			args::arg("block-info", "the block info in JSON").required(false),
+			args::opt("raw-stdout", "output the raw bytes of the result to stdout")
 				.short("r")
 				.required(false),
 		])
@@ -105,10 +105,10 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("decode", "decode a raw block to JSON").args(&cmd::opts_networks()).args(&[
-		cmd::opt_yaml(),
-		cmd::arg("raw-block", "the raw block in hex").required(false),
-		cmd::opt("txids", "provide transactions IDs instead of full transactions"),
+	cmd::subcommand("decode", "decode a raw block to JSON").args(&args::opts_networks()).args(&[
+		args::opt_yaml(),
+		args::arg("raw-block", "the raw block in hex").required(false),
+		args::opt("txids", "provide transactions IDs instead of full transactions"),
 	])
 }
 
@@ -119,14 +119,14 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 
 	if args.is_present("txids") {
 		let info = hal::block::BlockInfo {
-			header: hal::GetInfo::get_info(&block.header, cmd::network(args)),
+			header: hal::GetInfo::get_info(&block.header, args.network()),
 			txids: Some(block.txdata.iter().map(|t| t.txid()).collect()),
 			transactions: None,
 			raw_transactions: None,
 		};
-		cmd::print_output(args, &info)
+		args.print_output(&info)
 	} else {
-		let info = hal::GetInfo::get_info(&block, cmd::network(args));
-		cmd::print_output(args, &info)
+		let info = hal::GetInfo::get_info(&block, args.network());
+		args.print_output(&info)
 	}
 }

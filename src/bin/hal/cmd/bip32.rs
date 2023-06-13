@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bitcoin::util::bip32;
 use clap;
 
-use crate::{SECP, cmd};
+use crate::prelude::*;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("bip32", "BIP-32 key derivation")
@@ -20,9 +20,9 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_derive<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("derive", "derive keys from an extended key").arg(cmd::opt_yaml()).args(&[
-		cmd::arg("ext-key", "extended public or private key").required(true),
-		cmd::arg("derivation-path", "the derivation path").required(true),
+	cmd::subcommand("derive", "derive keys from an extended key").arg(args::opt_yaml()).args(&[
+		args::arg("ext-key", "extended public or private key").required(true),
+		args::arg("derivation-path", "the derivation path").required(true),
 	])
 }
 
@@ -62,12 +62,12 @@ fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 		),
 	};
 
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("inspect", "inspect a BIP-32 xpub or xpriv").args(&cmd::opts_networks()).args(
-		&[cmd::opt_yaml(), cmd::arg("ext-key", "extended public or private key").required(true)],
+	cmd::subcommand("inspect", "inspect a BIP-32 xpub or xpriv").args(&args::opts_networks()).args(
+		&[args::opt_yaml(), args::arg("ext-key", "extended public or private key").required(true)],
 	)
 }
 
@@ -100,5 +100,5 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 		),
 	};
 
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }

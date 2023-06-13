@@ -10,7 +10,7 @@ use rand;
 
 use hal::{self, GetInfo};
 
-use crate::{SECP, cmd};
+use crate::prelude::*;
 
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
@@ -42,12 +42,12 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("generate", "generate a new ECDSA keypair")
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
-		.args(&cmd::opts_networks())
-		.args(&[cmd::opt_yaml()])
+		.args(&args::opts_networks())
+		.args(&[args::opt_yaml()])
 }
 
 fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
-	let network = cmd::network(args);
+	let network = args.network();
 
 	let entropy: [u8; 32] = rand::random();
 	let secret_key = secp256k1::SecretKey::from_slice(&entropy[..]).unwrap();
@@ -58,17 +58,17 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 	};
 
 	let info = privkey.get_info(network);
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }
 
 fn cmd_derive<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("derive", "generate a public key from a private key")
-		.args(&cmd::opts_networks())
-		.args(&[cmd::opt_yaml(), cmd::arg("privkey", "the secret key").required(true)])
+		.args(&args::opts_networks())
+		.args(&[args::opt_yaml(), args::arg("privkey", "the secret key").required(true)])
 }
 
 fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
-	let network = cmd::network(args);
+	let network = args.network();
 
 	let privkey = {
 		let s = args.value_of("privkey").expect("no private key provided");
@@ -83,12 +83,12 @@ fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 	};
 
 	let info = privkey.get_info(network);
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("inspect", "inspect private keys")
-		.args(&[cmd::opt_yaml(), cmd::arg("key", "the key").required(true)])
+		.args(&[args::opt_yaml(), args::arg("key", "the key").required(true)])
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
@@ -97,12 +97,12 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 	let info = if let Ok(privkey) = PrivateKey::from_str(&raw) {
 		privkey.get_info(privkey.network)
 	} else if let Ok(sk) = secp256k1::SecretKey::from_str(&raw) {
-		sk.get_info(cmd::network(args))
+		sk.get_info(args.network())
 	} else {
 		panic!("invalid WIF/hex private key: {}", raw);
 	};
 
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }
 
 fn cmd_sign<'a>() -> clap::App<'a, 'a> {
@@ -112,15 +112,15 @@ fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
 	.args(&[
-		cmd::opt_yaml(),
-		cmd::opt("reverse", "reverse the message"),
-		cmd::arg("privkey", "the private key in hex or WIF").required(true),
-		cmd::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
+		args::opt_yaml(),
+		args::opt("reverse", "reverse the message"),
+		args::arg("privkey", "the private key in hex or WIF").required(true),
+		args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
 	])
 }
 
 fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
-	let network = cmd::network(args);
+	let network = args.network();
 
 	let msg_hex = args.value_of("message").expect("no message given");
 	let mut msg_bytes = hex::decode(&msg_hex).expect("invalid hex message");
@@ -141,7 +141,7 @@ fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
 	};
 
 	let signature = SECP.sign_ecdsa(&msg, &privkey.inner);
-	cmd::print_output(args, &signature.get_info(network))
+	args.print_output(&signature.get_info(network))
 }
 
 fn cmd_verify<'a>() -> clap::App<'a, 'a> {
@@ -151,12 +151,12 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
 	.args(&[
-		cmd::opt_yaml(),
-		cmd::opt("reverse", "reverse the message"),
-		cmd::opt("no-try-reverse", "don't try to verify for reversed message"),
-		cmd::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
-		cmd::arg("pubkey", "the public key in hex").required(true),
-		cmd::arg("signature", "the ecdsa signature in hex").required(true),
+		args::opt_yaml(),
+		args::opt("reverse", "reverse the message"),
+		args::opt("no-try-reverse", "don't try to verify for reversed message"),
+		args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
+		args::arg("pubkey", "the public key in hex").required(true),
+		args::arg("signature", "the ecdsa signature in hex").required(true),
 	])
 }
 
@@ -206,7 +206,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_negate_pubkey<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("negate-pubkey", "negate the public key")
-		.args(&[cmd::opt_yaml(), cmd::arg("pubkey", "the public key").required(true)])
+		.args(&[args::opt_yaml(), args::arg("pubkey", "the public key").required(true)])
 }
 
 fn exec_negate_pubkey<'a>(args: &clap::ArgMatches<'a>) {
@@ -221,9 +221,9 @@ fn exec_negate_pubkey<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_pubkey_tweak_add<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("pubkey-tweak-add", "add a scalar (private key) to a point (public key)").args(
 		&[
-			cmd::opt_yaml(),
-			cmd::arg("point", "the public key in hex").required(true),
-			cmd::arg("scalar", "the private key in hex").required(true),
+			args::opt_yaml(),
+			args::arg("point", "the public key in hex").required(true),
+			args::arg("scalar", "the private key in hex").required(true),
 		],
 	)
 }
@@ -253,9 +253,9 @@ fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_pubkey_combine<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("pubkey-combine", "add a point (public key) to another").args(&[
-		cmd::opt_yaml(),
-		cmd::arg("pubkey1", "the first public key in hex").required(true),
-		cmd::arg("pubkey2", "the second public key in hex").required(true),
+		args::opt_yaml(),
+		args::arg("pubkey1", "the first public key in hex").required(true),
+		args::arg("pubkey2", "the second public key in hex").required(true),
 	])
 }
 

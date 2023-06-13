@@ -5,7 +5,7 @@ use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
 
 use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
-use crate::{cmd, util};
+use crate::prelude::*;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("tx", "manipulate transactions")
@@ -24,9 +24,9 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a raw transaction from JSON")
 		.args(&[
-		cmd::arg("tx-info", "the transaction info in JSON; If omitted, reads from stdin.")
+		args::arg("tx-info", "the transaction info in JSON; If omitted, reads from stdin.")
 			.required(false),
-		cmd::opt("raw-stdout", "output the raw bytes of the result to stdout")
+		args::opt("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r")
 			.required(false),
 	])
@@ -227,8 +227,8 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode a raw transaction to JSON")
-		.args(&cmd::opts_networks())
-		.args(&[cmd::opt_yaml(), cmd::arg("raw-tx", "the raw transaction in hex").required(false)])
+		.args(&args::opts_networks())
+		.args(&[args::opt_yaml(), args::arg("raw-tx", "the raw transaction in hex").required(false)])
 }
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
@@ -236,6 +236,6 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw tx");
 	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
 
-	let info = hal::GetInfo::get_info(&tx, cmd::network(args));
-	cmd::print_output(args, &info)
+	let info = hal::GetInfo::get_info(&tx, args.network());
+	args.print_output(&info)
 }

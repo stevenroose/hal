@@ -4,7 +4,7 @@ use bitcoin::secp256k1;
 use bitcoin::{Address, AddressType, PrivateKey, PublicKey};
 use clap;
 
-use crate::{SECP, cmd, util};
+use crate::prelude::*;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("message", "Bitcoin Signed Messages")
@@ -26,8 +26,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_hash<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("hash", "calculate Bitcoin Signed Message hash").args(&[
-		cmd::opt_yaml(),
-		cmd::arg("message", "the message to sign (without prefix)").required(true),
+		args::opt_yaml(),
+		args::arg("message", "the message to sign (without prefix)").required(true),
 	])
 }
 
@@ -40,13 +40,13 @@ fn exec_hash<'a>(args: &clap::ArgMatches<'a>) {
 		sign_hash: bitcoin::util::misc::signed_msg_hash(&msg),
 	};
 
-	cmd::print_output(args, &res)
+	args.print_output(&res)
 }
 
 fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("sign", "create a new Bitcoin Signed Message").args(&[
-		cmd::arg("key", "the private key to sign with in WIF format").required(true),
-		cmd::arg("message", "the message to sign (without prefix)").required(false),
+		args::arg("key", "the private key to sign with in WIF format").required(true),
+		args::arg("message", "the message to sign (without prefix)").required(false),
 	])
 }
 
@@ -75,11 +75,11 @@ fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("verify", "recover the pubkey and address of a Bitcoin Signed Messages")
-		.args(&cmd::opts_networks())
+		.args(&args::opts_networks())
 		.args(&[
-			cmd::arg("signer", "the signer's public key or address").required(true),
-			cmd::arg("signature", "the signature in hex").required(true),
-			cmd::arg("message", "the message that was signed (without prefix)").required(false),
+			args::arg("signer", "the signer's public key or address").required(true),
+			args::arg("signature", "the signature in hex").required(true),
+			args::arg("message", "the message that was signed (without prefix)").required(false),
 		])
 }
 
@@ -130,7 +130,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 		compressed: compressed,
 	};
 
-	let network = cmd::network(args);
+	let network = args.network();
 	if let Ok(pk) = signer_pubk_res {
 		if pubkey != pk {
 			panic!("Signed for pubkey {}, expected {}", pubkey, pk);
@@ -164,10 +164,10 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_recover<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("recover", "recover the pubkey and address of a Bitcoin Signed Messages")
-		.args(&cmd::opts_networks())
+		.args(&args::opts_networks())
 		.args(&[
-			cmd::arg("signature", "the signature in hex").required(true),
-			cmd::arg("message", "the message that was signed (without prefix)").required(true),
+			args::arg("signature", "the signature in hex").required(true),
+			args::arg("message", "the message that was signed (without prefix)").required(true),
 		])
 }
 
@@ -203,6 +203,6 @@ fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {
 		inner: pubkey,
 		compressed: compressed,
 	};
-	let info = hal::GetInfo::get_info(&bitcoin_key, cmd::network(args));
-	cmd::print_output(args, &info)
+	let info = hal::GetInfo::get_info(&bitcoin_key, args.network());
+	args.print_output(&info)
 }

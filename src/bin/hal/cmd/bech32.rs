@@ -3,7 +3,7 @@ use clap;
 use hex;
 
 use hal;
-use crate::{cmd, util};
+use crate::prelude::*;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("bech32", "encode and decode the bech32 format")
@@ -21,10 +21,10 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_encode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("encode", "encode bech32 format").args(&[
-		cmd::opt_yaml(),
-		cmd::opt("no-convert", "Do not convert payload to base32").required(false),
-		cmd::arg("hrp", "human-readable part").takes_value(true).required(true),
-		cmd::arg(
+		args::opt_yaml(),
+		args::opt("no-convert", "Do not convert payload to base32").required(false),
+		args::arg("hrp", "human-readable part").takes_value(true).required(true),
+		args::arg(
 			"payload-hex",
 			"hex-encoded payload bytes, 8-bit values\nunless --no-convert is specified",
 		)
@@ -58,19 +58,19 @@ fn exec_encode<'a>(args: &clap::ArgMatches<'a>) {
 		},
 	};
 
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }
 
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode bech32 format").args(&[
-		cmd::opt_yaml(),
-		cmd::opt(
+		args::opt_yaml(),
+		args::opt(
 			"convert-bits",
 			"Attempt to convert payload from 5-bit to 8-bit values.\nNOTE: Does not work for BIP-173 addresses."
 		)
 		.short("c")
 		.required(false),
-		cmd::arg("string", "a bech32 string").takes_value(true).required(false),
+		args::arg("string", "a bech32 string").takes_value(true).required(false),
 	])
 }
 
@@ -93,5 +93,5 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 		},
 	};
 
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }

@@ -8,7 +8,7 @@ use miniscript::miniscript::{BareCtx, Legacy, Miniscript, Segwitv0};
 use miniscript::policy::Liftable;
 use miniscript::{Descriptor, policy, MiniscriptKey};
 
-use crate::{cmd, util};
+use crate::prelude::*;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("miniscript", "work with miniscript (alias: ms)")
@@ -31,13 +31,13 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_descriptor<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("descriptor", "get information about an output descriptor")
-		.arg(cmd::opt_yaml())
-		.args(&[cmd::arg("descriptor", "the output descriptor to inspect").required(false)])
+		.arg(args::opt_yaml())
+		.args(&[args::arg("descriptor", "the output descriptor to inspect").required(false)])
 }
 
 fn exec_descriptor<'a>(args: &clap::ArgMatches<'a>) {
 	let desc_str = util::arg_or_stdin(args, "descriptor");
-	let network = cmd::network(args);
+	let network = args.network();
 
 	let info = desc_str
 		.parse::<Descriptor<bitcoin::PublicKey>>()
@@ -66,11 +66,11 @@ fn exec_descriptor<'a>(args: &clap::ArgMatches<'a>) {
 			})
 		})
 		.expect("invalid miniscript");
-	cmd::print_output(args, &info);
+	args.print_output(&info);
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("inspect", "inspect miniscripts").arg(cmd::opt_yaml()).args(&[cmd::arg(
+	cmd::subcommand("inspect", "inspect miniscripts").arg(args::opt_yaml()).args(&[args::arg(
 		"miniscript",
 		"the miniscript to inspect",
 	)
@@ -124,13 +124,13 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
 			.unwrap()
 	};
-	cmd::print_output(args, &info);
+	args.print_output(&info);
 }
 
 fn cmd_parse<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("parse", "parse a script into a miniscript")
-		.arg(cmd::opt_yaml())
-		.args(&[cmd::arg("script", "hex script to parse").required(false)])
+		.arg(args::opt_yaml())
+		.args(&[args::arg("script", "hex script to parse").required(false)])
 }
 
 fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
@@ -158,11 +158,11 @@ fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
 	let comb_info =
 		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, legacy_info), segwit_info)
 			.unwrap();
-	cmd::print_output(args, &comb_info);
+	args.print_output(&comb_info);
 }
 
 fn cmd_policy<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("policy", "inspect policies").arg(cmd::opt_yaml()).args(&[cmd::arg(
+	cmd::subcommand("policy", "inspect policies").arg(args::opt_yaml()).args(&[args::arg(
 		"policy",
 		"the miniscript policy to inspect",
 	)
@@ -234,11 +234,11 @@ fn exec_policy<'a>(args: &clap::ArgMatches<'a>) {
 	if let Ok(info) =
 		get_policy_info::<bitcoin::PublicKey>(policy_str, MiniscriptKeyType::PublicKey)
 	{
-		cmd::print_output(args, &info)
+		args.print_output(&info)
 	} else {
 		// Then try with strings.
 		match get_policy_info::<String>(policy_str, MiniscriptKeyType::String) {
-			Ok(info) => cmd::print_output(args, &info),
+			Ok(info) => args.print_output(&info),
 			Err(e) => panic!("Invalid policy: {}", e),
 		}
 	}

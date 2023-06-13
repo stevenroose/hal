@@ -22,11 +22,17 @@ use std::env;
 use std::panic;
 use std::process;
 
+pub mod args;
 pub mod cmd;
 mod process_builder;
 pub mod util;
 
-pub use hal::SECP;
+
+pub mod prelude {
+	pub use crate::{args, cmd, util};
+	pub use crate::args::ArgMatchesExt;
+	pub use hal::SECP;
+}
 
 /// Setup logging with the given log level.
 fn setup_logger(lvl: log::LevelFilter) {
@@ -55,7 +61,7 @@ fn init_app() -> clap::App<'static, 'static> {
 		])
 		.subcommands(cmd::subcommands())
 		.arg(
-			cmd::opt("verbose", "Print verbose logging output to stderr")
+			args::opt("verbose", "Print verbose logging output to stderr")
 				.short("v")
 				.takes_value(false)
 				.global(true),

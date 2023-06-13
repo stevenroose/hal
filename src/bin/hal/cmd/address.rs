@@ -8,7 +8,7 @@ use clap;
 
 use hal;
 
-use crate::{SECP, cmd, util};
+use crate::prelude::*;
 
 lazy_static! {
 	/// The H point as used in BIP-341 which is constructed by taking the hash
@@ -41,19 +41,19 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("create", "create addresses").args(&cmd::opts_networks()).args(&[
-		cmd::opt_yaml(),
-		cmd::opt("pubkey", "a public key in hex").takes_value(true).required(false),
-		cmd::opt("script", "a script in hex").takes_value(true).required(false),
-		cmd::opt(
+	cmd::subcommand("create", "create addresses").args(&args::opts_networks()).args(&[
+		args::opt_yaml(),
+		args::opt("pubkey", "a public key in hex").takes_value(true).required(false),
+		args::opt("script", "a script in hex").takes_value(true).required(false),
+		args::opt(
 			"nums-internal-key-h",
 			"use the H NUMS key from BIP-341 for p2tr address when using --script",
 		).takes_value(false).required(false),
-		cmd::opt(
+		args::opt(
 			"nums-internal-key",
 			"NUMS internal pubkey to use with --script for p2tr",
 		).takes_value(true).required(false),
-		cmd::opt(
+		args::opt(
 			"nums-internal-key-entropy",
 			"entropy to use to create NUMS internal pubkey to use with --script for p2tr\n\
 			the zero scalar is used when left empty, this means the BIP-341 NUMS point H is used",
@@ -62,12 +62,12 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
-	let network = cmd::network(args);
+	let network = args.network();
 
 	if let Some(pubkey_hex) = args.value_of("pubkey") {
 		let pubkey = pubkey_hex.parse::<PublicKey>().expect("invalid pubkey");
 		let addr = hal::address::Addresses::from_pubkey(&pubkey, network);
-		cmd::print_output(args, &addr)
+		args.print_output(&addr)
 	} else if let Some(script_hex) = args.value_of("script") {
 		let script_bytes = hex::decode(script_hex).expect("invalid script hex");
 		let script = script_bytes.into();
@@ -100,7 +100,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 			ret.p2tr = Some(Address::from_script(&spk, network).unwrap());
 		}
 
-		cmd::print_output(args, &ret)
+		args.print_output(&ret)
 	} else {
 		cmd_create().print_help().unwrap();
 		std::process::exit(1);
@@ -109,7 +109,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("inspect", "inspect addresses")
-		.args(&[cmd::opt_yaml(), cmd::arg("address", "the address").required(true)])
+		.args(&[args::opt_yaml(), args::arg("address", "the address").required(true)])
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
@@ -168,5 +168,5 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 		}
 	}
 
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }

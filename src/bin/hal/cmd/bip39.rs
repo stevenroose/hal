@@ -7,7 +7,7 @@ use hex;
 use rand::Rng;
 
 use hal;
-use crate::cmd;
+use crate::prelude::*;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("bip39", "BIP-39 mnemonics")
@@ -26,15 +26,15 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("generate", "generate a new BIP-39 mnemonic")
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
-		.arg(cmd::arg("words", "the number of words").long("words").short("w").default_value("24"))
-		.arg(cmd::arg("entropy", "hex-encoded entropy data").long("entropy"))
-		.arg(cmd::opt("stdin", "read entropy from stdin"))
-		.args(&cmd::opts_networks())
-		.args(&[cmd::opt_yaml()])
+		.arg(args::arg("words", "the number of words").long("words").short("w").default_value("24"))
+		.arg(args::arg("entropy", "hex-encoded entropy data").long("entropy"))
+		.arg(args::opt("stdin", "read entropy from stdin"))
+		.args(&args::opts_networks())
+		.args(&[args::opt_yaml()])
 }
 
 fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
-	let network = cmd::network(args);
+	let network = args.network();
 
 	let word_count = args.value_of("words").unwrap_or("24").parse::<usize>()
 		.expect("invalid number of words");
@@ -73,7 +73,7 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 
 	assert!(entropy.len() == nb_entropy_bytes);
 	let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy).unwrap();
-	cmd::print_output(args, &hal::GetInfo::get_info(&mnemonic, network))
+	args.print_output(&hal::GetInfo::get_info(&mnemonic, network))
 }
 
 fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
@@ -82,15 +82,15 @@ fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
 		"get the seed value and BIP-32 master key for a given BIP-39 mnemonic",
 	)
 	.args(&[
-		cmd::arg("mnemonic", "the mnemonic phrase").required(true),
-		cmd::arg("passphrase", "the BIP-39 passphrase").long("passphrase"),
-		cmd::opt_yaml(),
+		args::arg("mnemonic", "the mnemonic phrase").required(true),
+		args::arg("passphrase", "the BIP-39 passphrase").long("passphrase"),
+		args::opt_yaml(),
 	])
-	.args(&cmd::opts_networks())
+	.args(&args::opts_networks())
 }
 
 fn exec_get_seed<'a>(args: &clap::ArgMatches<'a>) {
-	let network = cmd::network(args);
+	let network = args.network();
 
 	let mnemonic = args.value_of("mnemonic").expect("no mnemonic provided");
 	let mnemonic = Mnemonic::parse(mnemonic)
@@ -101,5 +101,5 @@ fn exec_get_seed<'a>(args: &clap::ArgMatches<'a>) {
 		args.value_of("passphrase").unwrap_or(""),
 		network,
 	);
-	cmd::print_output(args, &info)
+	args.print_output(&info)
 }

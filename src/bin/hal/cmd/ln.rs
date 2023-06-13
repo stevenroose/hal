@@ -1,7 +1,7 @@
 use clap;
 use lightning_invoice::Invoice;
 
-use crate::{cmd, util};
+use crate::prelude::*;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("ln", "everything Lightning").subcommand(
@@ -22,8 +22,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_invoice_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode Lightning invoices")
-		.args(&cmd::opts_networks())
-		.args(&[cmd::opt_yaml(), cmd::arg("invoice", "the invoice in bech32").required(false)])
+		.args(&args::opts_networks())
+		.args(&[args::opt_yaml(), args::arg("invoice", "the invoice in bech32").required(false)])
 }
 
 fn exec_invoice_decode<'a>(args: &clap::ArgMatches<'a>) {
@@ -32,6 +32,6 @@ fn exec_invoice_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let invoice_str = util::arg_or_stdin(args, "invoice");
 	let invoice: Invoice = invoice_str.as_ref().parse().expect("invalid invoice encoding");
 
-	let info = hal::GetInfo::get_info(&invoice, cmd::network(args));
-	cmd::print_output(args, &info)
+	let info = hal::GetInfo::get_info(&invoice, args.network());
+	args.print_output(&info)
 }

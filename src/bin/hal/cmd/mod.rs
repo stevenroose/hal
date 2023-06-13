@@ -11,8 +11,6 @@ pub mod psbt;
 pub mod script;
 pub mod tx;
 
-use bitcoin::Network;
-
 /// Build a list of all built-in subcommands.
 pub fn subcommands() -> Vec<clap::App<'static, 'static>> {
 	vec![
@@ -29,16 +27,6 @@ pub fn subcommands() -> Vec<clap::App<'static, 'static>> {
 		bip32::subcommand(),
 		bip39::subcommand(),
 	]
-}
-
-/// Construct a new command option.
-pub fn opt<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
-	clap::Arg::with_name(name).long(name).help(help)
-}
-
-/// Construct a new positional argument.
-pub fn arg<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
-	clap::Arg::with_name(name).help(help).takes_value(true)
 }
 
 /// Create a new subcommand group using the template that sets all the common settings.
@@ -58,47 +46,4 @@ pub fn subcommand<'a>(name: &'a str, about: &'a str) -> clap::App<'a, 'a> {
 	clap::SubCommand::with_name(name)
 		.about(about)
 		.setting(clap::AppSettings::DisableHelpSubcommand)
-}
-
-pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
-	vec![
-		clap::Arg::with_name("testnet")
-			.long("testnet")
-			.short("t")
-			.help("run in testnet mode")
-			.takes_value(false)
-			.required(false),
-		clap::Arg::with_name("regtest")
-			.long("regtest")
-			.help("run in regtest mode")
-			.takes_value(false)
-			.required(false),
-	]
-}
-
-pub fn network(args: &clap::ArgMatches) -> Network {
-	if args.is_present("testnet") {
-		Network::Testnet
-	} else if args.is_present("regtest") {
-		Network::Regtest
-	} else {
-		Network::Bitcoin
-	}
-}
-
-pub fn opt_yaml() -> clap::Arg<'static, 'static> {
-	clap::Arg::with_name("yaml")
-		.long("yaml")
-		.short("y")
-		.help("print output in YAML instead of JSON")
-		.takes_value(false)
-		.required(false)
-}
-
-pub fn print_output<T: serde::Serialize>(args: &clap::ArgMatches, out: &T) {
-	if args.is_present("yaml") {
-		serde_yaml::to_writer(::std::io::stdout(), &out).unwrap();
-	} else {
-		serde_json::to_writer_pretty(::std::io::stdout(), &out).unwrap();
-	}
 }
