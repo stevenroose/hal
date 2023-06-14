@@ -51,6 +51,12 @@ $ cargo install --locked hal
     - verify: verify a Bitcoin Signed Message
     - recover: recover the pubkey or address that signed a message
 
+- miniscript
+    - descriptor: get information about an output descriptor
+    - instpect: inspect miniscripts
+    - parse: parse a script into a miniscript
+    - policy: inspect policies
+
 - psbt
 	- create: create a PSBT from a raw unsigned transaction
 	- decode: decode a PSBT to JSON
@@ -60,7 +66,6 @@ $ cargo install --locked hal
 
 - script
 	- decode: decode a PSBT to JSON
-	- coming soon: script descriptor support
 
 - tx
 	- create: create a binary transaction from JSON
