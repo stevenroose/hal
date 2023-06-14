@@ -28,16 +28,25 @@ pub mod util;
 pub mod prelude {
 	pub use crate::{args, cmd, util};
 	pub use crate::args::ArgMatchesExt;
+	pub use crate::util::{OptionExt, ResultExt};
 	pub use hal::SECP;
 	pub use super::exit;
 }
 
 
+use crate::prelude::*;
+
 #[macro_export]
 macro_rules! exit {
 	($($arg:tt)*) => {{
-		eprintln!($($arg)*);
-		std::process::exit(1);
+		if $crate::init_app().get_matches().is_present("verbose") {
+			let msg = format!($($arg)*);
+			eprintln!("{}", msg);
+			panic!("{}", msg);
+		} else {
+			eprintln!($($arg)*);
+			std::process::exit(1);
+		}
 	}}
 }
 
@@ -48,7 +57,7 @@ fn setup_logger(lvl: log::LevelFilter) {
 		.level(lvl)
 		.chain(std::io::stderr())
 		.apply()
-		.expect("error setting up logger");
+		.need("error setting up logger");
 }
 
 /// Create the main app object.

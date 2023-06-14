@@ -77,7 +77,7 @@ fn create_block_header(info: BlockHeaderInfo) -> BlockHeader {
 
 fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let info = serde_json::from_str::<BlockInfo>(&util::arg_or_stdin(args, "block-info"))
-		.expect("invaid json JSON input");
+		.need("invaid json JSON input");
 
 	if info.txids.is_some() {
 		warn!("Field \"txids\" is ignored.");
@@ -91,7 +91,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 			(Some(infos), None) => infos.into_iter().map(create_transaction).collect(),
 			(None, Some(raws)) => raws
 				.into_iter()
-				.map(|r| deserialize(&r.0).expect("invalid raw transaction"))
+				.map(|r| deserialize(&r.0).need("invalid raw transaction"))
 				.collect(),
 		},
 	};
@@ -114,8 +114,8 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let hex_tx = util::arg_or_stdin(args, "raw-block");
-	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw block hex");
-	let block: Block = deserialize(&raw_tx).expect("invalid block format");
+	let raw_tx = hex::decode(hex_tx.as_ref()).need("could not decode raw block hex");
+	let block: Block = deserialize(&raw_tx).need("invalid block format");
 
 	if args.is_present("txids") {
 		let info = hal::block::BlockInfo {

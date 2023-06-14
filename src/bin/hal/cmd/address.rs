@@ -23,7 +23,7 @@ lazy_static! {
 
 /// Create a NUMS point from the given entropy.
 fn nums(entropy: secp256k1::Scalar) -> secp256k1::PublicKey {
-	NUMS_H.add_exp_tweak(&SECP, &entropy).expect("invalid NUMS entropy")
+	NUMS_H.add_exp_tweak(&SECP, &entropy).need("invalid NUMS entropy")
 }
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
@@ -65,11 +65,11 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
 	if let Some(pubkey_hex) = args.value_of("pubkey") {
-		let pubkey = pubkey_hex.parse::<PublicKey>().expect("invalid pubkey");
+		let pubkey = pubkey_hex.parse::<PublicKey>().need("invalid pubkey");
 		let addr = hal::address::Addresses::from_pubkey(&pubkey, network);
 		args.print_output(&addr)
 	} else if let Some(script_hex) = args.value_of("script") {
-		let script_bytes = hex::decode(script_hex).expect("invalid script hex");
+		let script_bytes = hex::decode(script_hex).need("invalid script hex");
 		let script = script_bytes.into();
 
 		let mut ret = hal::address::Addresses::from_script(&script, network);
@@ -87,11 +87,11 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 		let nums: Option<secp256k1::PublicKey> = if args.is_present("nums-internal-key-h") {
 			Some(*NUMS_H)
 		} else if let Some(int) = args.value_of("nums-internal-key") {
-			Some(int.parse().expect("invalid nums internal key"))
+			Some(int.parse().need("invalid nums internal key"))
 		} else if let Some(ent) = args.value_of("nums-internal-key-entropy") {
 			let scalar = <[u8; 32]>::from_hex(ent)
-				.expect("invalid entropy format: must be 32-byte hex");
-			Some(nums(secp256k1::Scalar::from_be_bytes(scalar).expect("invalid NUMS entropy")))
+				.need("invalid entropy format: must be 32-byte hex");
+			Some(nums(secp256k1::Scalar::from_be_bytes(scalar).need("invalid NUMS entropy")))
 		} else {
 			None
 		};
@@ -113,8 +113,8 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
-	let address_str = args.value_of("address").expect("no address provided");
-	let address: Address = address_str.parse().expect("invalid address format");
+	let address_str = args.value_of("address").need("no address provided");
+	let address: Address = address_str.parse().need("invalid address format");
 	let script_pk = address.script_pubkey();
 
 	let mut info = hal::address::AddressInfo {
@@ -154,11 +154,11 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 				if program.len() == 20 {
 					info.type_ = Some("p2wpkh".to_owned());
 					info.witness_pubkey_hash =
-						Some(WPubkeyHash::from_slice(&program).expect("size 20"));
+						Some(WPubkeyHash::from_slice(&program).need("size 20"));
 				} else if program.len() == 32 {
 					info.type_ = Some("p2wsh".to_owned());
 					info.witness_script_hash =
-						Some(WScriptHash::from_slice(&program).expect("size 32"));
+						Some(WScriptHash::from_slice(&program).need("size 32"));
 				} else {
 					info.type_ = Some("invalid-witness-program".to_owned());
 				}

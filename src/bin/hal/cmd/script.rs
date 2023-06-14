@@ -21,8 +21,8 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
-	let hex_script = args.value_of("hex-script").expect("no script provided");
-	let raw_script = hex::decode(hex_script).expect("could not decode raw script");
+	let hex_script = args.value_of("hex-script").need("no script provided");
+	let raw_script = hex::decode(hex_script).need("could not decode raw script");
 	let script: Script = raw_script.into();
 
 	print!("{}", script.asm());

@@ -28,21 +28,21 @@ fn cmd_derive<'a>() -> clap::App<'a, 'a> {
 
 fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 	let path_str = args.value_of("derivation-path").unwrap();
-	let path: bip32::DerivationPath = path_str.parse().expect("error parsing derivation path");
+	let path: bip32::DerivationPath = path_str.parse().need("error parsing derivation path");
 	let key_str = args.value_of("ext-key").unwrap();
 
 	let master_fingerprint;
 	let mut derived_xpriv = None;
 	let derived_xpub = match bip32::ExtendedPrivKey::from_str(&key_str) {
 		Ok(ext_priv) => {
-			derived_xpriv = Some(ext_priv.derive_priv(&SECP, &path).expect("derivation error"));
+			derived_xpriv = Some(ext_priv.derive_priv(&SECP, &path).need("derivation error"));
 			master_fingerprint = ext_priv.fingerprint(&SECP);
 			bip32::ExtendedPubKey::from_priv(&SECP, derived_xpriv.as_ref().unwrap())
 		}
 		Err(_) => {
-			let ext_pub: bip32::ExtendedPubKey = key_str.parse().expect("invalid extended key");
+			let ext_pub: bip32::ExtendedPubKey = key_str.parse().need("invalid extended key");
 			master_fingerprint = ext_pub.fingerprint();
-			ext_pub.derive_pub(&SECP, &path).expect("derivation error")
+			ext_pub.derive_pub(&SECP, &path).need("derivation error")
 		}
 	};
 
@@ -81,7 +81,7 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 			xpriv = Some(ext_priv);
 			bip32::ExtendedPubKey::from_priv(&SECP, xpriv.as_ref().unwrap())
 		}
-		Err(_) => key_str.parse().expect("invalid extended key"),
+		Err(_) => key_str.parse().need("invalid extended key"),
 	};
 
 	let info = hal::bip32::DerivationInfo {

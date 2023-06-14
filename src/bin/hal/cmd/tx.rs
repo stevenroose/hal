@@ -84,7 +84,7 @@ Example format:
 /// Check both ways to specify the outpoint and panic if conflicting.
 fn outpoint_from_input_info(input: &InputInfo) -> OutPoint {
 	let prevout: Option<OutPoint> = input.prevout.as_ref().map(
-		|ref op| op.parse().expect("invalid prevout format")
+		|ref op| op.parse().need("invalid prevout format")
 	);
 	let txid = input.txid;
 	let vout = input.vout;
@@ -116,7 +116,7 @@ fn create_input(input: InputInfo) -> TxIn {
 	TxIn {
 		previous_output: outpoint_from_input_info(&input),
 		script_sig: input.script_sig.map(create_script_sig).unwrap_or_default(),
-		sequence: bitcoin::Sequence::from_height(input.sequence.unwrap_or_default().try_into().expect("Invalid sequence")),
+		sequence: bitcoin::Sequence::from_height(input.sequence.unwrap_or_default().try_into().need("Invalid sequence")),
 		witness: match input.witness {
 			Some(ref w) => bitcoin::Witness::from_vec(w.iter().map(|h| h.clone().0).collect()),
 			None => bitcoin::Witness::new(),
@@ -167,7 +167,7 @@ fn create_output(output: OutputInfo) -> TxOut {
 	let mut used_network = None;
 
 	TxOut {
-		value: output.value.expect("Field \"value\" is required for outputs."),
+		value: output.value.need("Field \"value\" is required for outputs."),
 		script_pubkey: output
 			.script_pub_key
 			.map(|s| create_script_pubkey(s, &mut used_network))
@@ -194,18 +194,18 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 	}
 
 	Transaction {
-		version: info.version.expect("Field \"version\" is required."),
-		lock_time: bitcoin::LockTime::from_height(info.locktime.expect("Field \"locktime\" is required."))
-			.expect("Field \"lockime\" is invalid").into(),
+		version: info.version.need("Field \"version\" is required."),
+		lock_time: bitcoin::LockTime::from_height(info.locktime.need("Field \"locktime\" is required."))
+			.need("Field \"lockime\" is invalid").into(),
 		input: info
 			.inputs
-			.expect("Field \"inputs\" is required.")
+			.need("Field \"inputs\" is required.")
 			.into_iter()
 			.map(create_input)
 			.collect(),
 		output: info
 			.outputs
-			.expect("Field \"outputs\" is required.")
+			.need("Field \"outputs\" is required.")
 			.into_iter()
 			.map(create_output)
 			.collect(),
@@ -214,7 +214,7 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 
 fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let info = serde_json::from_str::<TransactionInfo>(&util::arg_or_stdin(args, "tx-info"))
-		.expect("invalid JSON provided");
+		.need("invalid JSON provided");
 
 	let tx = create_transaction(info);
 	let tx_bytes = serialize(&tx);
@@ -233,8 +233,8 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let hex_tx = util::arg_or_stdin(args, "raw-tx");
-	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw tx");
-	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
+	let raw_tx = hex::decode(hex_tx.as_ref()).need("could not decode raw tx");
+	let tx: Transaction = deserialize(&raw_tx).need("invalid tx format");
 
 	let info = hal::GetInfo::get_info(&tx, args.network());
 	args.print_output(&info)

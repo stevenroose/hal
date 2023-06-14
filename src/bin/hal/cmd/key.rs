@@ -71,13 +71,13 @@ fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
 	let privkey = {
-		let s = args.value_of("privkey").expect("no private key provided");
+		let s = args.value_of("privkey").need("no private key provided");
 		bitcoin::PrivateKey::from_str(&s).unwrap_or_else(|_| {
 			bitcoin::PrivateKey {
 				compressed: true,
 				network: network,
 				inner: secp256k1::SecretKey::from_str(&s)
-					.expect("invalid private key provided"),
+					.need("invalid private key provided"),
 			}
 		})
 	};
@@ -92,7 +92,7 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
-	let raw = args.value_of("key").expect("no key provided");
+	let raw = args.value_of("key").need("no key provided");
 
 	let info = if let Ok(privkey) = PrivateKey::from_str(&raw) {
 		privkey.get_info(privkey.network)
@@ -122,20 +122,20 @@ fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
-	let msg_hex = args.value_of("message").expect("no message given");
-	let mut msg_bytes = hex::decode(&msg_hex).expect("invalid hex message");
+	let msg_hex = args.value_of("message").need("no message given");
+	let mut msg_bytes = hex::decode(&msg_hex).need("invalid hex message");
 	if args.is_present("reverse") {
 		msg_bytes.reverse();
 	}
-	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
+	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
 
 	let privkey = {
-		let s = args.value_of("privkey").expect("no private key provided");
+		let s = args.value_of("privkey").need("no private key provided");
 		bitcoin::PrivateKey::from_str(&s).unwrap_or_else(|_| {
 			bitcoin::PrivateKey {
 				compressed: true,
 				network: network,
-				inner: secp256k1::SecretKey::from_str(&s).expect("invalid private key provided"),
+				inner: secp256k1::SecretKey::from_str(&s).need("invalid private key provided"),
 			}
 		})
 	};
@@ -161,21 +161,21 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
-	let msg_hex = args.value_of("message").expect("no message given");
-	let mut msg_bytes = hex::decode(&msg_hex).expect("invalid hex message");
+	let msg_hex = args.value_of("message").need("no message given");
+	let mut msg_bytes = hex::decode(&msg_hex).need("invalid hex message");
 	if args.is_present("reverse") {
 		msg_bytes.reverse();
 	}
-	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).expect("invalid message to be signed");
-	let pubkey_hex = args.value_of("pubkey").expect("no public key provided");
-	let pubkey = pubkey_hex.parse::<PublicKey>().expect("invalid public key");
+	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
+	let pubkey_hex = args.value_of("pubkey").need("no public key provided");
+	let pubkey = pubkey_hex.parse::<PublicKey>().need("invalid public key");
 	let sig = {
-		let hex = args.value_of("signature").expect("no signature provided");
-		let bytes = hex::decode(&hex).expect("invalid signature: not hex");
+		let hex = args.value_of("signature").need("no signature provided");
+		let bytes = hex::decode(&hex).need("invalid signature: not hex");
 		if bytes.len() == 64 {
-			secp256k1::ecdsa::Signature::from_compact(&bytes).expect("invalid signature")
+			secp256k1::ecdsa::Signature::from_compact(&bytes).need("invalid signature")
 		} else {
-			secp256k1::ecdsa::Signature::from_der(&bytes).expect("invalid DER signature")
+			secp256k1::ecdsa::Signature::from_der(&bytes).need("invalid DER signature")
 		}
 	};
 
@@ -185,7 +185,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 	if !valid && !args.is_present("no-try-reverse") {
 		msg_bytes.reverse();
 		let msg = secp256k1::Message::from_slice(&msg_bytes[..])
-			.expect("invalid message to be signed");
+			.need("invalid message to be signed");
 		if SECP.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok() {
 			eprintln!("Signature is valid for the reverse message.");
 			if args.is_present("reverse") {
@@ -210,12 +210,12 @@ fn cmd_negate_pubkey<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_negate_pubkey<'a>(args: &clap::ArgMatches<'a>) {
-	let s = args.value_of("pubkey").expect("no public key provided");
-	let key = PublicKey::from_str(&s).expect("invalid public key");
+	let s = args.value_of("pubkey").need("no public key provided");
+	let key = PublicKey::from_str(&s).need("invalid public key");
 
 	let negated = key.inner.negate(&SECP);
 
-	write!(::std::io::stdout(), "{}", negated).expect("failed to write stdout");
+	write!(::std::io::stdout(), "{}", negated).need("failed to write stdout");
 }
 
 fn cmd_pubkey_tweak_add<'a>() -> clap::App<'a, 'a> {
@@ -230,14 +230,14 @@ fn cmd_pubkey_tweak_add<'a>() -> clap::App<'a, 'a> {
 
 fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
 	let point = {
-		let hex = args.value_of("point").expect("no point provided");
-		hex.parse::<PublicKey>().expect("invalid point")
+		let hex = args.value_of("point").need("no point provided");
+		hex.parse::<PublicKey>().need("invalid point")
 	};
 
 	let scalar = {
-		let hex = args.value_of("scalar").expect("no scalar given");
-		let bytes = <[u8; 32]>::from_hex(hex).expect("invalid scalar hex");
-		secp256k1::Scalar::from_be_bytes(bytes).expect("invalid scalar")
+		let hex = args.value_of("scalar").need("no scalar given");
+		let bytes = <[u8; 32]>::from_hex(hex).need("invalid scalar hex");
+		secp256k1::Scalar::from_be_bytes(bytes).need("invalid scalar")
 	};
 
 	match point.inner.add_exp_tweak(&SECP, &scalar.into()) {
@@ -261,13 +261,13 @@ fn cmd_pubkey_combine<'a>() -> clap::App<'a, 'a> {
 
 fn exec_pubkey_combine<'a>(args: &clap::ArgMatches<'a>) {
 	let pk1 = {
-		let hex = args.value_of("pubkey1").expect("no first public key provided");
-		hex.parse::<PublicKey>().expect("invalid first public key")
+		let hex = args.value_of("pubkey1").need("no first public key provided");
+		hex.parse::<PublicKey>().need("invalid first public key")
 	};
 
 	let pk2 = {
-		let hex = args.value_of("pubkey2").expect("no second public key provided");
-		hex.parse::<PublicKey>().expect("invalid second public key")
+		let hex = args.value_of("pubkey2").need("no second public key provided");
+		hex.parse::<PublicKey>().need("invalid second public key")
 	};
 
 	match pk1.inner.combine(&pk2.inner) {

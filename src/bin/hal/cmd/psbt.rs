@@ -55,7 +55,7 @@ fn file_or_raw(flag: &str) -> (Vec<u8>, PsbtSource) {
 		(raw, PsbtSource::Base64)
 	} else if let Ok(mut file) = File::open(&flag) {
 		let mut buf = Vec::new();
-		file.read_to_end(&mut buf).expect("error reading file");
+		file.read_to_end(&mut buf).need("error reading file");
 		(buf, PsbtSource::File)
 	} else {
 		exit!("Can't load PSBT: invalid hex, base64 or unknown file");
@@ -77,16 +77,16 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 
 fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let hex_tx = util::arg_or_stdin(args, "raw-tx");
-	let raw_tx = hex::decode(hex_tx.as_ref()).expect("could not decode raw tx");
-	let tx: Transaction = deserialize(&raw_tx).expect("invalid tx format");
+	let raw_tx = hex::decode(hex_tx.as_ref()).need("could not decode raw tx");
+	let tx: Transaction = deserialize(&raw_tx).need("invalid tx format");
 
 	let psbt = psbt::PartiallySignedTransaction::from_unsigned_tx(tx)
-		.expect("couldn't create a PSBT from the transaction");
+		.need("couldn't create a PSBT from the transaction");
 
 	let serialized = serialize(&psbt);
 	if let Some(path) = args.value_of("output") {
-		let mut file = File::create(&path).expect("failed to open output file");
-		file.write_all(&serialized).expect("error writing output file");
+		let mut file = File::create(&path).need("failed to open output file");
+		file.write_all(&serialized).need("error writing output file");
 	} else if args.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&serialized).unwrap();
 	} else {
@@ -105,7 +105,7 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let input = util::arg_or_stdin(args, "psbt");
 	let (raw_psbt, _) = file_or_raw(input.as_ref());
 
-	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw_psbt).expect("invalid PSBT");
+	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw_psbt).need("invalid PSBT");
 
 	let info = hal::GetInfo::get_info(&psbt, args.network());
 	args.print_output(&info)
@@ -206,22 +206,22 @@ fn cmd_edit<'a>() -> clap::App<'a, 'a> {
 /// Parses a `<pubkey>:<signature>` pair.
 fn parse_partial_sig_pair(pair_str: &str) -> (PublicKey, bitcoin::EcdsaSig) {
 	let mut pair = pair_str.splitn(2, ":");
-	let pubkey = pair.next().unwrap().parse().expect("invalid partial sig pubkey");
+	let pubkey = pair.next().unwrap().parse().need("invalid partial sig pubkey");
 	let sig = {
-		let hex = pair.next().expect("invalid partial sig pair: missing signature");
-		hex::decode(&hex).expect("invalid partial sig signature hex")
+		let hex = pair.next().need("invalid partial sig pair: missing signature");
+		hex::decode(&hex).need("invalid partial sig signature hex")
 	};
-	(pubkey, bitcoin::EcdsaSig::from_slice(&sig).expect("partial sig is not valid ecdsa"))
+	(pubkey, bitcoin::EcdsaSig::from_slice(&sig).need("partial sig is not valid ecdsa"))
 }
 
 fn parse_hd_keypath_triplet(
 	triplet_str: &str,
 ) -> (bitcoin::secp256k1::PublicKey, (bip32::Fingerprint, bip32::DerivationPath)) {
 	let mut triplet = triplet_str.splitn(3, ":");
-	let pubkey = triplet.next().unwrap().parse().expect("invalid HD keypath pubkey");
+	let pubkey = triplet.next().unwrap().parse().need("invalid HD keypath pubkey");
 	let fp = {
-		let hex = triplet.next().expect("invalid HD keypath triplet: missing fingerprint");
-		let raw = hex::decode(&hex).expect("invalid HD keypath fingerprint hex");
+		let hex = triplet.next().need("invalid HD keypath triplet: missing fingerprint");
+		let raw = hex::decode(&hex).need("invalid HD keypath fingerprint hex");
 		if raw.len() != 4 {
 			exit!("invalid HD keypath fingerprint size: {} instead of 4", raw.len());
 		}
@@ -229,9 +229,9 @@ fn parse_hd_keypath_triplet(
 	};
 	let path = triplet
 		.next()
-		.expect("invalid HD keypath triplet: missing HD path")
+		.need("invalid HD keypath triplet: missing HD path")
 		.parse()
-		.expect("invalid derivation path format");
+		.need("invalid derivation path format");
 	(pubkey, (fp, path))
 }
 
@@ -240,17 +240,17 @@ fn edit_input<'a>(
 	args: &clap::ArgMatches<'a>,
 	psbt: &mut psbt::PartiallySignedTransaction,
 ) {
-	let input = psbt.inputs.get_mut(idx).expect("input index out of range");
+	let input = psbt.inputs.get_mut(idx).need("input index out of range");
 
 	if let Some(hex) = args.value_of("non-witness-utxo") {
-		let raw = hex::decode(&hex).expect("invalid non-witness-utxo hex");
-		let utxo = deserialize(&raw).expect("invalid non-witness-utxo transaction");
+		let raw = hex::decode(&hex).need("invalid non-witness-utxo hex");
+		let utxo = deserialize(&raw).need("invalid non-witness-utxo transaction");
 		input.non_witness_utxo = Some(utxo);
 	}
 
 	if let Some(hex) = args.value_of("witness-utxo") {
-		let raw = hex::decode(&hex).expect("invalid witness-utxo hex");
-		let utxo = deserialize(&raw).expect("invalid witness-utxo transaction");
+		let raw = hex::decode(&hex).need("invalid witness-utxo hex");
+		let utxo = deserialize(&raw).need("invalid witness-utxo transaction");
 		input.witness_utxo = Some(utxo);
 	}
 
@@ -266,16 +266,16 @@ fn edit_input<'a>(
 	}
 
 	if let Some(sht) = args.value_of("sighash-type") {
-		input.sighash_type = Some(hal::psbt::ecdsa_sighashtype_from_string(&sht).expect("invalid sighash string"));
+		input.sighash_type = Some(hal::psbt::ecdsa_sighashtype_from_string(&sht).need("invalid sighash string"));
 	}
 
 	if let Some(hex) = args.value_of("redeem-script") {
-		let raw = hex::decode(&hex).expect("invalid redeem-script hex");
+		let raw = hex::decode(&hex).need("invalid redeem-script hex");
 		input.redeem_script = Some(raw.into());
 	}
 
 	if let Some(hex) = args.value_of("witness-script") {
-		let raw = hex::decode(&hex).expect("invalid witness-script hex");
+		let raw = hex::decode(&hex).need("invalid witness-script hex");
 		input.witness_script = Some(raw.into());
 	}
 
@@ -291,13 +291,13 @@ fn edit_input<'a>(
 	}
 
 	if let Some(hex) = args.value_of("final-script-sig") {
-		let raw = hex::decode(&hex).expect("invalid final-script-sig hex");
+		let raw = hex::decode(&hex).need("invalid final-script-sig hex");
 		input.final_script_sig = Some(raw.into());
 	}
 
 	if let Some(csv) = args.value_of("final-script-witness") {
 		let vhex = csv.split(",");
-		let vraw = vhex.map(|h| hex::decode(&h).expect("invalid final-script-witness hex"));
+		let vraw = vhex.map(|h| hex::decode(&h).need("invalid final-script-witness hex"));
 		input.final_script_witness = Some(bitcoin::Witness::from_vec(vraw.collect()));
 	}
 }
@@ -307,15 +307,15 @@ fn edit_output<'a>(
 	args: &clap::ArgMatches<'a>,
 	psbt: &mut psbt::PartiallySignedTransaction,
 ) {
-	let output = psbt.outputs.get_mut(idx).expect("output index out of range");
+	let output = psbt.outputs.get_mut(idx).need("output index out of range");
 
 	if let Some(hex) = args.value_of("redeem-script") {
-		let raw = hex::decode(&hex).expect("invalid redeem-script hex");
+		let raw = hex::decode(&hex).need("invalid redeem-script hex");
 		output.redeem_script = Some(raw.into());
 	}
 
 	if let Some(hex) = args.value_of("witness-script") {
-		let raw = hex::decode(&hex).expect("invalid witness-script hex");
+		let raw = hex::decode(&hex).need("invalid witness-script hex");
 		output.witness_script = Some(raw.into());
 	}
 
@@ -335,23 +335,23 @@ fn exec_edit<'a>(args: &clap::ArgMatches<'a>) {
 	let input = util::arg_or_stdin(args, "psbt");
 	let (raw, source) = file_or_raw(input.as_ref());
 	let mut psbt: psbt::PartiallySignedTransaction =
-		deserialize(&raw).expect("invalid PSBT format");
+		deserialize(&raw).need("invalid PSBT format");
 
 	match (args.value_of("input-idx"), args.value_of("output-idx")) {
 		(None, None) => exit!("no input or output index provided"),
 		(Some(_), Some(_)) => exit!("can only edit an input or an output at a time"),
 		(Some(idx), _) => {
-			edit_input(idx.parse().expect("invalid input index"), &args, &mut psbt)
+			edit_input(idx.parse().need("invalid input index"), &args, &mut psbt)
 		}
 		(_, Some(idx)) => {
-			edit_output(idx.parse().expect("invalid output index"), &args, &mut psbt)
+			edit_output(idx.parse().need("invalid output index"), &args, &mut psbt)
 		}
 	}
 
 	let edited_raw = serialize(&psbt);
 	if let Some(path) = args.value_of("output") {
-		let mut file = File::create(&path).expect("failed to open output file");
-		file.write_all(&edited_raw).expect("error writing output file");
+		let mut file = File::create(&path).need("failed to open output file");
+		file.write_all(&edited_raw).need("error writing output file");
 	} else if args.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&edited_raw).unwrap();
 	} else {
@@ -360,8 +360,8 @@ fn exec_edit<'a>(args: &clap::ArgMatches<'a>) {
 			PsbtSource::Base64 => print!("{}", base64::encode(&edited_raw)),
 			PsbtSource::File => {
 				let path = args.value_of("psbt").unwrap();
-				let mut file = File::create(&path).expect("failed to PSBT file for writing");
-				file.write_all(&edited_raw).expect("error writing PSBT file");
+				let mut file = File::create(&path).need("failed to PSBT file for writing");
+				file.write_all(&edited_raw).need("error writing PSBT file");
 			}
 		}
 	}
@@ -379,10 +379,13 @@ fn cmd_finalize<'a>() -> clap::App<'a, 'a> {
 fn exec_finalize<'a>(args: &clap::ArgMatches<'a>) {
 	let input = util::arg_or_stdin(args, "psbt");
 	let (raw, _) = file_or_raw(input.as_ref());
-	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
+	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw).need("invalid PSBT format");
 
 	// Create a secp context, should there be one with static lifetime?
-	let psbt = psbt.finalize(&SECP).expect("failed to finalize");
+	let psbt = psbt.finalize(&SECP).unwrap_or_else(|(_, errs)| {
+		let errs = errs.into_iter().map(|e| e.to_string()).collect::<Vec<_>>();
+		exit!("failed to finalize psbt: {}", errs.join(", "));
+	});
 
 	let finalized_raw = serialize(&psbt.extract_tx());
 	if args.is_present("raw-stdout") {
@@ -415,7 +418,7 @@ fn exec_merge<'a>(args: &clap::ArgMatches<'a>) {
 		Box::new(values.into_iter().map(|f| {
 			let (raw, _) = file_or_raw(&f);
 			let psbt: psbt::PartiallySignedTransaction =
-				deserialize(&raw).expect("invalid PSBT format");
+				deserialize(&raw).need("invalid PSBT format");
 			psbt
 		}))
 	} else {
@@ -425,7 +428,7 @@ fn exec_merge<'a>(args: &clap::ArgMatches<'a>) {
 		Box::new(buf.lines().take_while(|l| l.is_ok() && !l.as_ref().unwrap().is_empty()).map(|l| {
 			let (raw, _) = file_or_raw(&l.unwrap());
 			deserialize::<psbt::PartiallySignedTransaction>(&raw)
-				.expect("invalid PSBT format")
+				.need("invalid PSBT format")
 		}))
 	};
 
@@ -435,13 +438,13 @@ fn exec_merge<'a>(args: &clap::ArgMatches<'a>) {
 			panic!("PSBTs are not compatible");
 		}
 
-		merged.combine(part).expect(&format!("error merging PSBT #{}", idx));
+		merged.combine(part).need(&format!("error merging PSBT #{}", idx));
 	}
 
 	let merged_raw = serialize(&merged);
 	if let Some(path) = args.value_of("output") {
-		let mut file = File::create(&path).expect("failed to open output file");
-		file.write_all(&merged_raw).expect("error writing output file");
+		let mut file = File::create(&path).need("failed to open output file");
+		file.write_all(&merged_raw).need("error writing output file");
 	} else if args.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&merged_raw).unwrap();
 	} else {
@@ -470,13 +473,13 @@ fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
 fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 	let input = util::arg_or_stdin(args, "psbt");
 	let (raw, source) = file_or_raw(input.as_ref());
-	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).expect("invalid PSBT format");
+	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).need("invalid PSBT format");
 
-	let priv_key = args.value_of("priv-key").expect("no key provided");
-	let i = args.value_of("input-idx").expect("Input index not provided")
-		.parse::<usize>().expect("input-idx must be a positive integer");
+	let priv_key = args.value_of("priv-key").need("no key provided");
+	let i = args.value_of("input-idx").need("Input index not provided")
+		.parse::<usize>().need("input-idx must be a positive integer");
 	let compressed = args.value_of("compressed").unwrap()
-		.parse::<bool>().expect("Compressed must be boolean");
+		.parse::<bool>().need("Compressed must be boolean");
 
 	if i >= psbt.inputs.len() {
 		panic!("PSBT input index out of range")
@@ -498,11 +501,11 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 		inner: pk,
 	};
 	let msg = psbt.sighash_msg(i, &mut cache, None)
-		.expect("error computing sighash message on psbt");
+		.need("error computing sighash message on psbt");
 	let secp_sig = match msg {
 		miniscript::psbt::PsbtSighashMsg::EcdsaSighash(sighash) => {
 			let msg = secp256k1::Message::from_slice(&sighash)
-				.expect("error computing sighash message on psbt");
+				.need("error computing sighash message on psbt");
 			SECP.sign_ecdsa(&msg, &sk)
 		},
 		miniscript::psbt::PsbtSighashMsg::TapSighash(_) => {
@@ -511,19 +514,19 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 	};
 
 	let sighashtype = psbt.inputs[i].sighash_type
-		.expect("error locating sighash type on the selected input")
+		.need("error locating sighash type on the selected input")
 		.ecdsa_hash_ty()
-		.expect("schnorr signatures are not yet supported");
+		.need("schnorr signatures are not yet supported");
 	let mut btc_sig = secp_sig.serialize_der().as_ref().to_vec();
 	btc_sig.push(sighashtype.to_u32() as u8);
 
 	// mutate the psbt
 	psbt.inputs[i].partial_sigs.insert(pk, bitcoin::EcdsaSig::from_slice(&btc_sig)
-		.expect("failed to sign psbt"));
+		.need("failed to sign psbt"));
 	let raw = serialize(&psbt);
 	if let Some(path) = args.value_of("output") {
-		let mut file = File::create(&path).expect("failed to open output file");
-		file.write_all(&raw).expect("error writing output file");
+		let mut file = File::create(&path).need("failed to open output file");
+		file.write_all(&raw).need("error writing output file");
 	} else if args.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&raw).unwrap();
 	} else {
@@ -532,8 +535,8 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 			PsbtSource::Base64 => println!("{}", base64::encode(&raw)),
 			PsbtSource::File => {
 				let path = args.value_of("psbt").unwrap();
-				let mut file = File::create(&path).expect("failed to PSBT file for writing");
-				file.write_all(&raw).expect("error writing PSBT file");
+				let mut file = File::create(&path).need("failed to PSBT file for writing");
+				file.write_all(&raw).need("error writing PSBT file");
 			}
 		}
 	}

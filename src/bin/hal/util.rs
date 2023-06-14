@@ -1,8 +1,6 @@
-use std::{cmp, io};
+use std::{cmp, env, fmt, fs, io};
 use std::borrow::Cow;
 use std::collections::BTreeSet;
-use std::env;
-use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -47,7 +45,7 @@ pub fn arg_or_stdin<'a>(args: &'a clap::ArgMatches<'a>, arg: &str) -> Cow<'a, st
 		if input.is_empty() {
 			exit!("no '{}' argument given", arg);
 		}
-		String::from_utf8(input).expect(&format!("invalid utf8 on stdin for '{}'", arg))
+		String::from_utf8(input).need(&format!("invalid utf8 on stdin for '{}'", arg))
 			.trim().to_owned().into()
 	}
 }
@@ -168,6 +166,30 @@ pub fn more_than_one(bools: &[bool]) -> bool {
 	}
 	false
 }
+
+pub trait ResultExt<T, E: fmt::Display>: Into<Result<T, E>> {
+    #[cfg_attr(rust_v_1_46, track_caller)]
+    fn need(self, msg: &str) -> T {
+        match self.into() {
+            Ok(t) => t,
+            Err(e) => exit!("{}: {}", msg, e),
+        }
+    }
+}
+
+impl<T, E: fmt::Display> ResultExt<T, E> for std::result::Result<T, E> {}
+
+pub trait OptionExt<T>: Into<Option<T>> {
+    #[cfg_attr(rust_v_1_46, track_caller)]
+    fn need(self, msg: &str) -> T {
+        match self.into() {
+            Some(t) => t,
+            None => exit!("{}", msg),
+        }
+    }
+}
+
+impl<T> OptionExt<T> for std::option::Option<T> {}
 
 #[test]
 fn test_lev_distance() {

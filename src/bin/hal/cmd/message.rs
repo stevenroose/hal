@@ -33,7 +33,7 @@ fn cmd_hash<'a>() -> clap::App<'a, 'a> {
 
 fn exec_hash<'a>(args: &clap::ArgMatches<'a>) {
 	use bitcoin::hashes::Hash;
-	let msg = args.value_of("message").expect("no message provided");
+	let msg = args.value_of("message").need("no message provided");
 	let res = hal::message::MessageHash {
 		sha256: bitcoin::hashes::sha256::Hash::hash(msg.as_bytes()),
 		sha256d: bitcoin::hashes::sha256d::Hash::hash(msg.as_bytes()),
@@ -51,8 +51,8 @@ fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
-	let wif = args.value_of("key").expect("no key provided");
-	let privkey: PrivateKey = wif.parse().expect("invalid WIF format");
+	let wif = args.value_of("key").need("no key provided");
+	let privkey: PrivateKey = wif.parse().need("invalid WIF format");
 
 	let msg = util::arg_or_stdin(args, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
@@ -84,7 +84,7 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
-	let signer = args.value_of("signer").expect("no signer provided");
+	let signer = args.value_of("signer").need("no signer provided");
 	let signer_addr_res = Address::from_str(&signer);
 	let signer_pubk_res = PublicKey::from_str(&signer);
 	if signer_addr_res.is_err() && signer_pubk_res.is_err() {
@@ -100,7 +100,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 		debug!("Rare/impossible case that signer can both be parsed as pubkey and address.");
 	}
 
-	let sig = args.value_of("signature").expect("no signature provided");
+	let sig = args.value_of("signature").need("no signature provided");
 	let sig_bytes = match (hex::decode(&sig), base64::decode(&sig)) {
 		(Ok(b), Err(_)) => b,
 		(Err(_), Ok(b)) => b,
@@ -115,10 +115,10 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 		exit!("Invalid signature: length is {} instead of 65 bytes", sig_bytes.len());
 	}
 	let recid = secp256k1::ecdsa::RecoveryId::from_i32(((sig_bytes[0] - 27) & 0x03) as i32)
-		.expect("invalid recoverable signature (invalid recid)");
+		.need("invalid recoverable signature (invalid recid)");
 	let compressed = ((sig_bytes[0] - 27) & 0x04) != 0;
 	let signature = secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_bytes[1..], recid)
-		.expect("invalid recoverable signature");
+		.need("invalid recoverable signature");
 
 	let msg = util::arg_or_stdin(args, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
@@ -126,7 +126,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 	let pubkey = PublicKey {
 		inner: SECP
 			.recover_ecdsa(&secp256k1::Message::from_slice(&hash).unwrap(), &signature)
-			.expect("invalid signature"),
+			.need("invalid signature"),
 		compressed: compressed,
 	};
 
@@ -140,10 +140,10 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 			None => exit!("Unknown address type provided"),
 			Some(AddressType::P2pkh) => Address::p2pkh(&pubkey, network),
 			Some(AddressType::P2wpkh) => {
-				Address::p2wpkh(&pubkey, network).expect("Uncompressed key in Segwit")
+				Address::p2wpkh(&pubkey, network).need("Uncompressed key in Segwit")
 			}
 			Some(AddressType::P2sh) => {
-				Address::p2shwpkh(&pubkey, network).expect("Uncompressed key in Segwit")
+				Address::p2shwpkh(&pubkey, network).need("Uncompressed key in Segwit")
 			}
 			Some(tp) => exit!("Address of type {} can't sign messages.", tp),
 		};
@@ -172,7 +172,7 @@ fn cmd_recover<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {
-	let sig = args.value_of("signature").expect("no signature provided");
+	let sig = args.value_of("signature").need("no signature provided");
 	let sig_bytes = match (hex::decode(&sig), base64::decode(&sig)) {
 		(Ok(b), Err(_)) => b,
 		(Err(_), Ok(b)) => b,
@@ -187,17 +187,17 @@ fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {
 		exit!("Invalid signature: length is {} instead of 65 bytes", sig_bytes.len());
 	}
 	let recid = secp256k1::ecdsa::RecoveryId::from_i32((sig_bytes[0] - 27 & 0x03) as i32)
-		.expect("invalid recoverable signature (invalid recid)");
+		.need("invalid recoverable signature (invalid recid)");
 	let compressed = sig_bytes[0] & 0x04 != 0x04;
 	let signature = secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_bytes[1..], recid)
-		.expect("invalid recoverable signature");
+		.need("invalid recoverable signature");
 
-	let msg = args.value_of("message").expect("no message given");
+	let msg = args.value_of("message").need("no message given");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
 
 	let pubkey = SECP
 		.recover_ecdsa(&secp256k1::Message::from_slice(&hash).unwrap(), &signature)
-		.expect("invalid signature");
+		.need("invalid signature");
 
 	let bitcoin_key = PublicKey {
 		inner: pubkey,

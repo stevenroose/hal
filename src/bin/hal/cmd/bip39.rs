@@ -37,7 +37,7 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
 	let word_count = args.value_of("words").unwrap_or("24").parse::<usize>()
-		.expect("invalid number of words");
+		.need("invalid number of words");
 	if word_count < 12 || word_count % 6 != 0 || word_count > 24 {
 		exit!("invalid word count: {}", word_count);
 	}
@@ -54,12 +54,12 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 					word_count, nb_entropy_bytes
 				);
 			}
-			entropy = hex::decode(&entropy_hex).expect("invalid entropy hex");
+			entropy = hex::decode(&entropy_hex).need("invalid entropy hex");
 		}
 		(false, true) => {
 			let mut hasher = sha256::Hash::engine();
 			let stdin = io::stdin();
-			let read = io::copy(&mut stdin.lock(), &mut hasher).expect("error reading stdin");
+			let read = io::copy(&mut stdin.lock(), &mut hasher).need("error reading stdin");
 			if read < nb_entropy_bytes as u64 {
 				warn!("Low entropy provided! Do not use this mnemonic in production!");
 			}
@@ -92,9 +92,9 @@ fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
 fn exec_get_seed<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
-	let mnemonic = args.value_of("mnemonic").expect("no mnemonic provided");
+	let mnemonic = args.value_of("mnemonic").need("no mnemonic provided");
 	let mnemonic = Mnemonic::parse(mnemonic)
-		.expect("invalid mnemonic phrase");
+		.need("invalid mnemonic phrase");
 
 	let info = ::hal::bip39::MnemonicInfo::from_mnemonic_with_passphrase(
 		&mnemonic,

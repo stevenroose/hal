@@ -65,7 +65,7 @@ fn exec_descriptor<'a>(args: &clap::ArgMatches<'a>) {
 				policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
 			})
 		})
-		.expect("invalid miniscript");
+		.need("invalid miniscript");
 	args.print_output(&info);
 }
 
@@ -119,7 +119,7 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 			.ok();
 
 		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
-			.expect("Invalid Miniscript")
+			.need("Invalid Miniscript")
 	} else {
 		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
 			.unwrap()
@@ -135,7 +135,7 @@ fn cmd_parse<'a>() -> clap::App<'a, 'a> {
 
 fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
 	let script_hex = util::arg_or_stdin(args, "script");
-	let script = Script::from(Vec::<u8>::from_hex(&script_hex).expect("invalid hex script"));
+	let script = Script::from(Vec::<u8>::from_hex(&script_hex).need("invalid hex script"));
 
 	let segwit_info = Miniscript::<_, Segwitv0>::parse_insane(&script)
 		.map_err(|e| info!("Cannot parse as segwit Miniscript {}", e))

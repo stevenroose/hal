@@ -151,7 +151,7 @@ impl ProcessBuilder {
 	/// Runs the process, waiting for completion, and mapping non-success exit codes to an error.
 	pub fn exec(&self) {
 		let mut command = self.build_command();
-		let exit = command.status().expect(&format!("could not execute process {}", self));
+		let exit = command.status().need(&format!("could not execute process {}", self));
 
 		if !exit.success() {
 			exit!("process didn't exit successfully: {}", self);
@@ -181,7 +181,7 @@ impl ProcessBuilder {
 	pub fn exec_with_output(&self) {
 		let mut command = self.build_command();
 
-		let output = command.output().expect(&format!("could not execute process {}", self));
+		let output = command.output().need(&format!("could not execute process {}", self));
 
 		if !output.status.success() {
 			exit!("process didn't exit successfully: {}", self);

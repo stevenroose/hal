@@ -41,6 +41,10 @@ pub fn opt_yaml() -> clap::Arg<'static, 'static> {
 }
 
 pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
+	fn verbose(&self) -> bool {
+		self.borrow().is_present("verbose")
+	}
+
 	fn network(&self) -> bitcoin::Network {
 		if self.borrow().is_present("testnet") {
 			Network::Testnet

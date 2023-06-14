@@ -30,7 +30,7 @@ fn exec_invoice_decode<'a>(args: &clap::ArgMatches<'a>) {
 	::lightning_invoice::check_platform();
 
 	let invoice_str = util::arg_or_stdin(args, "invoice");
-	let invoice: Invoice = invoice_str.as_ref().parse().expect("invalid invoice encoding");
+	let invoice: Invoice = invoice_str.as_ref().parse().need("invalid invoice encoding");
 
 	let info = hal::GetInfo::get_info(&invoice, args.network());
 	args.print_output(&info)
