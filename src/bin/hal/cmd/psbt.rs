@@ -1,12 +1,11 @@
 use std::fs::File;
 use std::io::{self, BufRead, Read, Write};
-use std::str::FromStr;
 
 use base64;
 use clap;
 use hex;
 
-use bitcoin::{PrivateKey, consensus::{deserialize, serialize}};
+use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::bip32;
 use bitcoin::util::psbt;
 use bitcoin::{PublicKey, Transaction};
@@ -475,7 +474,7 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 	let (raw, source) = file_or_raw(input.as_ref());
 	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).need("invalid PSBT format");
 
-	let priv_key = args.value_of("priv-key").need("no key provided");
+	let sk = args.need_privkey("priv-key").inner;
 	let i = args.value_of("input-idx").need("Input index not provided")
 		.parse::<usize>().need("input-idx must be a positive integer");
 	let compressed = args.value_of("compressed").unwrap()
@@ -488,13 +487,6 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 	let tx =  psbt.clone().extract_tx();
 	let mut cache = bitcoin::util::sighash::SighashCache::new(&tx);
 
-	let sk = if let Ok(privkey) = PrivateKey::from_str(&priv_key) {
-		privkey.inner
-	} else if let Ok(sk) = secp256k1::SecretKey::from_str(&priv_key) {
-		sk
-	} else {
-		panic!("invalid WIF/hex private key: {}", priv_key);
-	};
 	let pk = secp256k1::PublicKey::from_secret_key(&SECP, &sk);
 	let pk = bitcoin::PublicKey {
 		compressed: compressed,

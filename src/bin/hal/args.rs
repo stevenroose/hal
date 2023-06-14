@@ -1,5 +1,6 @@
 
 use std::borrow::Borrow;
+use std::str::FromStr;
 
 use bitcoin::Network;
 
@@ -53,6 +54,26 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 		} else {
 			Network::Bitcoin
 		}
+	}
+
+	fn privkey(&self, key: &str) -> Option<bitcoin::PrivateKey> {
+		self.borrow().value_of(key).map(|s| {
+			bitcoin::PrivateKey::from_str(&s).unwrap_or_else(|_| {
+				bitcoin::PrivateKey {
+					compressed: true,
+					network: self.network(),
+					inner: secp256k1::SecretKey::from_str(&s).unwrap_or_else(|_| {
+						exit!("invalid WIF/hex private key provided for argument '{}'", key);
+					}),
+				}
+			})
+		})
+	}
+
+	fn need_privkey(&self, key: &str) -> bitcoin::PrivateKey {
+		self.privkey(key).unwrap_or_else(|| {
+			exit!("expected a private key for argument '{}'", key);
+		})
 	}
 
 	fn out_yaml(&self) -> bool {

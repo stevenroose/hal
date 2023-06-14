@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use bitcoin::secp256k1;
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::{PrivateKey, PublicKey};
+use bitcoin::PublicKey;
 use clap;
 use rand;
 
@@ -69,19 +69,7 @@ fn cmd_derive<'a>() -> clap::App<'a, 'a> {
 
 fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
-
-	let privkey = {
-		let s = args.value_of("privkey").need("no private key provided");
-		bitcoin::PrivateKey::from_str(&s).unwrap_or_else(|_| {
-			bitcoin::PrivateKey {
-				compressed: true,
-				network: network,
-				inner: secp256k1::SecretKey::from_str(&s)
-					.need("invalid private key provided"),
-			}
-		})
-	};
-
+	let privkey = args.need_privkey("privkey");
 	let info = privkey.get_info(network);
 	args.print_output(&info)
 }
@@ -92,16 +80,8 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
-	let raw = args.value_of("key").need("no key provided");
-
-	let info = if let Ok(privkey) = PrivateKey::from_str(&raw) {
-		privkey.get_info(privkey.network)
-	} else if let Ok(sk) = secp256k1::SecretKey::from_str(&raw) {
-		sk.get_info(args.network())
-	} else {
-		exit!("invalid WIF/hex private key: {}", raw);
-	};
-
+	let key = args.need_privkey("key");
+	let info = key.get_info(args.network());
 	args.print_output(&info)
 }
 
@@ -128,18 +108,7 @@ fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
 		msg_bytes.reverse();
 	}
 	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
-
-	let privkey = {
-		let s = args.value_of("privkey").need("no private key provided");
-		bitcoin::PrivateKey::from_str(&s).unwrap_or_else(|_| {
-			bitcoin::PrivateKey {
-				compressed: true,
-				network: network,
-				inner: secp256k1::SecretKey::from_str(&s).need("invalid private key provided"),
-			}
-		})
-	};
-
+	let privkey = args.need_privkey("privkey");
 	let signature = SECP.sign_ecdsa(&msg, &privkey.inner);
 	args.print_output(&signature.get_info(network))
 }

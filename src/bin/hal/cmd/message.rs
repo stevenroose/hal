@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bitcoin::secp256k1;
-use bitcoin::{Address, AddressType, PrivateKey, PublicKey};
+use bitcoin::{Address, AddressType, PublicKey};
 use clap;
 
 use crate::prelude::*;
@@ -51,8 +51,7 @@ fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
-	let wif = args.value_of("key").need("no key provided");
-	let privkey: PrivateKey = wif.parse().need("invalid WIF format");
+	let privkey = args.need_privkey("key");
 
 	let msg = util::arg_or_stdin(args, "message");
 	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
