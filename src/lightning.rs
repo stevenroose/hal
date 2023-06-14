@@ -15,15 +15,15 @@ const WRONG_CID: &'static str = "incorrect short channel ID HRF format";
 /// Parse a short channel is in the form of `${blockheight)x$(txindex}x${outputindex}`.
 pub fn parse_short_channel_id(cid: &str) -> Result<u64, &'static str> {
 	let mut split = cid.split("x");
-	let blocknum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
+	let blocknum: u64 = split.next().ok_or(WRONG_CID)?.parse().map_err(|_| WRONG_CID)?;
 	if blocknum & 0xFFFFFF != blocknum {
 		return Err(WRONG_CID);
 	}
-	let txnum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
+	let txnum: u64 = split.next().ok_or(WRONG_CID)?.parse().map_err(|_| WRONG_CID)?;
 	if txnum & 0xFFFFFF != txnum {
 		return Err(WRONG_CID);
 	}
-	let outnum: u64 = split.next().expect(WRONG_CID).parse().expect(WRONG_CID);
+	let outnum: u64 = split.next().ok_or(WRONG_CID)?.parse().map_err(|_| WRONG_CID)?;
 	if outnum & 0xFFFF != outnum {
 		return Err(WRONG_CID);
 	}
@@ -104,7 +104,8 @@ impl GetInfo<InvoiceInfo> for Invoice {
 			},
 			payee_pub_key: self.payee_pub_key().map(|pk| pk.serialize()[..].into()),
 			expiry_time: Some(
-				Local::now() + Duration::from_std(self.expiry_time()).expect("Invalid expiry"),
+				Local::now() + Duration::from_std(self.expiry_time())
+					.expect("invalid expiry in invoice"),
 			),
 			min_final_cltv_expiry: self.min_final_cltv_expiry().map(|e| *e),
 			fallback_addresses: self
@@ -115,17 +116,17 @@ impl GetInfo<InvoiceInfo> for Invoice {
 					Address {
 						payload: match f {
 							Fallback::PubKeyHash(pkh) => {
-								Payload::PubkeyHash(Hash::from_slice(&pkh[..]).expect("wrong hash"))
+								Payload::PubkeyHash(Hash::from_slice(&pkh[..]).unwrap())
 							}
 							Fallback::ScriptHash(sh) => {
-								Payload::ScriptHash(Hash::from_slice(&sh[..]).expect("wrong hash"))
+								Payload::ScriptHash(Hash::from_slice(&sh[..]).unwrap())
 							}
 							Fallback::SegWitProgram {
 								version: v,
 								program: p,
 							} => Payload::WitnessProgram {
 								version: WitnessVersion::try_from(v.to_u8())
-									.expect("invalid segwit version"),
+									.expect("invalid segwit version in invoice"),
 								program: p.to_vec(),
 							},
 						},
