@@ -1,10 +1,8 @@
 use std::io::Write;
 use std::process;
-use std::str::FromStr;
 
 use bitcoin::secp256k1;
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::PublicKey;
 use clap;
 use rand;
 
@@ -136,8 +134,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 		msg_bytes.reverse();
 	}
 	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
-	let pubkey_hex = args.value_of("pubkey").need("no public key provided");
-	let pubkey = pubkey_hex.parse::<PublicKey>().need("invalid public key");
+	let pubkey = args.need_pubkey("pubkey");
 	let sig = {
 		let hex = args.value_of("signature").need("no signature provided");
 		let bytes = hex::decode(&hex).need("invalid signature: not hex");
@@ -179,11 +176,8 @@ fn cmd_negate_pubkey<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_negate_pubkey<'a>(args: &clap::ArgMatches<'a>) {
-	let s = args.value_of("pubkey").need("no public key provided");
-	let key = PublicKey::from_str(&s).need("invalid public key");
-
+	let key = args.need_pubkey("pubkey");
 	let negated = key.inner.negate(&SECP);
-
 	write!(::std::io::stdout(), "{}", negated).need("failed to write stdout");
 }
 
@@ -198,10 +192,7 @@ fn cmd_pubkey_tweak_add<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
-	let point = {
-		let hex = args.value_of("point").need("no point provided");
-		hex.parse::<PublicKey>().need("invalid point")
-	};
+	let point = args.need_pubkey("point");
 
 	let scalar = {
 		let hex = args.value_of("scalar").need("no scalar given");
@@ -229,15 +220,8 @@ fn cmd_pubkey_combine<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_pubkey_combine<'a>(args: &clap::ArgMatches<'a>) {
-	let pk1 = {
-		let hex = args.value_of("pubkey1").need("no first public key provided");
-		hex.parse::<PublicKey>().need("invalid first public key")
-	};
-
-	let pk2 = {
-		let hex = args.value_of("pubkey2").need("no second public key provided");
-		hex.parse::<PublicKey>().need("invalid second public key")
-	};
+	let pk1 = args.need_pubkey("pubkey1");
+	let pk2 = args.need_pubkey("pubkey2");
 
 	match pk1.inner.combine(&pk2.inner) {
 		Ok(sum) => {

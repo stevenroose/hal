@@ -76,6 +76,20 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 		})
 	}
 
+	fn pubkey(&self, key: &str) -> Option<bitcoin::PublicKey> {
+		self.borrow().value_of(key).map(|s| {
+			bitcoin::PublicKey::from_str(&s).unwrap_or_else(|_| {
+				exit!("invalid public key provided for argument '{}'", key);
+			})
+		})
+	}
+
+	fn need_pubkey(&self, key: &str) -> bitcoin::PublicKey {
+		self.pubkey(key).unwrap_or_else(|| {
+			exit!("expected a public key for argument '{}'", key);
+		})
+	}
+
 	fn out_yaml(&self) -> bool {
 		self.borrow().is_present("yaml")
 	}

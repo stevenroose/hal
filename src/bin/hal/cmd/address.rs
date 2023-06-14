@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use bitcoin::hashes::Hash;
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::{Address, PublicKey, WPubkeyHash, WScriptHash};
+use bitcoin::{Address, WPubkeyHash, WScriptHash};
 use clap;
 
 use hal;
@@ -64,8 +64,7 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
-	if let Some(pubkey_hex) = args.value_of("pubkey") {
-		let pubkey = pubkey_hex.parse::<PublicKey>().need("invalid pubkey");
+	if let Some(pubkey) = args.pubkey("pubkey") {
 		let addr = hal::address::Addresses::from_pubkey(&pubkey, network);
 		args.print_output(&addr)
 	} else if let Some(script_hex) = args.value_of("script") {
