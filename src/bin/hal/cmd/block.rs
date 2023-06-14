@@ -120,6 +120,7 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	if args.is_present("txids") {
 		let info = hal::block::BlockInfo {
 			header: hal::GetInfo::get_info(&block.header, args.network()),
+			bip34_block_height: block.bip34_block_height().ok(),
 			txids: Some(block.txdata.iter().map(|t| t.txid()).collect()),
 			transactions: None,
 			raw_transactions: None,

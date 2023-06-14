@@ -33,6 +33,7 @@ impl<'a> GetInfo<BlockHeaderInfo> for BlockHeader {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct BlockInfo {
 	pub header: BlockHeaderInfo,
+	pub bip34_block_height: Option<u64>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub transactions: Option<Vec<TransactionInfo>>,
 
@@ -46,6 +47,7 @@ impl GetInfo<BlockInfo> for Block {
 	fn get_info(&self, network: Network) -> BlockInfo {
 		BlockInfo {
 			header: self.header.get_info(network),
+			bip34_block_height: self.bip34_block_height().ok(),
 			transactions: Some(self.txdata.iter().map(|t| t.get_info(network)).collect()),
 			txids: None,
 			raw_transactions: None,
