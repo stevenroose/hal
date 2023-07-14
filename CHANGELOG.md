@@ -2,6 +2,10 @@ CHANGELOG
 =========
 
 
+# v0.9.2  --  2023-07-14
+
+- Support signet
+
 # v0.9.1  --  2023-06-13
 
 - Add `p2tr` to address output

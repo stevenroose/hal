@@ -1,6 +1,6 @@
 [package]
 name = "hal"
-version = "0.9.1"
+version = "0.9.2"
 authors = ["Steven Roose <steven@stevenroose.org>"]
 license = "CC0-1.0"
 homepage = "https://github.com/stevenroose/hal/"
