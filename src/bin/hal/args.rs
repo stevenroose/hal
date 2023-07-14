@@ -24,6 +24,11 @@ pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 			.help("run in testnet mode")
 			.takes_value(false)
 			.required(false),
+		clap::Arg::with_name("signet")
+			.long("signet")
+			.help("run in signet mode")
+			.takes_value(false)
+			.required(false),
 		clap::Arg::with_name("regtest")
 			.long("regtest")
 			.help("run in regtest mode")
@@ -49,6 +54,8 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 	fn network(&self) -> bitcoin::Network {
 		if self.borrow().is_present("testnet") {
 			Network::Testnet
+		} else if self.borrow().is_present("signet") {
+			Network::Signet
 		} else if self.borrow().is_present("regtest") {
 			Network::Regtest
 		} else {
