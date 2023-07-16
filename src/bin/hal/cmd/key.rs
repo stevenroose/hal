@@ -18,6 +18,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_inspect())
 		.subcommand(cmd_ecdsa_sign())
 		.subcommand(cmd_ecdsa_verify())
+		.subcommand(cmd_schnorr_sign())
+		.subcommand(cmd_schnorr_verify())
 		.subcommand(cmd_negate_pubkey())
 		.subcommand(cmd_pubkey_tweak_add())
 		.subcommand(cmd_pubkey_combine())
@@ -30,6 +32,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("ecdsa-sign", Some(ref m)) => exec_ecdsa_sign(&m),
 		("ecdsa-verify", Some(ref m)) => exec_ecdsa_verify(&m),
+		("schnorr-sign", Some(ref m)) => exec_schnorr_sign(&m),
+		("schnorr-verify", Some(ref m)) => exec_schnorr_verify(&m),
 		("sign", Some(ref m)) => exec_ecdsa_sign(&m), // deprecate
 		("verify", Some(ref m)) => exec_ecdsa_verify(&m), // deprecate
 		("negate-pubkey", Some(ref m)) => exec_negate_pubkey(&m),
@@ -146,6 +150,82 @@ fn exec_ecdsa_verify<'a>(args: &clap::ArgMatches<'a>) {
 		let msg = secp256k1::Message::from_slice(&msg_bytes[..])
 			.need("invalid message to be signed");
 		if SECP.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok() {
+			eprintln!("Signature is valid for the reverse message.");
+			if args.is_present("reverse") {
+				eprintln!("Try dropping the --reverse");
+			} else {
+				eprintln!("If the message is a Bitcoin SHA256 hash, try --reverse");
+			}
+		}
+	}
+
+	if valid {
+		eprintln!("Signature is valid.");
+	} else {
+		eprintln!("Signature is invalid!");
+		process::exit(1);
+	}
+}
+
+fn cmd_schnorr_sign<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand(
+		"schnorr-sign",
+		"sign messages using Schnorr\n\nNOTE!! For SHA-256-d hashes, the --reverse \
+		flag must be used because Bitcoin Core reverses the hex order for those!",
+	)
+	.arg(args::opt("reverse", "reverse the message"))
+	.arg(args::arg("privkey", "the private key in hex or WIF").required(true))
+	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
+}
+
+fn exec_schnorr_sign<'a>(args: &clap::ArgMatches<'a>) {
+	let msg_hex = args.value_of("message").need("no message given");
+	let mut msg_bytes = hex::decode(&msg_hex).need("invalid hex message");
+	if args.is_present("reverse") {
+		msg_bytes.reverse();
+	}
+	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
+	let privkey = args.need_privkey("privkey");
+	let keypair = secp256k1::KeyPair::from_secret_key(&SECP, &privkey.inner);
+	let signature = SECP.sign_schnorr_with_rng(&msg, &keypair, &mut rand::thread_rng());
+	write!(::std::io::stdout(), "{:x}", &signature).need("failed to write stdout");
+}
+
+fn cmd_schnorr_verify<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand(
+		"schnorr-verify",
+		"verify Schnorr signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
+		flag must be used because Bitcoin Core reverses the hex order for those!",
+	)
+	.arg(args::opt("reverse", "reverse the message"))
+	.arg(args::opt("no-try-reverse", "don't try to verify for reversed message"))
+	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
+	.arg(args::arg("pubkey", "the public key in hex").required(true))
+	.arg(args::arg("signature", "the Schnorr signature in hex").required(true))
+}
+
+fn exec_schnorr_verify<'a>(args: &clap::ArgMatches<'a>) {
+	let msg_hex = args.value_of("message").need("no message given");
+	let mut msg_bytes = hex::decode(&msg_hex).need("invalid hex message");
+	if args.is_present("reverse") {
+		msg_bytes.reverse();
+	}
+	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
+	let pubkey = args.need_xonly_pubkey("pubkey");
+	let sig = {
+		let hex = args.value_of("signature").need("no signature provided");
+		let bytes = hex::decode(&hex).need("invalid signature: not hex");
+		secp256k1::schnorr::Signature::from_slice(&bytes).need("invalid signature")
+	};
+
+	let valid = SECP.verify_schnorr(&sig, &msg, &pubkey).is_ok();
+
+	// Perhaps the user should have passed --reverse.
+	if !valid && !args.is_present("no-try-reverse") {
+		msg_bytes.reverse();
+		let msg = secp256k1::Message::from_slice(&msg_bytes[..])
+			.need("invalid message to be signed");
+		if SECP.verify_schnorr(&sig, &msg, &pubkey).is_ok() {
 			eprintln!("Signature is valid for the reverse message.");
 			if args.is_present("reverse") {
 				eprintln!("Try dropping the --reverse");

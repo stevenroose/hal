@@ -103,6 +103,22 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 		})
 	}
 
+	fn xonly_pubkey(&self, key: &str) -> Option<secp256k1::XOnlyPublicKey> {
+		self.borrow().value_of(key).map(|s| {
+			secp256k1::XOnlyPublicKey::from_str(&s).or_else(|_| {
+				bitcoin::PublicKey::from_str(&s).map(|pk| pk.inner.x_only_public_key().0)
+			}).unwrap_or_else(|_| {
+				exit!("invalid public key provided for argument '{}'", key);
+			})
+		})
+	}
+
+	fn need_xonly_pubkey(&self, key: &str) -> secp256k1::XOnlyPublicKey {
+		self.xonly_pubkey(key).unwrap_or_else(|| {
+			exit!("expected a public key for argument '{}'", key);
+		})
+	}
+
 	fn out_yaml(&self) -> bool {
 		self.borrow().is_present("yaml")
 	}
