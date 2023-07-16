@@ -20,10 +20,9 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_derive<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("derive", "derive keys from an extended key").arg(args::opt_yaml()).args(&[
-		args::arg("ext-key", "extended public or private key").required(true),
-		args::arg("derivation-path", "the derivation path").required(true),
-	])
+	cmd::subcommand("derive", "derive keys from an extended key")
+		.arg(args::arg("ext-key", "extended public or private key").required(true))
+		.arg(args::arg("derivation-path", "the derivation path").required(true))
 }
 
 fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
@@ -67,7 +66,6 @@ fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("inspect", "inspect a BIP-32 xpub or xpriv")
-		.arg(args::opt_yaml())
 		.arg(args::arg("ext-key", "extended public or private key").required(true))
 }
 

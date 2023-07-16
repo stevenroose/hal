@@ -31,7 +31,6 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_descriptor<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("descriptor", "get information about an output descriptor")
-		.arg(args::opt_yaml())
 		.args(&[args::arg("descriptor", "the output descriptor to inspect").required(false)])
 }
 
@@ -70,11 +69,8 @@ fn exec_descriptor<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("inspect", "inspect miniscripts").arg(args::opt_yaml()).args(&[args::arg(
-		"miniscript",
-		"the miniscript to inspect",
-	)
-	.required(false)])
+	cmd::subcommand("inspect", "inspect miniscripts")
+		.arg(args::arg("miniscript", "the miniscript to inspect").required(false))
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
@@ -129,8 +125,7 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_parse<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("parse", "parse a script into a miniscript")
-		.arg(args::opt_yaml())
-		.args(&[args::arg("script", "hex script to parse").required(false)])
+		.arg(args::arg("script", "hex script to parse").required(false))
 }
 
 fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
@@ -162,11 +157,8 @@ fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_policy<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("policy", "inspect policies").arg(args::opt_yaml()).args(&[args::arg(
-		"policy",
-		"the miniscript policy to inspect",
-	)
-	.required(false)])
+	cmd::subcommand("policy", "inspect policies")
+		.arg(args::arg("policy", "the miniscript policy to inspect").required(false))
 }
 
 fn get_policy_info<Pk: MiniscriptKey>(

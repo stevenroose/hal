@@ -25,10 +25,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_hash<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("hash", "calculate Bitcoin Signed Message hash").args(&[
-		args::opt_yaml(),
-		args::arg("message", "the message to sign (without prefix)").required(true),
-	])
+	cmd::subcommand("hash", "calculate Bitcoin Signed Message hash")
+		.arg(args::arg("message", "the message to sign (without prefix)").required(true))
 }
 
 fn exec_hash<'a>(args: &clap::ArgMatches<'a>) {
@@ -44,10 +42,9 @@ fn exec_hash<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_sign<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("sign", "create a new Bitcoin Signed Message").args(&[
-		args::arg("key", "the private key to sign with in WIF format").required(true),
-		args::arg("message", "the message to sign (without prefix)").required(false),
-	])
+	cmd::subcommand("sign", "create a new Bitcoin Signed Message")
+		.arg(args::arg("key", "the private key to sign with in WIF format").required(true))
+		.arg(args::arg("message", "the message to sign (without prefix)").required(false))
 }
 
 fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {

@@ -26,7 +26,6 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("generate", "generate a new BIP-39 mnemonic")
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
-		.arg(args::opt_yaml())
 		.arg(args::arg("words", "the number of words").long("words").short("w").default_value("24"))
 		.arg(args::arg("entropy", "hex-encoded entropy data").long("entropy"))
 		.arg(args::opt("stdin", "read entropy from stdin"))
@@ -82,7 +81,6 @@ fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
 	)
 	.arg(args::arg("mnemonic", "the mnemonic phrase").required(true))
 	.arg(args::arg("passphrase", "the BIP-39 passphrase").long("passphrase"))
-	.arg(args::opt_yaml())
 }
 
 fn exec_get_seed<'a>(args: &clap::ArgMatches<'a>) {

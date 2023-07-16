@@ -22,7 +22,6 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_invoice_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode Lightning invoices")
-		.arg(args::opt_yaml())
 		.arg(args::arg("invoice", "the invoice in bech32").required(false))
 }
 

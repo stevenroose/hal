@@ -42,7 +42,6 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create addresses")
-		.arg(args::opt_yaml())
 		.arg(args::opt("pubkey", "a public key in hex").takes_value(true).required(false))
 		.arg(args::opt("script", "a script in hex").takes_value(true).required(false))
 		.arg(args::opt(
@@ -107,7 +106,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("inspect", "inspect addresses")
-		.args(&[args::opt_yaml(), args::arg("address", "the address").required(true)])
+		.arg(args::arg("address", "the address").required(true))
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {

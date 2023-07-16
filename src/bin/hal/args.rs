@@ -41,6 +41,7 @@ pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 	]
 }
 
+/// Global option for changing output format to YAML.
 pub fn opt_yaml() -> clap::Arg<'static, 'static> {
 	clap::Arg::with_name("yaml")
 		.long("yaml")
@@ -48,6 +49,7 @@ pub fn opt_yaml() -> clap::Arg<'static, 'static> {
 		.help("print output in YAML instead of JSON")
 		.takes_value(false)
 		.required(false)
+		.global(true)
 }
 
 pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {

@@ -40,7 +40,6 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("generate", "generate a new ECDSA keypair")
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
-		.arg(args::opt_yaml())
 }
 
 fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
@@ -60,7 +59,6 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_derive<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("derive", "generate a public key from a private key")
-		.arg(args::opt_yaml())
 		.arg(args::arg("privkey", "the secret key").required(true))
 }
 
@@ -73,7 +71,7 @@ fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("inspect", "inspect private keys")
-		.args(&[args::opt_yaml(), args::arg("key", "the key").required(true)])
+		.arg(args::arg("key", "the key").required(true))
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
@@ -88,12 +86,9 @@ fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 		"sign messages\n\nNOTE!! For SHA-256-d hashes, the --reverse \
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
-	.args(&[
-		args::opt_yaml(),
-		args::opt("reverse", "reverse the message"),
-		args::arg("privkey", "the private key in hex or WIF").required(true),
-		args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
-	])
+	.arg(args::opt("reverse", "reverse the message"))
+	.arg(args::arg("privkey", "the private key in hex or WIF").required(true))
+	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
 }
 
 fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
@@ -116,14 +111,11 @@ fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 		"verify ecdsa signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
-	.args(&[
-		args::opt_yaml(),
-		args::opt("reverse", "reverse the message"),
-		args::opt("no-try-reverse", "don't try to verify for reversed message"),
-		args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true),
-		args::arg("pubkey", "the public key in hex").required(true),
-		args::arg("signature", "the ecdsa signature in hex").required(true),
-	])
+	.arg(args::opt("reverse", "reverse the message"))
+	.arg(args::opt("no-try-reverse", "don't try to verify for reversed message"))
+	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
+	.arg(args::arg("pubkey", "the public key in hex").required(true))
+	.arg(args::arg("signature", "the ecdsa signature in hex").required(true))
 }
 
 fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
@@ -171,7 +163,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_negate_pubkey<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("negate-pubkey", "negate the public key")
-		.args(&[args::opt_yaml(), args::arg("pubkey", "the public key").required(true)])
+		.arg(args::arg("pubkey", "the public key").required(true))
 }
 
 fn exec_negate_pubkey<'a>(args: &clap::ArgMatches<'a>) {
@@ -181,13 +173,9 @@ fn exec_negate_pubkey<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_pubkey_tweak_add<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("pubkey-tweak-add", "add a scalar (private key) to a point (public key)").args(
-		&[
-			args::opt_yaml(),
-			args::arg("point", "the public key in hex").required(true),
-			args::arg("scalar", "the private key in hex").required(true),
-		],
-	)
+	cmd::subcommand("pubkey-tweak-add", "add a scalar (private key) to a point (public key)")
+		.arg(args::arg("point", "the public key in hex").required(true))
+		.arg(args::arg("scalar", "the private key in hex").required(true))
 }
 
 fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
@@ -211,11 +199,9 @@ fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_pubkey_combine<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("pubkey-combine", "add a point (public key) to another").args(&[
-		args::opt_yaml(),
-		args::arg("pubkey1", "the first public key in hex").required(true),
-		args::arg("pubkey2", "the second public key in hex").required(true),
-	])
+	cmd::subcommand("pubkey-combine", "add a point (public key) to another")
+		.arg(args::arg("pubkey1", "the first public key in hex").required(true))
+		.arg(args::arg("pubkey2", "the second public key in hex").required(true))
 }
 
 fn exec_pubkey_combine<'a>(args: &clap::ArgMatches<'a>) {
