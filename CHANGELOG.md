@@ -2,6 +2,15 @@ CHANGELOG
 =========
 
 
+# v0.9.3  --  2023-07-16
+
+- Rename `key sign` command to `key ecdsa-sign`, but `key sign` still works.
+- Rename `key verify` command to `key ecdsa-verify`, but `key verify` still works.
+- Add `key schnorr-sign` command
+- Add `key schnorr-verify` command
+- Make network selection options global
+- Make yaml output selection global
+
 # v0.9.2  --  2023-07-14
 
 - Support signet
