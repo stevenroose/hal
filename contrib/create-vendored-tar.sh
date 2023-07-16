@@ -1,8 +1,11 @@
 #!/bin/bash
 
-BASEDIR=$(git rev-parse --show-toplevel)
+set -e
+BASEDIR=$(dirname $(readlink -f $0))
+BASEDIR=$(git -C ${BASEDIR} rev-parse --show-toplevel)
 cd "$BASEDIR"
 PROJ=$(basename ${BASEDIR})
+GITDATE=$(git log --pretty=format:"%ai" -1)
 
 WORKDIR=./vendored-tar
 TAG=$(git describe --tags)
@@ -20,7 +23,7 @@ rm -rf ${WORKDIR}
 mkdir ${WORKDIR}
 
 # Copy all relevant files
-cp -r ./src/ ./Cargo.toml ./Cargo.lock ./LICENSE ./README.md ${WORKDIR}
+cp -r ./src/ ./Cargo.toml ./Cargo.lock ./LICENSE ./README.md ./contrib ${WORKDIR}
 pushd ${WORKDIR}
 
 cargo vendor --locked ./vendor
@@ -34,7 +37,7 @@ replace-with = "vendored-sources"
 directory = "vendor"
 EOF
 
-tar -czf ${TARFILE} .
+tar --sort=name --mtime="${GITDATE}" -czf ${TARFILE} .
 
 popd
 rm -rf ${WORKDIR}
