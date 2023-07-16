@@ -16,8 +16,8 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_generate())
 		.subcommand(cmd_derive())
 		.subcommand(cmd_inspect())
-		.subcommand(cmd_sign())
-		.subcommand(cmd_verify())
+		.subcommand(cmd_ecdsa_sign())
+		.subcommand(cmd_ecdsa_verify())
 		.subcommand(cmd_negate_pubkey())
 		.subcommand(cmd_pubkey_tweak_add())
 		.subcommand(cmd_pubkey_combine())
@@ -28,8 +28,10 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 		("generate", Some(ref m)) => exec_generate(&m),
 		("derive", Some(ref m)) => exec_derive(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
-		("sign", Some(ref m)) => exec_sign(&m),
-		("verify", Some(ref m)) => exec_verify(&m),
+		("ecdsa-sign", Some(ref m)) => exec_ecdsa_sign(&m),
+		("ecdsa-verify", Some(ref m)) => exec_ecdsa_verify(&m),
+		("sign", Some(ref m)) => exec_ecdsa_sign(&m), // deprecate
+		("verify", Some(ref m)) => exec_ecdsa_verify(&m), // deprecate
 		("negate-pubkey", Some(ref m)) => exec_negate_pubkey(&m),
 		("pubkey-tweak-add", Some(ref m)) => exec_pubkey_tweak_add(&m),
 		("pubkey-combine", Some(ref m)) => exec_pubkey_combine(&m),
@@ -80,10 +82,10 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 	args.print_output(&info)
 }
 
-fn cmd_sign<'a>() -> clap::App<'a, 'a> {
+fn cmd_ecdsa_sign<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand(
-		"sign",
-		"sign messages\n\nNOTE!! For SHA-256-d hashes, the --reverse \
+		"ecdsa-sign",
+		"sign messages using ECDSA\n\nNOTE!! For SHA-256-d hashes, the --reverse \
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
 	.arg(args::opt("reverse", "reverse the message"))
@@ -91,7 +93,7 @@ fn cmd_sign<'a>() -> clap::App<'a, 'a> {
 	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
 }
 
-fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
+fn exec_ecdsa_sign<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
 	let msg_hex = args.value_of("message").need("no message given");
@@ -105,20 +107,20 @@ fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
 	args.print_output(&signature.get_info(network))
 }
 
-fn cmd_verify<'a>() -> clap::App<'a, 'a> {
+fn cmd_ecdsa_verify<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand(
-		"verify",
-		"verify ecdsa signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
+		"ecdsa-verify",
+		"verify ECDSA signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
 	.arg(args::opt("reverse", "reverse the message"))
 	.arg(args::opt("no-try-reverse", "don't try to verify for reversed message"))
 	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
 	.arg(args::arg("pubkey", "the public key in hex").required(true))
-	.arg(args::arg("signature", "the ecdsa signature in hex").required(true))
+	.arg(args::arg("signature", "the ECDSA signature in hex").required(true))
 }
 
-fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
+fn exec_ecdsa_verify<'a>(args: &clap::ArgMatches<'a>) {
 	let msg_hex = args.value_of("message").need("no message given");
 	let mut msg_bytes = hex::decode(&msg_hex).need("invalid hex message");
 	if args.is_present("reverse") {

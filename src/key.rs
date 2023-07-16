@@ -79,14 +79,14 @@ impl GetInfo<PublicKeyInfo> for PublicKey {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
-pub struct SignatureInfo {
+pub struct EcdsaSignatureInfo {
 	pub der: HexBytes,
 	pub compact: HexBytes,
 }
 
-impl GetInfo<SignatureInfo> for secp256k1::ecdsa::Signature {
-	fn get_info(&self, _network: Network) -> SignatureInfo {
-		SignatureInfo {
+impl GetInfo<EcdsaSignatureInfo> for secp256k1::ecdsa::Signature {
+	fn get_info(&self, _network: Network) -> EcdsaSignatureInfo {
+		EcdsaSignatureInfo {
 			der: self.serialize_der().as_ref().into(),
 			compact: self.serialize_compact().to_vec().into(),
 		}
