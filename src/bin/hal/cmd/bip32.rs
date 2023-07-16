@@ -66,9 +66,9 @@ fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("inspect", "inspect a BIP-32 xpub or xpriv").args(&args::opts_networks()).args(
-		&[args::opt_yaml(), args::arg("ext-key", "extended public or private key").required(true)],
-	)
+	cmd::subcommand("inspect", "inspect a BIP-32 xpub or xpriv")
+		.arg(args::opt_yaml())
+		.arg(args::arg("ext-key", "extended public or private key").required(true))
 }
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {

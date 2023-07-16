@@ -82,6 +82,7 @@ fn init_app() -> clap::App<'static, 'static> {
 				.takes_value(false)
 				.global(true),
 		)
+		.args(&args::opts_networks())
 }
 
 /// The help appendix listing external subcommands.

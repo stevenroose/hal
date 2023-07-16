@@ -16,6 +16,7 @@ pub fn arg<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
 	clap::Arg::with_name(name).help(help).takes_value(true)
 }
 
+/// Global options for network selection.
 pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 	vec![
 		clap::Arg::with_name("testnet")
@@ -23,17 +24,20 @@ pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 			.short("t")
 			.help("run in testnet mode")
 			.takes_value(false)
-			.required(false),
+			.required(false)
+			.global(true),
 		clap::Arg::with_name("signet")
 			.long("signet")
 			.help("run in signet mode")
 			.takes_value(false)
-			.required(false),
+			.required(false)
+			.global(true),
 		clap::Arg::with_name("regtest")
 			.long("regtest")
 			.help("run in regtest mode")
 			.takes_value(false)
-			.required(false),
+			.required(false)
+			.global(true),
 	]
 }
 

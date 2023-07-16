@@ -74,12 +74,9 @@ fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_verify<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("verify", "recover the pubkey and address of a Bitcoin Signed Messages")
-		.args(&args::opts_networks())
-		.args(&[
-			args::arg("signer", "the signer's public key or address").required(true),
-			args::arg("signature", "the signature in hex").required(true),
-			args::arg("message", "the message that was signed (without prefix)").required(false),
-		])
+		.arg(args::arg("signer", "the signer's public key or address").required(true))
+		.arg(args::arg("signature", "the signature in hex").required(true))
+		.arg(args::arg("message", "the message that was signed (without prefix)").required(false))
 }
 
 fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
@@ -163,11 +160,8 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_recover<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("recover", "recover the pubkey and address of a Bitcoin Signed Messages")
-		.args(&args::opts_networks())
-		.args(&[
-			args::arg("signature", "the signature in hex").required(true),
-			args::arg("message", "the message that was signed (without prefix)").required(true),
-		])
+		.arg(args::arg("signature", "the signature in hex").required(true))
+		.arg(args::arg("message", "the message that was signed (without prefix)").required(true))
 }
 
 fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {

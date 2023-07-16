@@ -94,10 +94,9 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("decode", "decode a PSBT to JSON").args(&args::opts_networks()).args(&[
-		args::opt_yaml(),
-		args::arg("psbt", "the PSBT file or raw PSBT in base64/hex").required(false),
-	])
+	cmd::subcommand("decode", "decode a PSBT to JSON")
+		.arg(args::opt_yaml())
+		.arg(args::arg("psbt", "the PSBT file or raw PSBT in base64/hex").required(false))
 }
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {

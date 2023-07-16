@@ -26,11 +26,10 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("generate", "generate a new BIP-39 mnemonic")
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
+		.arg(args::opt_yaml())
 		.arg(args::arg("words", "the number of words").long("words").short("w").default_value("24"))
 		.arg(args::arg("entropy", "hex-encoded entropy data").long("entropy"))
 		.arg(args::opt("stdin", "read entropy from stdin"))
-		.args(&args::opts_networks())
-		.args(&[args::opt_yaml()])
 }
 
 fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
@@ -81,12 +80,9 @@ fn cmd_get_seed<'a>() -> clap::App<'a, 'a> {
 		"get-seed",
 		"get the seed value and BIP-32 master key for a given BIP-39 mnemonic",
 	)
-	.args(&[
-		args::arg("mnemonic", "the mnemonic phrase").required(true),
-		args::arg("passphrase", "the BIP-39 passphrase").long("passphrase"),
-		args::opt_yaml(),
-	])
-	.args(&args::opts_networks())
+	.arg(args::arg("mnemonic", "the mnemonic phrase").required(true))
+	.arg(args::arg("passphrase", "the BIP-39 passphrase").long("passphrase"))
+	.arg(args::opt_yaml())
 }
 
 fn exec_get_seed<'a>(args: &clap::ArgMatches<'a>) {

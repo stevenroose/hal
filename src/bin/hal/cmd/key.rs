@@ -40,8 +40,7 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("generate", "generate a new ECDSA keypair")
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
-		.args(&args::opts_networks())
-		.args(&[args::opt_yaml()])
+		.arg(args::opt_yaml())
 }
 
 fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
@@ -61,8 +60,8 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_derive<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("derive", "generate a public key from a private key")
-		.args(&args::opts_networks())
-		.args(&[args::opt_yaml(), args::arg("privkey", "the secret key").required(true)])
+		.arg(args::opt_yaml())
+		.arg(args::arg("privkey", "the secret key").required(true))
 }
 
 fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {

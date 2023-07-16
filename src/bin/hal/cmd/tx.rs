@@ -227,8 +227,8 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode a raw transaction to JSON")
-		.args(&args::opts_networks())
-		.args(&[args::opt_yaml(), args::arg("raw-tx", "the raw transaction in hex").required(false)])
+		.arg(args::opt_yaml())
+		.arg(args::arg("raw-tx", "the raw transaction in hex").required(false))
 }
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {

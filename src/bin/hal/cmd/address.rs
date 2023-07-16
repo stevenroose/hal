@@ -41,24 +41,23 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("create", "create addresses").args(&args::opts_networks()).args(&[
-		args::opt_yaml(),
-		args::opt("pubkey", "a public key in hex").takes_value(true).required(false),
-		args::opt("script", "a script in hex").takes_value(true).required(false),
-		args::opt(
+	cmd::subcommand("create", "create addresses")
+		.arg(args::opt_yaml())
+		.arg(args::opt("pubkey", "a public key in hex").takes_value(true).required(false))
+		.arg(args::opt("script", "a script in hex").takes_value(true).required(false))
+		.arg(args::opt(
 			"nums-internal-key-h",
 			"use the H NUMS key from BIP-341 for p2tr address when using --script",
-		).takes_value(false).required(false),
-		args::opt(
+		).takes_value(false).required(false))
+		.arg(args::opt(
 			"nums-internal-key",
 			"NUMS internal pubkey to use with --script for p2tr",
-		).takes_value(true).required(false),
-		args::opt(
+		).takes_value(true).required(false))
+		.arg(args::opt(
 			"nums-internal-key-entropy",
 			"entropy to use to create NUMS internal pubkey to use with --script for p2tr\n\
 			the zero scalar is used when left empty, this means the BIP-341 NUMS point H is used",
-		).takes_value(true).required(false),
-	])
+		).takes_value(true).required(false))
 }
 
 fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
