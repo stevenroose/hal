@@ -11,7 +11,6 @@ extern crate clap;
 extern crate fern;
 extern crate hex;
 extern crate jobserver;
-extern crate rand;
 extern crate serde_json;
 extern crate secp256k1;
 extern crate shell_escape;

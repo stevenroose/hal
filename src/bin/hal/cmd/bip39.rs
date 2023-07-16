@@ -2,9 +2,9 @@ use std::io;
 
 use bip39::{Language, Mnemonic};
 use bitcoin::hashes::{sha256, Hash};
+use bitcoin::secp256k1::rand::{self, RngCore};
 use clap;
 use hex;
-use rand::Rng;
 
 use hal;
 use crate::prelude::*;

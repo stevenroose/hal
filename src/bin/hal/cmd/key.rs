@@ -2,9 +2,9 @@ use std::io::Write;
 use std::process;
 
 use bitcoin::secp256k1;
+use bitcoin::secp256k1::rand;
 use bitcoin::hashes::hex::FromHex;
 use clap;
-use rand;
 
 use hal::{self, GetInfo};
 
