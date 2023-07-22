@@ -23,14 +23,12 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a raw transaction from JSON")
-		.args(&[
-		args::arg("tx-info", "the transaction info in JSON; If omitted, reads from stdin.")
-			.required(false),
-		args::opt("raw-stdout", "output the raw bytes of the result to stdout")
+		.arg(args::arg("tx-info", "the transaction info in JSON; If omitted, reads from stdin.")
+			.required(false))
+		.arg(args::opt("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r")
-			.required(false),
-	])
-	.long_about(r#"
+			.required(false))
+		.long_about(r#"
 Create a transaction from JSON. Use the same format as the `hal tx decode` output.
 
 It's possible to pass the JSON string as the first argument or pass it via stdin.

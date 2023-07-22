@@ -65,6 +65,9 @@ $ cargo install --locked hal
 	- finalize: finalize a PSBT into a fully signed transaction
 	- merge: merge multiple PSBTs into one
 
+- random
+    - bytes: generate random bytes
+
 - script
 	- decode: decode a PSBT to JSON
 

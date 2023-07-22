@@ -8,6 +8,7 @@ pub mod ln;
 pub mod message;
 pub mod miniscript;
 pub mod psbt;
+pub mod random;
 pub mod script;
 pub mod tx;
 
@@ -23,6 +24,7 @@ pub fn subcommands() -> Vec<clap::App<'static, 'static>> {
 		miniscript::subcommand(),
 		tx::subcommand(),
 		psbt::subcommand(),
+		random::subcommand(),
 		script::subcommand(),
 		bip32::subcommand(),
 		bip39::subcommand(),

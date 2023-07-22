@@ -141,6 +141,7 @@ fn main() {
 		("message", Some(ref m)) => cmd::message::execute(&m),
 		("miniscript", Some(ref m)) => cmd::miniscript::execute(&m),
 		("psbt", Some(ref m)) => cmd::psbt::execute(&m),
+		("random", Some(ref m)) => cmd::random::execute(&m),
 		("script", Some(ref m)) => cmd::script::execute(&m),
 		("tx", Some(ref m)) => cmd::tx::execute(&m),
 		(cmd, subcommand_args) => {
