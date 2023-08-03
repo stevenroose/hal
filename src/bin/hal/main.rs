@@ -133,9 +133,10 @@ fn main() {
 	match args.subcommand() {
 		("address", Some(ref m)) => cmd::address::execute(&m),
 		("bech32", Some(ref m)) => cmd::bech32::execute(&m),
-		("block", Some(ref m)) => cmd::block::execute(&m),
 		("bip32", Some(ref m)) => cmd::bip32::execute(&m),
 		("bip39", Some(ref m)) => cmd::bip39::execute(&m),
+		("block", Some(ref m)) => cmd::block::execute(&m),
+		("hash", Some(ref m)) => cmd::hash::execute(&m),
 		("key", Some(ref m)) => cmd::key::execute(&m),
 		("ln", Some(ref m)) => cmd::ln::execute(&m),
 		("message", Some(ref m)) => cmd::message::execute(&m),

@@ -33,6 +33,10 @@ $ cargo install --locked hal
 	- create: create a binary block from JSON
 	- decode: decode a binary block to JSON
 
+- hash
+	- sha256: hash data with SHA-256
+	- sha256d: hash data with double SHA-256
+
 - key
 	- generate: generate a random keypair
 	- derive: generate a public key from a private key

@@ -3,6 +3,7 @@ pub mod bech32;
 pub mod bip32;
 pub mod bip39;
 pub mod block;
+pub mod hash;
 pub mod key;
 pub mod ln;
 pub mod message;
@@ -17,17 +18,18 @@ pub fn subcommands() -> Vec<clap::App<'static, 'static>> {
 	vec![
 		address::subcommand(),
 		bech32::subcommand(),
+		bip32::subcommand(),
+		bip39::subcommand(),
 		block::subcommand(),
+		hash::subcommand(),
 		key::subcommand(),
 		ln::subcommand(),
 		message::subcommand(),
 		miniscript::subcommand(),
-		tx::subcommand(),
 		psbt::subcommand(),
 		random::subcommand(),
 		script::subcommand(),
-		bip32::subcommand(),
-		bip39::subcommand(),
+		tx::subcommand(),
 	]
 }
 
