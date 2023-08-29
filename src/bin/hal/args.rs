@@ -2,6 +2,7 @@
 use std::borrow::Borrow;
 use std::str::FromStr;
 
+use bitcoin::consensus::encode::Decodable;
 use bitcoin::Network;
 
 use crate::exit;
@@ -116,6 +117,16 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 	fn need_xonly_pubkey(&self, key: &str) -> secp256k1::XOnlyPublicKey {
 		self.xonly_pubkey(key).unwrap_or_else(|| {
 			exit!("expected a public key for argument '{}'", key);
+		})
+	}
+
+	fn hex_consensus<T: Decodable>(&self, key: &str) -> Option<Result<T, String>> {
+		self.borrow().value_of(key).map(|s| -> Result<T, String> {
+			let mut hex = bitcoin::hashes::hex::HexIterator::new(s)
+				.map_err(|e| format!("invalid hex: {}", e))?;
+			let ret = Decodable::consensus_decode(&mut hex)
+				.map_err(|e| format!("invalid format: {}", e))?;
+			Ok(ret)
 		})
 	}
 

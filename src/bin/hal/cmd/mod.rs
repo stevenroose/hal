@@ -6,6 +6,7 @@ pub mod block;
 pub mod hash;
 pub mod key;
 pub mod ln;
+pub mod merkle;
 pub mod message;
 pub mod miniscript;
 pub mod psbt;
@@ -24,6 +25,7 @@ pub fn subcommands() -> Vec<clap::App<'static, 'static>> {
 		hash::subcommand(),
 		key::subcommand(),
 		ln::subcommand(),
+		merkle::subcommand(),
 		message::subcommand(),
 		miniscript::subcommand(),
 		psbt::subcommand(),

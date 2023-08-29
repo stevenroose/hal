@@ -139,6 +139,7 @@ fn main() {
 		("hash", Some(ref m)) => cmd::hash::execute(&m),
 		("key", Some(ref m)) => cmd::key::execute(&m),
 		("ln", Some(ref m)) => cmd::ln::execute(&m),
+		("merkle", Some(ref m)) => cmd::merkle::execute(&m),
 		("message", Some(ref m)) => cmd::message::execute(&m),
 		("miniscript", Some(ref m)) => cmd::miniscript::execute(&m),
 		("psbt", Some(ref m)) => cmd::psbt::execute(&m),

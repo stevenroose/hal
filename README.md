@@ -50,6 +50,10 @@ $ cargo install --locked hal
 	- invoice
 		- decode: decode Lightning invoices
 
+- merkle
+    - proof-create: create a merkle proof
+    - proof-check: check a merkle proof
+
 - message
     - hash: get hashes of Bitcoin Signed Message
     - sign: sign a message using Bitcoin Signed Message
