@@ -2,6 +2,13 @@ CHANGELOG
 =========
 
 
+# v0.9.4  --  2023-08-29
+
+- Add `random bytes` command
+- Add `hash` subcommands with some hash utils
+- Add `merkle` subcommands to work with merkle proofs
+- Add `cli` feature so that library builders can opt-out of cli dependencies
+
 # v0.9.3  --  2023-07-16
 
 - Rename `key sign` command to `key ecdsa-sign`, but `key sign` still works.
