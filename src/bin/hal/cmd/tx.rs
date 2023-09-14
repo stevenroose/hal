@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::io::Write;
 
 use bitcoin::consensus::encode::{deserialize, serialize};
-use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
+use bitcoin::{Network, OutPoint, Transaction, TxIn, TxOut, ScriptBuf};
 
 use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
 use crate::prelude::*;
@@ -96,7 +96,7 @@ fn outpoint_from_input_info(input: &InputInfo) -> OutPoint {
 	}
 }
 
-fn create_script_sig(ss: InputScriptInfo) -> Script {
+fn create_script_sig(ss: InputScriptInfo) -> ScriptBuf {
 	if let Some(hex) = ss.hex {
 		if ss.asm.is_some() {
 			warn!("Field \"asm\" of input is ignored.");
@@ -116,13 +116,13 @@ fn create_input(input: InputInfo) -> TxIn {
 		script_sig: input.script_sig.map(create_script_sig).unwrap_or_default(),
 		sequence: bitcoin::Sequence::from_height(input.sequence.unwrap_or_default().try_into().need("Invalid sequence")),
 		witness: match input.witness {
-			Some(ref w) => bitcoin::Witness::from_vec(w.iter().map(|h| h.clone().0).collect()),
+			Some(ref w) => bitcoin::Witness::from(w.iter().map(|h| h.clone().0).collect::<Vec<_>>()),
 			None => bitcoin::Witness::new(),
 		},
 	}
 }
 
-fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network>) -> Script {
+fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network>) -> ScriptBuf {
 	if spk.type_.is_some() {
 		warn!("Field \"type\" of output is ignored.");
 	}
@@ -153,7 +153,7 @@ fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network
 		//TODO(stevenroose) support script disassembly
 		exit!("Decoding script assembly is not yet supported.");
 	} else if let Some(address) = spk.address {
-		address.script_pubkey()
+		address.assume_checked().script_pubkey() // network checked above
 	} else {
 		exit!("No scriptPubKey info provided.");
 	}
@@ -193,8 +193,7 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 
 	Transaction {
 		version: info.version.need("Field \"version\" is required."),
-		lock_time: bitcoin::LockTime::from_height(info.locktime.need("Field \"locktime\" is required."))
-			.need("Field \"lockime\" is invalid").into(),
+		lock_time: info.locktime.need("Field \"locktime\" is required."),
 		input: info
 			.inputs
 			.need("Field \"inputs\" is required.")

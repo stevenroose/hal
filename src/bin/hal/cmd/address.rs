@@ -1,12 +1,15 @@
 
 use std::str::FromStr;
 
+use bitcoin::address::NetworkUnchecked;
 use bitcoin::hashes::Hash;
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::{Address, WPubkeyHash, WScriptHash};
+use bitcoin::{Address, WPubkeyHash, WScriptHash, Script, AddressType};
 use clap;
 
 use hal;
+use hal::address::addr_unchecked;
+use secp256k1::XOnlyPublicKey;
 
 use crate::prelude::*;
 
@@ -67,9 +70,9 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 		args.print_output(&addr)
 	} else if let Some(script_hex) = args.value_of("script") {
 		let script_bytes = hex::decode(script_hex).need("invalid script hex");
-		let script = script_bytes.into();
+		let script = Script::from_bytes(&script_bytes);
 
-		let mut ret = hal::address::Addresses::from_script(&script, network);
+		let mut ret = hal::address::Addresses::from_script(script, network);
 
 		// If the user provided NUMS information we can add a p2tr address.
 		if util::more_than_one(&[
@@ -94,7 +97,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 		};
 		if let Some(pk) = nums {
 			let spk = script.to_v1_p2tr(&SECP, pk.into());
-			ret.p2tr = Some(Address::from_script(&spk, network).unwrap());
+			ret.p2tr = Some(addr_unchecked(Address::from_script(&spk, network).unwrap()));
 		}
 
 		args.print_output(&ret)
@@ -111,26 +114,30 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 	let address_str = args.value_of("address").need("no address provided");
-	let address: Address = address_str.parse().need("invalid address format");
+	let address: Address<NetworkUnchecked> = address_str.parse().need("invalid address format");
+	let address = address.require_network(args.network()).unwrap();
 	let script_pk = address.script_pubkey();
 
 	let mut info = hal::address::AddressInfo {
 		network: address.network,
 		script_pub_key: hal::tx::OutputScriptInfo {
 			hex: Some(script_pk.to_bytes().into()),
-			asm: Some(script_pk.asm()),
+			asm: Some(script_pk.to_asm_string()),
 			address: None,
 			type_: None,
 		},
 		type_: None,
+		witness_program_version: None,
 		pubkey_hash: None,
 		script_hash: None,
 		witness_pubkey_hash: None,
 		witness_script_hash: None,
-		witness_program_version: None,
+		taproot_output_key: None,
 	};
 
-	use bitcoin::util::address::Payload;
+
+	use bitcoin::address::Payload;
+	let addr_ty = address.address_type();
 	match address.payload {
 		Payload::PubkeyHash(pkh) => {
 			info.type_ = Some("p2pkh".to_owned());
@@ -140,28 +147,31 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 			info.type_ = Some("p2sh".to_owned());
 			info.script_hash = Some(sh);
 		}
-		Payload::WitnessProgram {
-			version,
-			program,
-		} => {
+		Payload::WitnessProgram(prog) => {
+			let (version, program) = (prog.version(), prog.program());
 			let version = version.to_num() as usize;
 			info.witness_program_version = Some(version);
 
-			if version == 0 {
-				if program.len() == 20 {
-					info.type_ = Some("p2wpkh".to_owned());
-					info.witness_pubkey_hash =
-						Some(WPubkeyHash::from_slice(&program).need("size 20"));
-				} else if program.len() == 32 {
-					info.type_ = Some("p2wsh".to_owned());
-					info.witness_script_hash =
-						Some(WScriptHash::from_slice(&program).need("size 32"));
-				} else {
-					info.type_ = Some("invalid-witness-program".to_owned());
-				}
-			} else {
-				info.type_ = Some("unknown-witness-program-version".to_owned());
-			}
+			match addr_ty {
+				Some(ty) => {
+					info.type_ = Some(ty.to_string());
+					match ty {
+						AddressType::P2pkh => unreachable!("Dealt earlier"),
+						AddressType::P2sh => unreachable!("Dealt earlier"),
+						AddressType::P2wpkh =>
+							info.witness_pubkey_hash = Some(WPubkeyHash::from_slice(program.as_bytes()).need("size 20")),
+						AddressType::P2wsh =>
+							info.witness_script_hash = Some(WScriptHash::from_slice(program.as_bytes()).need("size 32")),
+						AddressType::P2tr =>
+							info.taproot_output_key = Some(XOnlyPublicKey::from_slice(program.as_bytes()).need("size 32")),
+						_ => {},
+					}
+				},
+				None => info.type_ = Some("unknown-witness-program-version".to_owned()),
+			};
+		}
+		_ => {
+			info.type_ = Some("unknown payload".to_owned());
 		}
 	}
 

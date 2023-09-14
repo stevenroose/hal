@@ -1,7 +1,9 @@
+use bitcoin::address::NetworkUnchecked;
 use bitcoin::consensus::encode::serialize;
-use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut, Txid, Wtxid};
+use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut, Txid, Wtxid, Weight, absolute};
 use serde::{Deserialize, Serialize};
 
+use crate::address::addr_unchecked;
 use crate::{GetInfo, HexBytes};
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -16,7 +18,7 @@ impl<'a> GetInfo<InputScriptInfo> for InputScript<'a> {
 	fn get_info(&self, _network: Network) -> InputScriptInfo {
 		InputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
-			asm: Some(self.0.asm()),
+			asm: Some(self.0.to_asm_string()),
 		}
 	}
 }
@@ -55,7 +57,7 @@ pub struct OutputScriptInfo {
 	#[serde(skip_serializing_if = "Option::is_none", rename = "type")]
 	pub type_: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub address: Option<Address>,
+	pub address: Option<Address<NetworkUnchecked>>,
 }
 
 pub struct OutputScript<'a>(pub &'a Script);
@@ -64,7 +66,7 @@ impl<'a> GetInfo<OutputScriptInfo> for OutputScript<'a> {
 	fn get_info(&self, network: Network) -> OutputScriptInfo {
 		OutputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
-			asm: Some(self.0.asm()),
+			asm: Some(self.0.to_asm_string()),
 			type_: Some(
 				if self.0.is_p2pk() {
 					"p2pk"
@@ -83,7 +85,7 @@ impl<'a> GetInfo<OutputScriptInfo> for OutputScript<'a> {
 				}
 				.to_owned(),
 			),
-			address: Address::from_script(&self.0, network).ok(),
+			address: Address::from_script(&self.0, network).map(addr_unchecked).ok(),
 		}
 	}
 }
@@ -108,10 +110,10 @@ pub struct TransactionInfo {
 	pub txid: Option<Txid>,
 	pub wtxid: Option<Wtxid>,
 	pub size: Option<usize>,
-	pub weight: Option<usize>,
-	pub vsize: Option<usize>,
+	pub weight: Option<Weight>,
+	pub vsize: Option<u64>,
 	pub version: Option<i32>,
-	pub locktime: Option<u32>,
+	pub locktime: Option<absolute::LockTime>,
 	pub inputs: Option<Vec<InputInfo>>,
 	pub outputs: Option<Vec<OutputInfo>>,
 	pub total_output_value: Option<u64>,
@@ -119,15 +121,15 @@ pub struct TransactionInfo {
 
 impl GetInfo<TransactionInfo> for Transaction {
 	fn get_info(&self, network: Network) -> TransactionInfo {
-		let weight = self.weight() as usize;
+		let weight = self.weight();
 		TransactionInfo {
 			txid: Some(self.txid()),
 			wtxid: Some(self.wtxid()),
 			version: Some(self.version),
-			locktime: Some(self.lock_time.to_u32()),
+			locktime: Some(self.lock_time),
 			size: Some(serialize(self).len()),
 			weight: Some(weight),
-			vsize: Some(weight / 4),
+			vsize: Some(weight.to_vbytes_ceil()),
 			inputs: Some(self.input.iter().map(|i| i.get_info(network)).collect()),
 			outputs: Some(self.output.iter().map(|o| o.get_info(network)).collect()),
 			total_output_value: Some(self.output.iter().map(|o| o.value).sum()),

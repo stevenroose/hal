@@ -35,7 +35,7 @@ fn exec_hash<'a>(args: &clap::ArgMatches<'a>) {
 	let res = hal::message::MessageHash {
 		sha256: bitcoin::hashes::sha256::Hash::hash(msg.as_bytes()),
 		sha256d: bitcoin::hashes::sha256d::Hash::hash(msg.as_bytes()),
-		sign_hash: bitcoin::util::misc::signed_msg_hash(&msg),
+		sign_hash: bitcoin::sign_message::signed_msg_hash(&msg),
 	};
 
 	args.print_output(&res)
@@ -51,10 +51,10 @@ fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
 	let privkey = args.need_privkey("key");
 
 	let msg = util::arg_or_stdin(args, "message");
-	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
+	let hash = bitcoin::sign_message::signed_msg_hash(&msg);
 
 	let signature = SECP.sign_ecdsa_recoverable(
-		&secp256k1::Message::from_slice(&hash).unwrap(), &privkey.inner,
+		&secp256k1::Message::from_slice(hash.as_ref()).unwrap(), &privkey.inner,
 	);
 
 	let (recid, raw) = signature.serialize_compact();
@@ -114,11 +114,11 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 		.need("invalid recoverable signature");
 
 	let msg = util::arg_or_stdin(args, "message");
-	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
+	let hash = bitcoin::sign_message::signed_msg_hash(&msg);
 
 	let pubkey = PublicKey {
 		inner: SECP
-			.recover_ecdsa(&secp256k1::Message::from_slice(&hash).unwrap(), &signature)
+			.recover_ecdsa(&secp256k1::Message::from_slice(hash.as_ref()).unwrap(), &signature)
 			.need("invalid signature"),
 		compressed: compressed,
 	};
@@ -129,6 +129,7 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 			exit!("Signed for pubkey {}, expected {}", pubkey, pk);
 		}
 	} else if let Ok(expected) = signer_addr_res {
+		let expected = expected.require_network(network).unwrap();
 		let addr = match expected.address_type() {
 			None => exit!("Unknown address type provided"),
 			Some(AddressType::P2pkh) => Address::p2pkh(&pubkey, network),
@@ -183,10 +184,10 @@ fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {
 		.need("invalid recoverable signature");
 
 	let msg = args.value_of("message").need("no message given");
-	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
+	let hash = bitcoin::sign_message::signed_msg_hash(&msg);
 
 	let pubkey = SECP
-		.recover_ecdsa(&secp256k1::Message::from_slice(&hash).unwrap(), &signature)
+		.recover_ecdsa(&secp256k1::Message::from_slice(hash.as_ref()).unwrap(), &signature)
 		.need("invalid signature");
 
 	let bitcoin_key = PublicKey {

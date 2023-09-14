@@ -3,8 +3,9 @@ use std::io::Write;
 use std::str::FromStr;
 use std::process;
 
+use bitcoin::merkle_tree::PartialMerkleTree;
 use bitcoin::{Block, Txid};
-use bitcoin::util::merkleblock::PartialMerkleTree;
+
 use clap;
 
 use crate::prelude::*;
