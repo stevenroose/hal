@@ -1,6 +1,7 @@
 
-use bitcoin::{secp256k1, Network, PrivateKey, PublicKey, XOnlyPublicKey};
+use bitcoin::{secp256k1, Network, PrivateKey, PublicKey};
 use serde::{Deserialize, Serialize};
+use bitcoin::key::XOnlyPublicKey;
 
 use crate::{SECP, address, GetInfo, HexBytes};
 

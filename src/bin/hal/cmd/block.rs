@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use bitcoin::consensus::encode::{deserialize, serialize};
-use bitcoin::{Block, BlockHeader};
+use bitcoin::{Block, block};
 
 use hal::block::{BlockHeaderInfo, BlockInfo};
 use crate::prelude::*;
@@ -60,12 +60,12 @@ Example format:
 	)
 }
 
-fn create_block_header(info: BlockHeaderInfo) -> BlockHeader {
+fn create_block_header(info: BlockHeaderInfo) -> block::Header {
 	if info.block_hash.is_some() {
 		warn!("Field \"block_hash\" is ignored.");
 	}
 
-	BlockHeader {
+	block::Header {
 		version: info.version,
 		prev_blockhash: info.previous_block_hash,
 		merkle_root: info.merkle_root,

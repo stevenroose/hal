@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, Read, Write};
 
@@ -6,10 +7,10 @@ use clap;
 use hex;
 
 use bitcoin::consensus::{deserialize, serialize};
-use bitcoin::util::bip32;
-use bitcoin::util::psbt;
+use bitcoin::{bip32, ecdsa};
+use bitcoin::psbt::{self, Psbt};
 use bitcoin::{PublicKey, Transaction};
-use miniscript::psbt::PsbtExt;
+use miniscript::psbt::{PsbtExt, PsbtSighashMsg};
 use secp256k1;
 
 use crate::prelude::*;
@@ -82,7 +83,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let psbt = psbt::PartiallySignedTransaction::from_unsigned_tx(tx)
 		.need("couldn't create a PSBT from the transaction");
 
-	let serialized = serialize(&psbt);
+	let serialized = psbt.serialize();
 	if let Some(path) = args.value_of("output") {
 		let mut file = File::create(&path).need("failed to open output file");
 		file.write_all(&serialized).need("error writing output file");
@@ -102,7 +103,7 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let input = util::arg_or_stdin(args, "psbt");
 	let (raw_psbt, _) = file_or_raw(input.as_ref());
 
-	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw_psbt).need("invalid PSBT");
+	let psbt: psbt::PartiallySignedTransaction = Psbt::deserialize(&raw_psbt).need("invalid PSBT");
 
 	let info = hal::GetInfo::get_info(&psbt, args.network());
 	args.print_output(&info)
@@ -201,14 +202,14 @@ fn cmd_edit<'a>() -> clap::App<'a, 'a> {
 }
 
 /// Parses a `<pubkey>:<signature>` pair.
-fn parse_partial_sig_pair(pair_str: &str) -> (PublicKey, bitcoin::EcdsaSig) {
+fn parse_partial_sig_pair(pair_str: &str) -> (PublicKey, ecdsa::Signature) {
 	let mut pair = pair_str.splitn(2, ":");
 	let pubkey = pair.next().unwrap().parse().need("invalid partial sig pubkey");
 	let sig = {
 		let hex = pair.next().need("invalid partial sig pair: missing signature");
 		hex::decode(&hex).need("invalid partial sig signature hex")
 	};
-	(pubkey, bitcoin::EcdsaSig::from_slice(&sig).need("partial sig is not valid ecdsa"))
+	(pubkey, ecdsa::Signature::from_slice(&sig).need("partial sig is not valid ecdsa"))
 }
 
 fn parse_hd_keypath_triplet(
@@ -222,7 +223,9 @@ fn parse_hd_keypath_triplet(
 		if raw.len() != 4 {
 			exit!("invalid HD keypath fingerprint size: {} instead of 4", raw.len());
 		}
-		raw[..].into()
+		let mut raw_bytes = [0u8; 4];
+		raw_bytes.copy_from_slice(&raw);
+		raw_bytes.into()
 	};
 	let path = triplet
 		.next()
@@ -295,7 +298,7 @@ fn edit_input<'a>(
 	if let Some(csv) = args.value_of("final-script-witness") {
 		let vhex = csv.split(",");
 		let vraw = vhex.map(|h| hex::decode(&h).need("invalid final-script-witness hex"));
-		input.final_script_witness = Some(bitcoin::Witness::from_vec(vraw.collect()));
+		input.final_script_witness = Some(bitcoin::Witness::from(vraw.collect::<Vec<_>>()));
 	}
 }
 
@@ -332,7 +335,7 @@ fn exec_edit<'a>(args: &clap::ArgMatches<'a>) {
 	let input = util::arg_or_stdin(args, "psbt");
 	let (raw, source) = file_or_raw(input.as_ref());
 	let mut psbt: psbt::PartiallySignedTransaction =
-		deserialize(&raw).need("invalid PSBT format");
+		Psbt::deserialize(&raw).need("invalid PSBT format");
 
 	match (args.value_of("input-idx"), args.value_of("output-idx")) {
 		(None, None) => exit!("no input or output index provided"),
@@ -345,7 +348,7 @@ fn exec_edit<'a>(args: &clap::ArgMatches<'a>) {
 		}
 	}
 
-	let edited_raw = serialize(&psbt);
+	let edited_raw = Psbt::serialize(&psbt);
 	if let Some(path) = args.value_of("output") {
 		let mut file = File::create(&path).need("failed to open output file");
 		file.write_all(&edited_raw).need("error writing output file");
@@ -376,7 +379,7 @@ fn cmd_finalize<'a>() -> clap::App<'a, 'a> {
 fn exec_finalize<'a>(args: &clap::ArgMatches<'a>) {
 	let input = util::arg_or_stdin(args, "psbt");
 	let (raw, _) = file_or_raw(input.as_ref());
-	let psbt: psbt::PartiallySignedTransaction = deserialize(&raw).need("invalid PSBT format");
+	let psbt: psbt::PartiallySignedTransaction = Psbt::deserialize(&raw).need("invalid PSBT format");
 
 	// Create a secp context, should there be one with static lifetime?
 	let psbt = psbt.finalize(&SECP).unwrap_or_else(|(_, errs)| {
@@ -415,7 +418,7 @@ fn exec_merge<'a>(args: &clap::ArgMatches<'a>) {
 		Box::new(values.into_iter().map(|f| {
 			let (raw, _) = file_or_raw(&f);
 			let psbt: psbt::PartiallySignedTransaction =
-				deserialize(&raw).need("invalid PSBT format");
+				Psbt::deserialize(&raw).need("invalid PSBT format");
 			psbt
 		}))
 	} else {
@@ -424,7 +427,7 @@ fn exec_merge<'a>(args: &clap::ArgMatches<'a>) {
 		let buf = io::BufReader::new(stdin_lock);
 		Box::new(buf.lines().take_while(|l| l.is_ok() && !l.as_ref().unwrap().is_empty()).map(|l| {
 			let (raw, _) = file_or_raw(&l.unwrap());
-			deserialize::<psbt::PartiallySignedTransaction>(&raw)
+			Psbt::deserialize(&raw)
 				.need("invalid PSBT format")
 		}))
 	};
@@ -438,7 +441,7 @@ fn exec_merge<'a>(args: &clap::ArgMatches<'a>) {
 		merged.combine(part).need(&format!("error merging PSBT #{}", idx));
 	}
 
-	let merged_raw = serialize(&merged);
+	let merged_raw = merged.serialize();
 	if let Some(path) = args.value_of("output") {
 		let mut file = File::create(&path).need("failed to open output file");
 		file.write_all(&merged_raw).need("error writing output file");
@@ -470,9 +473,9 @@ fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
 fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 	let input = util::arg_or_stdin(args, "psbt");
 	let (raw, source) = file_or_raw(input.as_ref());
-	let mut psbt: psbt::PartiallySignedTransaction = deserialize(&raw).need("invalid PSBT format");
+	let mut psbt = Psbt::deserialize(&raw).need("invalid PSBT format");
 
-	let sk = args.need_privkey("priv-key").inner;
+	let sk = args.need_privkey("priv-key");
 	let i = args.value_of("input-idx").need("Input index not provided")
 		.parse::<usize>().need("input-idx must be a positive integer");
 	let compressed = args.value_of("compressed").unwrap()
@@ -483,37 +486,30 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 	}
 
 	let tx =  psbt.clone().extract_tx();
-	let mut cache = bitcoin::util::sighash::SighashCache::new(&tx);
+	let mut cache = bitcoin::sighash::SighashCache::new(&tx);
 
-	let pk = secp256k1::PublicKey::from_secret_key(&SECP, &sk);
+	let pk = secp256k1::PublicKey::from_secret_key(&SECP, &sk.inner);
 	let pk = bitcoin::PublicKey {
 		compressed: compressed,
 		inner: pk,
 	};
+	let mut key_map = HashMap::new();
+	key_map.insert(pk, sk);
 	let msg = psbt.sighash_msg(i, &mut cache, None)
 		.need("error computing sighash message on psbt");
-	let secp_sig = match msg {
-		miniscript::psbt::PsbtSighashMsg::EcdsaSighash(sighash) => {
-			let msg = secp256k1::Message::from_slice(&sighash)
-				.need("error computing sighash message on psbt");
-			SECP.sign_ecdsa(&msg, &sk)
+	match msg {
+		PsbtSighashMsg::LegacySighash(_sighash) => {
+			psbt.sign(&key_map, &SECP).expect("ecdsa psbt signing error");
 		},
-		miniscript::psbt::PsbtSighashMsg::TapSighash(_) => {
-			panic!("Signing taproot transactions is not yet suppported")
+		PsbtSighashMsg::SegwitV0Sighash(_sighash) => {
+			psbt.sign(&key_map, &SECP).expect("ecdsa psbt signing error");
+		},
+		PsbtSighashMsg::TapSighash(_tap_sighash) => {
+			todo!("Signing taproot transactions not yet supported")
 		},
 	};
 
-	let sighashtype = psbt.inputs[i].sighash_type
-		.need("error locating sighash type on the selected input")
-		.ecdsa_hash_ty()
-		.need("schnorr signatures are not yet supported");
-	let mut btc_sig = secp_sig.serialize_der().as_ref().to_vec();
-	btc_sig.push(sighashtype.to_u32() as u8);
-
-	// mutate the psbt
-	psbt.inputs[i].partial_sigs.insert(pk, bitcoin::EcdsaSig::from_slice(&btc_sig)
-		.need("failed to sign psbt"));
-	let raw = serialize(&psbt);
+	let raw = psbt.serialize();
 	if let Some(path) = args.value_of("output") {
 		let mut file = File::create(&path).need("failed to open output file");
 		file.write_all(&raw).need("error writing output file");

@@ -1,6 +1,5 @@
 use bip39lib::{Language, Mnemonic};
-use bitcoin::Network;
-use bitcoin::util::bip32;
+use bitcoin::{Network, bip32};
 use serde::{Deserialize, Serialize};
 
 use crate::{SECP, GetInfo, HexBytes};

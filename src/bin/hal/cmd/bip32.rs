@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bitcoin::util::bip32;
+use bitcoin::bip32;
 use clap;
 
 use crate::prelude::*;

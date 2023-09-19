@@ -1,7 +1,8 @@
 use std::convert::TryFrom;
 
+use bitcoin::address::{NetworkUnchecked, WitnessProgram};
 use bitcoin::hashes::{sha256, Hash};
-use bitcoin::util::address::{Payload, WitnessVersion};
+use bitcoin::address::{Payload, WitnessVersion};
 use bitcoin::{Address, Network};
 use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
@@ -77,7 +78,7 @@ pub struct InvoiceInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub min_final_cltv_expiry: Option<u64>,
 	#[serde(skip_serializing_if = "Vec::is_empty")]
-	pub fallback_addresses: Vec<Address>,
+	pub fallback_addresses: Vec<Address<NetworkUnchecked>>,
 	#[serde(skip_serializing_if = "Vec::is_empty")]
 	pub routes: Vec<Vec<RouteHopInfo>>,
 	pub currency: String,
@@ -113,8 +114,9 @@ impl GetInfo<InvoiceInfo> for Invoice {
 				.iter()
 				.map(|f| {
 					//TODO(stevenroose) see https://github.com/rust-bitcoin/rust-lightning-invoice/issues/24
-					Address {
-						payload: match f {
+					Address::new(
+						network,
+						match f {
 							Fallback::PubKeyHash(pkh) => {
 								Payload::PubkeyHash(Hash::from_slice(&pkh[..]).unwrap())
 							}
@@ -124,14 +126,14 @@ impl GetInfo<InvoiceInfo> for Invoice {
 							Fallback::SegWitProgram {
 								version: v,
 								program: p,
-							} => Payload::WitnessProgram {
-								version: WitnessVersion::try_from(v.to_u8())
+							} =>
+							Payload::WitnessProgram(WitnessProgram::new(
+								WitnessVersion::try_from(v.to_u8())
 									.expect("invalid segwit version in invoice"),
-								program: p.to_vec(),
-							},
+								p.to_vec(),
+							).expect("invalid segwit program")),
 						},
-						network: network,
-					}
+					)
 				})
 				.collect(),
 			routes: self
@@ -146,12 +148,12 @@ impl GetInfo<InvoiceInfo> for Invoice {
 				Currency::Simnet => "bitcoin-signet".to_owned(),
 			},
 			amount_pico_btc: self.amount_pico_btc(),
-			signature: sig.as_ref().into(),
+			signature: sig.to_vec().into(),
 			signature_recover_id: sig_rec.to_i32(),
 			payee_pubkey: signed_raw
 				.recover_payee_pub_key()
 				.ok()
-				.map(|s| s.0.serialize().as_ref().into()),
+				.map(|s| s.0.serialize().to_vec().into()),
 		}
 	}
 }

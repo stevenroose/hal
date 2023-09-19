@@ -1,5 +1,5 @@
 use bitcoin::Network;
-use bitcoin::util::bip32;
+use bitcoin::bip32;
 use serde::{Deserialize, Serialize};
 
 use crate::address;
@@ -15,7 +15,7 @@ pub struct DerivationInfo {
 	pub xpriv: Option<bip32::ExtendedPrivKey>,
 	pub xpub: bip32::ExtendedPubKey,
 	pub chain_code: bip32::ChainCode,
-	pub identifier: bitcoin::XpubIdentifier,
+	pub identifier: bitcoin::hash_types::XpubIdentifier,
 	pub fingerprint: bip32::Fingerprint,
 	pub public_key: bitcoin::secp256k1::PublicKey,
 	#[serde(skip_serializing_if = "Option::is_none")]
