@@ -1,6 +1,6 @@
 use std::io;
 
-use bip39::{Language, Mnemonic};
+use bip39::Mnemonic;
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::rand::{self, RngCore};
 use clap;
@@ -8,6 +8,19 @@ use hex;
 
 use hal;
 use crate::prelude::*;
+
+/// List of languages we support.
+const LANGUAGES: &[&'static str] = &[
+	"english",
+	"czech",
+	"french",
+	"italian",
+	"japanese",
+	"korean",
+	"spanish",
+	"simplified-chinese",
+	"traditional-chinese",
+];
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("bip39", "BIP-39 mnemonics")
@@ -24,15 +37,33 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_generate<'a>() -> clap::App<'a, 'a> {
+	lazy_static! {
+		static ref LANGUAGE_HELP: String = format!(
+			"the language to use for the mnemonic. \
+			Supported languages are: {}", LANGUAGES.join(", "),
+		);
+	}
+
 	cmd::subcommand("generate", "generate a new BIP-39 mnemonic")
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
-		.arg(args::arg("words", "the number of words").long("words").short("w").default_value("24"))
+		.arg(args::arg("words", "the number of words")
+			.long("words").short("w")
+			.default_value("24"))
+		.arg(args::arg("language", "the language to use")
+			.long("language").short("l")
+			.default_value("english")
+			.help(&LANGUAGE_HELP))
 		.arg(args::arg("entropy", "hex-encoded entropy data").long("entropy"))
 		.arg(args::opt("stdin", "read entropy from stdin"))
 }
 
 fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
+
+	let language = {
+		let s = args.value_of("language").unwrap_or("en");
+		hal::bip39::parse_language(s).need("invalid language string")
+	};
 
 	let word_count = args.value_of("words").unwrap_or("24").parse::<usize>()
 		.need("invalid number of words");
@@ -70,7 +101,7 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 	}
 
 	assert!(entropy.len() == nb_entropy_bytes);
-	let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy).unwrap();
+	let mnemonic = Mnemonic::from_entropy_in(language, &entropy).unwrap();
 	args.print_output(&hal::GetInfo::get_info(&mnemonic, network))
 }
 
@@ -96,4 +127,18 @@ fn exec_get_seed<'a>(args: &clap::ArgMatches<'a>) {
 		network,
 	);
 	args.print_output(&info)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_languages() {
+		let mut unique = std::collections::HashSet::new();
+		for l in LANGUAGES {
+			let lang = hal::bip39::parse_language(l).unwrap();
+			assert!(unique.insert(lang));
+		}
+	}
 }
