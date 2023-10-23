@@ -418,13 +418,11 @@ fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
 		args::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(false),
 		args::arg("input-idx", "the input index to edit").required(true),
 		args::arg("priv-key", "the private key in WIF/hex").required(true),
-		args::flag("compressed", "Whether the corresponding pk is compressed")
-			.required(false)
-			.default_value("true"),
 		args::flag("raw-stdout", "output the raw bytes of the result to stdout")
 			.short("r"),
 		args::opt("output", "where to save the resulting PSBT file -- in place if omitted")
 			.short("o"),
+		args::opt("uncompressed", "Whether the corresponding pubkey should be used uncompressed"),
 	])
 }
 
@@ -436,8 +434,7 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 	let sk = args.need_privkey("priv-key").inner;
 	let i = args.value_of("input-idx").need("Input index not provided")
 		.parse::<usize>().need("input-idx must be a positive integer");
-	let compressed = args.value_of("compressed").unwrap()
-		.parse::<bool>().need("Compressed must be boolean");
+	let uncompressed = args.is_present("uncompressed");
 
 	if i >= psbt.inputs.len() {
 		panic!("PSBT input index out of range")
@@ -448,7 +445,7 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 
 	let pk = secp256k1::PublicKey::from_secret_key(&SECP, &sk);
 	let pk = bitcoin::PublicKey {
-		compressed: compressed,
+		compressed: !uncompressed,
 		inner: pk,
 	};
 	let msg = psbt.sighash_msg(i, &mut cache, None)
