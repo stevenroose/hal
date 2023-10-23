@@ -5,10 +5,10 @@ use base64;
 use clap;
 use hex;
 
+use bitcoin::{EcdsaSighashType, PublicKey, Transaction};
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::bip32;
 use bitcoin::util::psbt;
-use bitcoin::{PublicKey, Transaction};
 use miniscript::psbt::PsbtExt;
 use secp256k1;
 
@@ -504,15 +504,18 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 	};
 
 	let sighashtype = psbt.inputs[i].sighash_type
-		.need("error locating sighash type on the selected input")
-		.ecdsa_hash_ty()
-		.need("schnorr signatures are not yet supported");
-	let mut btc_sig = secp_sig.serialize_der().as_ref().to_vec();
-	btc_sig.push(sighashtype.to_u32() as u8);
+		.map(|t| t.ecdsa_hash_ty().need("schnorr signatures are not yet supported"))
+		.unwrap_or_else(|| {
+			eprintln!("No sighash type set for input {}, so signing with SIGHASH_ALL", i+1);
+			EcdsaSighashType::All
+		});
+	let sig = bitcoin::EcdsaSig {
+		sig: secp_sig,
+		hash_ty: sighashtype,
+	};
 
 	// mutate the psbt
-	psbt.inputs[i].partial_sigs.insert(pk, bitcoin::EcdsaSig::from_slice(&btc_sig)
-		.need("failed to sign psbt"));
+	psbt.inputs[i].partial_sigs.insert(pk, sig);
 	let raw = serialize(&psbt);
 	if let Some(path) = args.value_of("output") {
 		let mut file = File::create(&path).need("failed to open output file");
