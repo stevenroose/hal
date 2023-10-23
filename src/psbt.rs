@@ -76,6 +76,9 @@ pub struct PsbtInputInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub witness_script: Option<tx::OutputScriptInfo>,
 	#[serde(skip_serializing_if = "HashMap::is_empty")]
+	pub bip32_derivation: HashMap<HexBytes, HDPathInfo>,
+	#[deprecated(since = "0.9.5", note = "use bip32_derivation instead")]
+	#[serde(skip_serializing_if = "HashMap::is_empty")]
 	pub hd_keypaths: HashMap<HexBytes, HDPathInfo>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub final_script_sig: Option<tx::InputScriptInfo>,
@@ -85,6 +88,19 @@ pub struct PsbtInputInfo {
 
 impl GetInfo<PsbtInputInfo> for psbt::Input {
 	fn get_info(&self, network: Network) -> PsbtInputInfo {
+		let bip32_derivation = {
+			let mut ret = HashMap::new();
+			for (key, value) in self.bip32_derivation.iter() {
+				ret.insert(key.serialize().to_vec().into(),
+					HDPathInfo {
+						master_fingerprint: value.0[..].into(),
+						path: value.1.clone(),
+					},
+				);
+			}
+			ret
+		};
+		#[allow(deprecated)] // for hd_keypaths
 		PsbtInputInfo {
 			non_witness_utxo: self.non_witness_utxo.as_ref().map(|u| u.get_info(network)),
 			witness_utxo: self.witness_utxo.as_ref().map(|u| u.get_info(network)),
@@ -100,18 +116,8 @@ impl GetInfo<PsbtInputInfo> for psbt::Input {
 				.map(|s| tx::OutputScript(s).get_info(network)),
 			witness_script: self.witness_script.as_ref()
 				.map(|s| tx::OutputScript(s).get_info(network)),
-			hd_keypaths: {
-				let mut hd_keypaths = HashMap::new();
-				for (key, value) in self.bip32_derivation.iter() {
-					hd_keypaths.insert(key.serialize().to_vec().into(),
-						HDPathInfo {
-							master_fingerprint: value.0[..].into(),
-							path: value.1.clone(),
-						},
-					);
-				}
-				hd_keypaths
-			},
+			bip32_derivation: bip32_derivation.clone(),
+			hd_keypaths: bip32_derivation,
 			final_script_sig: self.final_script_sig.as_ref()
 				.map(|s| tx::InputScript(s).get_info(network)),
 			final_script_witness: self.final_script_witness.as_ref()
