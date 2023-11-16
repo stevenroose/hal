@@ -73,12 +73,13 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 	fn privkey(&self, key: &str) -> Option<bitcoin::PrivateKey> {
 		self.borrow().value_of(key).map(|s| {
 			bitcoin::PrivateKey::from_str(&s).unwrap_or_else(|_| {
+				let key = secp256k1::SecretKey::from_str(&s).unwrap_or_else(|_| {
+					exit!("invalid WIF/hex private key provided for argument '{}'", key);
+				});
 				bitcoin::PrivateKey {
 					compressed: true,
 					network: self.network(),
-					inner: secp256k1::SecretKey::from_str(&s).unwrap_or_else(|_| {
-						exit!("invalid WIF/hex private key provided for argument '{}'", key);
-					}),
+					inner: key,
 				}
 			})
 		})
