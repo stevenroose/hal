@@ -45,14 +45,14 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 		.arg(args::opt("pubkey", "a public key in hex").takes_value(true).required(false))
 		.arg(args::opt("script", "a script in hex").takes_value(true).required(false))
 		.arg(args::opt(
+			"internal-key",
+			"internal pubkey to use with --script for p2tr",
+		).takes_value(true).required(false))
+		.arg(args::opt(
 			"nums-internal-key-h",
 			"Use the H NUMS key from BIP-341 for p2tr address when using --script.\n\
 			This point will be used by default if no NUMS point is specified.",
 		).takes_value(false).required(false))
-		.arg(args::opt(
-			"nums-internal-key",
-			"NUMS internal pubkey to use with --script for p2tr",
-		).takes_value(true).required(false))
 		.arg(args::opt(
 			"nums-internal-key-entropy",
 			"entropy to use to create NUMS internal pubkey to use with --script for p2tr\n\
@@ -74,18 +74,23 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 			// If the user provided NUMS information we can add a p2tr address.
 			// If not, we assume H NUMS from BIP-341.
 			if util::more_than_one(&[
+				args.is_present("internal-key"),
 				args.is_present("nums-internal-key-h"),
-				args.is_present("nums-internal-key"),
 				args.is_present("nums-internal-key-entropy"),
+				// deprecated
+				args.is_present("nums-internal-key"),
 			]) {
 				println!("Use only either nums-h, nums-internal-key or \
 					nums-internal-key-entropy.\n");
 				cmd_create().print_help().unwrap();
 				std::process::exit(1);
 			}
-			let nums = if args.is_present("nums-internal-key-h") {
+			let internal = if args.is_present("nums-internal-key-h") {
 				*NUMS_H
 			} else if let Some(int) = args.value_of("nums-internal-key") {
+				eprintln!("--nums-internal-key is deprecated in favor of --internal-key");
+				int.parse().need("invalid nums internal key")
+			} else if let Some(int) = args.value_of("internal-key") {
 				int.parse().need("invalid nums internal key")
 			} else if let Some(ent) = args.value_of("nums-internal-key-entropy") {
 				let scalar = <[u8; 32]>::from_hex(ent)
@@ -95,7 +100,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 				eprintln!("No NUMS key info provided, will use H NUMS from BIP-341 for p2tr.");
 				*NUMS_H
 			};
-			Address::from_script(&script.to_v1_p2tr(&SECP, nums.into()), network).unwrap()
+			Address::from_script(&script.to_v1_p2tr(&SECP, internal.into()), network).unwrap()
 		};
 
 		let mut ret = hal::address::Addresses::from_script(&script, network);
