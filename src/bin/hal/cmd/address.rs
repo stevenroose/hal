@@ -46,7 +46,8 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 		.arg(args::opt("script", "a script in hex").takes_value(true).required(false))
 		.arg(args::opt(
 			"nums-internal-key-h",
-			"use the H NUMS key from BIP-341 for p2tr address when using --script",
+			"Use the H NUMS key from BIP-341 for p2tr address when using --script.\n\
+			This point will be used by default if no NUMS point is specified.",
 		).takes_value(false).required(false))
 		.arg(args::opt(
 			"nums-internal-key",
@@ -67,35 +68,38 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 		args.print_output(&addr)
 	} else if let Some(script_hex) = args.value_of("script") {
 		let script_bytes = hex::decode(script_hex).need("invalid script hex");
-		let script = script_bytes.into();
+		let script = bitcoin::Script::from(script_bytes);
+
+		let p2tr = {
+			// If the user provided NUMS information we can add a p2tr address.
+			// If not, we assume H NUMS from BIP-341.
+			if util::more_than_one(&[
+				args.is_present("nums-internal-key-h"),
+				args.is_present("nums-internal-key"),
+				args.is_present("nums-internal-key-entropy"),
+			]) {
+				println!("Use only either nums-h, nums-internal-key or \
+					nums-internal-key-entropy.\n");
+				cmd_create().print_help().unwrap();
+				std::process::exit(1);
+			}
+			let nums = if args.is_present("nums-internal-key-h") {
+				*NUMS_H
+			} else if let Some(int) = args.value_of("nums-internal-key") {
+				int.parse().need("invalid nums internal key")
+			} else if let Some(ent) = args.value_of("nums-internal-key-entropy") {
+				let scalar = <[u8; 32]>::from_hex(ent)
+					.need("invalid entropy format: must be 32-byte hex");
+				nums(secp256k1::Scalar::from_be_bytes(scalar).need("invalid NUMS entropy"))
+			} else {
+				eprintln!("No NUMS key info provided, will use H NUMS from BIP-341 for p2tr.");
+				*NUMS_H
+			};
+			Address::from_script(&script.to_v1_p2tr(&SECP, nums.into()), network).unwrap()
+		};
 
 		let mut ret = hal::address::Addresses::from_script(&script, network);
-
-		// If the user provided NUMS information we can add a p2tr address.
-		if util::more_than_one(&[
-			args.is_present("nums-internal-key-h"),
-			args.is_present("nums-internal-key"),
-			args.is_present("nums-internal-key-entropy"),
-		]) {
-			println!("Use only either nums-h, nums-internal-key or nums-internal-key-entropy.\n");
-			cmd_create().print_help().unwrap();
-			std::process::exit(1);
-		}
-		let nums: Option<secp256k1::PublicKey> = if args.is_present("nums-internal-key-h") {
-			Some(*NUMS_H)
-		} else if let Some(int) = args.value_of("nums-internal-key") {
-			Some(int.parse().need("invalid nums internal key"))
-		} else if let Some(ent) = args.value_of("nums-internal-key-entropy") {
-			let scalar = <[u8; 32]>::from_hex(ent)
-				.need("invalid entropy format: must be 32-byte hex");
-			Some(nums(secp256k1::Scalar::from_be_bytes(scalar).need("invalid NUMS entropy")))
-		} else {
-			None
-		};
-		if let Some(pk) = nums {
-			let spk = script.to_v1_p2tr(&SECP, pk.into());
-			ret.p2tr = Some(Address::from_script(&spk, network).unwrap());
-		}
+		assert!(ret.p2tr.replace(p2tr).is_none(), "Addresses::from_script shouldn't set p2tr");
 
 		args.print_output(&ret)
 	} else {
