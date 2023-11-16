@@ -49,6 +49,10 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 			"internal pubkey to use with --script for p2tr",
 		).takes_value(true).required(false))
 		.arg(args::opt(
+			"nums-internal-key",
+			"internal pubkey to use with --script for p2tr",
+		).takes_value(true).required(false).hidden(true))
+		.arg(args::opt(
 			"nums-internal-key-h",
 			"Use the H NUMS key from BIP-341 for p2tr address when using --script.\n\
 			This point will be used by default if no NUMS point is specified.",

@@ -2,6 +2,14 @@ CHANGELOG
 =========
 
 
+# v0.9.5  --  2023-11-16
+
+- Use BIP-341-suggested NUMS key for p2tr tapscript address creation
+- Deprecate field `hd_keypaths` in favor of `bip32_derivations`.
+- Use SIGHASH_ALL by default if no sighash set in rawsign command
+- Make all key commands print to stdout instead of stderr
+- Rename --nums-internal-key to --internal-key.
+
 # v0.9.4  --  2023-08-29
 
 - Add `random bytes` command
