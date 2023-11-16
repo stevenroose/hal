@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::process;
 
 use bitcoin::secp256k1;
@@ -160,7 +159,7 @@ fn exec_ecdsa_verify<'a>(args: &clap::ArgMatches<'a>) {
 	}
 
 	if valid {
-		eprintln!("Signature is valid.");
+		println!("Signature is valid.");
 	} else {
 		eprintln!("Signature is invalid!");
 		process::exit(1);
@@ -188,7 +187,7 @@ fn exec_schnorr_sign<'a>(args: &clap::ArgMatches<'a>) {
 	let privkey = args.need_privkey("privkey");
 	let keypair = secp256k1::KeyPair::from_secret_key(&SECP, &privkey.inner);
 	let signature = SECP.sign_schnorr_with_rng(&msg, &keypair, &mut rand::thread_rng());
-	write!(::std::io::stdout(), "{:x}", &signature).need("failed to write stdout");
+	print!("{:x}", &signature);
 }
 
 fn cmd_schnorr_verify<'a>() -> clap::App<'a, 'a> {
@@ -236,7 +235,7 @@ fn exec_schnorr_verify<'a>(args: &clap::ArgMatches<'a>) {
 	}
 
 	if valid {
-		eprintln!("Signature is valid.");
+		println!("Signature is valid.");
 	} else {
 		eprintln!("Signature is invalid!");
 		process::exit(1);
@@ -251,7 +250,7 @@ fn cmd_negate_pubkey<'a>() -> clap::App<'a, 'a> {
 fn exec_negate_pubkey<'a>(args: &clap::ArgMatches<'a>) {
 	let key = args.need_pubkey("pubkey");
 	let negated = key.inner.negate(&SECP);
-	write!(::std::io::stdout(), "{}", negated).need("failed to write stdout");
+	print!("{}", negated);
 }
 
 fn cmd_pubkey_tweak_add<'a>() -> clap::App<'a, 'a> {
@@ -271,7 +270,7 @@ fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
 
 	match point.inner.add_exp_tweak(&SECP, &scalar.into()) {
 		Ok(..) => {
-			eprintln!("{}", point.to_string());
+			print!("{}", point.to_string());
 		}
 		Err(err) => {
 			eprintln!("error: {}", err);
@@ -292,7 +291,7 @@ fn exec_pubkey_combine<'a>(args: &clap::ArgMatches<'a>) {
 
 	match pk1.inner.combine(&pk2.inner) {
 		Ok(sum) => {
-			eprintln!("{}", sum.to_string());
+			print!("{}", sum.to_string());
 		}
 		Err(err) => {
 			eprintln!("error: {}", err);
