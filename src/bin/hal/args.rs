@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use bitcoin::consensus::encode::Decodable;
 use bitcoin::Network;
+use secp256k1::{self, XOnlyPublicKey};
 
 use crate::exit;
 
@@ -105,9 +106,9 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 		})
 	}
 
-	fn xonly_pubkey(&self, key: &str) -> Option<secp256k1::XOnlyPublicKey> {
+	fn xonly_pubkey(&self, key: &str) -> Option<XOnlyPublicKey> {
 		self.borrow().value_of(key).map(|s| {
-			secp256k1::XOnlyPublicKey::from_str(&s).or_else(|_| {
+			XOnlyPublicKey::from_str(&s).or_else(|_| {
 				bitcoin::PublicKey::from_str(&s).map(|pk| pk.inner.x_only_public_key().0)
 			}).unwrap_or_else(|_| {
 				exit!("invalid public key provided for argument '{}'", key);
@@ -115,7 +116,7 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 		})
 	}
 
-	fn need_xonly_pubkey(&self, key: &str) -> secp256k1::XOnlyPublicKey {
+	fn need_xonly_pubkey(&self, key: &str) -> XOnlyPublicKey {
 		self.xonly_pubkey(key).unwrap_or_else(|| {
 			exit!("expected a public key for argument '{}'", key);
 		})
