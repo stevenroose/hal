@@ -25,9 +25,8 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a raw block from JSON")
 		.args(&[
 			args::arg("block-info", "the block info in JSON").required(false),
-			args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-				.short("r")
-				.required(false),
+			args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+				.short("r"),
 		])
 		.long_about(r#"
 Create a block from JSON. Use the same format as the `hal block decode` output.
@@ -107,7 +106,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode a raw block to JSON")
 		.arg(args::arg("raw-block", "the raw block in hex").required(false))
-		.arg(args::opt("txids", "provide transactions IDs instead of full transactions"))
+		.arg(args::flag("txids", "provide transactions IDs instead of full transactions"))
 }
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {

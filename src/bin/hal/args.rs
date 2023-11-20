@@ -8,9 +8,14 @@ use secp256k1::{self, XOnlyPublicKey};
 
 use crate::exit;
 
+/// Construct a new boolean command flag.
+pub fn flag<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
+	clap::Arg::with_name(name).long(name).help(help).takes_value(false).required(false)
+}
+
 /// Construct a new command option.
 pub fn opt<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
-	clap::Arg::with_name(name).long(name).help(help)
+	clap::Arg::with_name(name).long(name).help(help).takes_value(true).required(false)
 }
 
 /// Construct a new positional argument.
@@ -21,23 +26,14 @@ pub fn arg<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
 /// Global options for network selection.
 pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 	vec![
-		clap::Arg::with_name("testnet")
-			.long("testnet")
+		flag("testnet", "run in testnet mode")
 			.short("t")
-			.help("run in testnet mode")
-			.takes_value(false)
 			.required(false)
 			.global(true),
-		clap::Arg::with_name("signet")
-			.long("signet")
-			.help("run in signet mode")
-			.takes_value(false)
+		flag("signet", "run in signet mode")
 			.required(false)
 			.global(true),
-		clap::Arg::with_name("regtest")
-			.long("regtest")
-			.help("run in regtest mode")
-			.takes_value(false)
+		flag("regtest", "run in regtest mode")
 			.required(false)
 			.global(true),
 	]
@@ -45,11 +41,8 @@ pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 
 /// Global option for changing output format to YAML.
 pub fn opt_yaml() -> clap::Arg<'static, 'static> {
-	clap::Arg::with_name("yaml")
-		.long("yaml")
+	flag("yaml", "print output in YAML instead of JSON")
 		.short("y")
-		.help("print output in YAML instead of JSON")
-		.takes_value(false)
 		.required(false)
 		.global(true)
 }

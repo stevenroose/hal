@@ -91,9 +91,9 @@ fn cmd_ecdsa_sign<'a>() -> clap::App<'a, 'a> {
 		"sign messages using ECDSA\n\nNOTE!! For SHA-256-d hashes, the --reverse \
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
-	.arg(args::opt("reverse", "reverse the message"))
 	.arg(args::arg("privkey", "the private key in hex or WIF").required(true))
 	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
+	.arg(args::flag("reverse", "reverse the message"))
 }
 
 fn exec_ecdsa_sign<'a>(args: &clap::ArgMatches<'a>) {
@@ -116,11 +116,11 @@ fn cmd_ecdsa_verify<'a>() -> clap::App<'a, 'a> {
 		"verify ECDSA signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
-	.arg(args::opt("reverse", "reverse the message"))
-	.arg(args::opt("no-try-reverse", "don't try to verify for reversed message"))
 	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
 	.arg(args::arg("pubkey", "the public key in hex").required(true))
 	.arg(args::arg("signature", "the ECDSA signature in hex").required(true))
+	.arg(args::flag("reverse", "reverse the message"))
+	.arg(args::flag("no-try-reverse", "don't try to verify for reversed message"))
 }
 
 fn exec_ecdsa_verify<'a>(args: &clap::ArgMatches<'a>) {
@@ -172,9 +172,9 @@ fn cmd_schnorr_sign<'a>() -> clap::App<'a, 'a> {
 		"sign messages using Schnorr\n\nNOTE!! For SHA-256-d hashes, the --reverse \
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
-	.arg(args::opt("reverse", "reverse the message"))
 	.arg(args::arg("privkey", "the private key in hex or WIF").required(true))
 	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
+	.arg(args::flag("reverse", "reverse the message"))
 }
 
 fn exec_schnorr_sign<'a>(args: &clap::ArgMatches<'a>) {
@@ -196,11 +196,11 @@ fn cmd_schnorr_verify<'a>() -> clap::App<'a, 'a> {
 		"verify Schnorr signatures\n\nNOTE!! For SHA-256-d hashes, the --reverse \
 		flag must be used because Bitcoin Core reverses the hex order for those!",
 	)
-	.arg(args::opt("reverse", "reverse the message"))
-	.arg(args::opt("no-try-reverse", "don't try to verify for reversed message"))
 	.arg(args::arg("message", "the message to be signed in hex (must be 32 bytes)").required(true))
 	.arg(args::arg("pubkey", "the public key in hex").required(true))
 	.arg(args::arg("signature", "the Schnorr signature in hex").required(true))
+	.arg(args::flag("reverse", "reverse the message"))
+	.arg(args::flag("no-try-reverse", "don't try to verify for reversed message"))
 }
 
 fn exec_schnorr_verify<'a>(args: &clap::ArgMatches<'a>) {

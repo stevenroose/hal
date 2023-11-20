@@ -29,9 +29,8 @@ fn cmd_proof_create<'a>() -> clap::App<'a, 'a> {
 		.arg(args::opt("block", "the full block in hex"))
 		.arg(args::opt("block-txids", "all txids in the block, separated by a comma"))
 		.arg(args::opt("txid", "the txids to proof inclusion for").required(true))
-		.arg(args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false))
+		.arg(args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"))
 }
 
 fn exec_proof_create<'a>(args: &clap::ArgMatches<'a>) {
@@ -67,7 +66,7 @@ fn cmd_proof_check<'a>() -> clap::App<'a, 'a> {
 					if no txids are provided, it prints all of the included ones")
 		.arg(args::arg("proof", "merkle proof in hex").required(true))
 		.arg(args::opt("txid", "the txids to proof inclusion for"))
-		.arg(args::opt("indices", "also print the indices for the txids"))
+		.arg(args::flag("indices", "also print the indices for the txids"))
 }
 
 fn exec_proof_check<'a>(args: &clap::ArgMatches<'a>) {

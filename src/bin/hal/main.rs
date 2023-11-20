@@ -76,9 +76,8 @@ fn init_app() -> clap::App<'static, 'static> {
 		])
 		.subcommands(cmd::subcommands())
 		.arg(
-			args::opt("verbose", "Print verbose logging output to stderr")
+			args::flag("verbose", "Print verbose logging output to stderr")
 				.short("v")
-				.takes_value(false)
 				.global(true),
 		)
 		.args(&args::opts_networks())

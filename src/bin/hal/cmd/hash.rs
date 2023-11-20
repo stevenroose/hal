@@ -22,9 +22,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_sha256<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("sha256", "hash input with SHA-256")
 		.arg(args::arg("hex", "the input bytes in hex to hash").required(true))
-		.arg(args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false))
+		.arg(args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"))
 }
 
 fn exec_sha256<'a>(args: &clap::ArgMatches<'a>) {
@@ -42,9 +41,8 @@ fn exec_sha256<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_sha256d<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("sha256d", "hash input with double SHA-256")
 		.arg(args::arg("hex", "the input bytes in hex to hash").required(true))
-		.arg(args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false))
+		.arg(args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"))
 }
 
 fn exec_sha256d<'a>(args: &clap::ArgMatches<'a>) {

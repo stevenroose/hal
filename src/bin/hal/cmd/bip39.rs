@@ -28,7 +28,7 @@ fn cmd_generate<'a>() -> clap::App<'a, 'a> {
 		.unset_setting(clap::AppSettings::ArgRequiredElseHelp)
 		.arg(args::arg("words", "the number of words").long("words").short("w").default_value("24"))
 		.arg(args::arg("entropy", "hex-encoded entropy data").long("entropy"))
-		.arg(args::opt("stdin", "read entropy from stdin"))
+		.arg(args::flag("stdin", "read entropy from stdin"))
 }
 
 fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {

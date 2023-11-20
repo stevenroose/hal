@@ -65,12 +65,9 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create a PSBT from an unsigned raw transaction").args(&[
 		args::arg("raw-tx", "the raw transaction in hex").required(false),
 		args::opt("output", "where to save the merged PSBT output")
-			.short("o")
-			.takes_value(true)
-			.required(false),
-		args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false),
+			.short("o"),
+		args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"),
 	])
 }
 
@@ -112,85 +109,56 @@ fn cmd_edit<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("edit", "edit a PSBT").args(&[
 		args::arg("psbt", "PSBT to edit, either base64/hex or a file path").required(false),
 		args::opt("input-idx", "the input index to edit")
-			.display_order(1)
-			.takes_value(true)
-			.required(false),
+			.display_order(1),
 		args::opt("output-idx", "the output index to edit")
-			.display_order(2)
-			.takes_value(true)
-			.required(false),
+			.display_order(2),
 		args::opt("output", "where to save the resulting PSBT file -- in place if omitted")
 			.short("o")
 			.display_order(3)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
-		args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false),
+			.next_line_help(true),
+		args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"),
 		//
 		// values used in both inputs and outputs
 		args::opt("redeem-script", "the redeem script")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		args::opt("witness-script", "the witness script")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		args::opt("hd-keypaths", "the HD wallet keypaths `<pubkey>:<master-fp>:<path>,...`")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		args::opt("hd-keypaths-add", "add an HD wallet keypath `<pubkey>:<master-fp>:<path>`")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		//
 		// input values
 		args::opt("non-witness-utxo", "the non-witness UTXO field in hex (full transaction)")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		args::opt("witness-utxo", "the witness UTXO field in hex (only output)")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		args::opt("partial-sigs", "set partial sigs `<pubkey>:<signature>,...`")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		args::opt("partial-sigs-add", "add a partial sig pair `<pubkey>:<signature>`")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		args::opt("sighash-type", "the sighash type")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		// (omitted) redeem-script
 		// (omitted) witness-script
 		// (omitted) hd-keypaths
 		// (omitted) hd-keypaths-add
 		args::opt("final-script-sig", "set final script signature")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		args::opt("final-script-witness", "set final script witness as comma-separated hex values")
 			.display_order(99)
-			.next_line_help(true)
-			.takes_value(true)
-			.required(false),
+			.next_line_help(true),
 		//
 		// output values
 		// (omitted) redeem-script
@@ -367,9 +335,8 @@ fn exec_edit<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_finalize<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("finalize", "finalize a PSBT and print the fully signed tx in hex").args(&[
 		args::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(false),
-		args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false),
+		args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"),
 	])
 }
 
@@ -398,12 +365,9 @@ fn cmd_merge<'a>() -> clap::App<'a, 'a> {
 			.multiple(true)
 			.required(true),
 		args::opt("output", "where to save the merged PSBT output")
-			.short("o")
-			.takes_value(true)
-			.required(false),
-		args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false),
+			.short("o"),
+		args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"),
 	])
 }
 
@@ -454,16 +418,13 @@ fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
 		args::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(false),
 		args::arg("input-idx", "the input index to edit").required(true),
 		args::arg("priv-key", "the private key in WIF/hex").required(true),
-		args::arg("compressed", "Whether the corresponding pk is compressed")
+		args::flag("compressed", "Whether the corresponding pk is compressed")
 			.required(false)
 			.default_value("true"),
-		args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false),
+		args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"),
 		args::opt("output", "where to save the resulting PSBT file -- in place if omitted")
-			.short("o")
-			.takes_value(true)
-			.required(false),
+			.short("o"),
 	])
 }
 

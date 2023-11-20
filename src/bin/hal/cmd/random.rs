@@ -19,9 +19,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_bytes<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("bytes", "generate random bytes")
 		.arg(args::arg("number", "the number of bytes").required(true))
-		.arg(args::opt("raw-stdout", "output the raw bytes of the result to stdout")
-			.short("r")
-			.required(false))
+		.arg(args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+			.short("r"))
 }
 
 fn exec_bytes<'a>(args: &clap::ArgMatches<'a>) {
