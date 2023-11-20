@@ -67,8 +67,11 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
-	if let Some(pubkey) = args.pubkey("pubkey") {
-		let addr = hal::address::Addresses::from_pubkey(&pubkey, network);
+	if let Some(pubkey) = args.flexible_pubkey("pubkey") {
+		let addr = match pubkey {
+			FlexiblePubkey::Regular(pk) => hal::address::Addresses::from_pubkey(&pk, network),
+			FlexiblePubkey::XOnly(pk) => hal::address::Addresses::from_xonly_pubkey(pk, network),
+		};
 		args.print_output(&addr)
 	} else if let Some(script_hex) = args.value_of("script") {
 		let script_bytes = hex::decode(script_hex).need("invalid script hex");

@@ -47,6 +47,13 @@ pub fn opt_yaml() -> clap::Arg<'static, 'static> {
 		.global(true)
 }
 
+/// A flexible pubkey return type that accepts both xonly and regular pubkeys.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FlexiblePubkey {
+	Regular(bitcoin::PublicKey),
+	XOnly(XOnlyPublicKey),
+}
+
 pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 	fn verbose(&self) -> bool {
 		self.borrow().is_present("verbose")
@@ -112,6 +119,18 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 	fn need_xonly_pubkey(&self, key: &str) -> XOnlyPublicKey {
 		self.xonly_pubkey(key).unwrap_or_else(|| {
 			exit!("expected a public key for argument '{}'", key);
+		})
+	}
+
+	fn flexible_pubkey(&self, key: &str) -> Option<FlexiblePubkey> {
+		self.borrow().value_of(key).map(|s| {
+			if let Ok(xonly) = XOnlyPublicKey::from_str(&s) {
+				FlexiblePubkey::XOnly(xonly)
+			} else if let Ok(reg) = bitcoin::PublicKey::from_str(&s) {
+				FlexiblePubkey::Regular(reg)
+			} else {
+				exit!("invalid public key provided for argument '{}'", key);
+			}
 		})
 	}
 

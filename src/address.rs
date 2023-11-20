@@ -1,4 +1,6 @@
+
 use bitcoin::{self, Address, Network, Script, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
+use secp256k1::XOnlyPublicKey;
 use serde::{Deserialize, Serialize};
 
 use crate::SECP;
@@ -47,6 +49,13 @@ impl Addresses {
 			p2wpkh: Address::p2wpkh(pubkey, network).ok(),
 			p2shwpkh: Address::p2shwpkh(pubkey, network).ok(),
 			p2tr: Some(Address::p2tr(&SECP, pubkey.inner.into(), None, network)),
+			..Default::default()
+		}
+	}
+
+	pub fn from_xonly_pubkey(pubkey: XOnlyPublicKey, network: Network) -> Addresses {
+		Addresses {
+			p2tr: Some(Address::p2tr(&SECP, pubkey, None, network)),
 			..Default::default()
 		}
 	}

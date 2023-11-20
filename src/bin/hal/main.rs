@@ -26,7 +26,7 @@ pub mod util;
 
 pub mod prelude {
 	pub use crate::{args, cmd, util};
-	pub use crate::args::ArgMatchesExt;
+	pub use crate::args::{ArgMatchesExt, FlexiblePubkey};
 	pub use crate::util::{OptionExt, ResultExt};
 	pub use hal::SECP;
 	pub use super::exit;
