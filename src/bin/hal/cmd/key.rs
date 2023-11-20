@@ -280,7 +280,8 @@ fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
 }
 
 fn cmd_pubkey_combine<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("pubkey-combine", "add a point (public key) to another")
+	cmd::subcommand("pubkey-combine", "add a point (public key) to another; \
+		note that this is NOT MuSig2 compatible, use the musig command for that")
 		.arg(args::arg("pubkey1", "the first public key in hex").required(true))
 		.arg(args::arg("pubkey2", "the second public key in hex").required(true))
 }
@@ -299,3 +300,4 @@ fn exec_pubkey_combine<'a>(args: &clap::ArgMatches<'a>) {
 		}
 	}
 }
+
