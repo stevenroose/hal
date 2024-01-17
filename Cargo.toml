@@ -30,7 +30,6 @@ secp256k1_zkp_musig = { package = "secp256k1-zkp", git = "https://github.com/san
 bip39 = { version = "1.0.1", features = [ "all-languages" ] }
 lightning-invoice = "0.4.0"
 miniscript = { version = "9.0.0", features = ["compiler"] }
-byteorder = "1.3.1"
 chrono = { version = "0.4.6", features = ["serde"] }
 lazy_static = "1.4"
 

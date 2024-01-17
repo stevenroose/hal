@@ -3,7 +3,6 @@ use std::convert::TryFrom;
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::util::address::{Payload, WitnessVersion};
 use bitcoin::{Address, Network};
-use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
 use lightning_invoice::{Currency, Fallback, Invoice, InvoiceDescription, RouteHop};
 use serde::{Deserialize, Serialize};
@@ -52,7 +51,7 @@ pub struct RouteHopInfo {
 impl GetInfo<RouteHopInfo> for RouteHop {
 	fn get_info(&self, _network: Network) -> RouteHopInfo {
 		let ssid_hex = &self.short_channel_id[..];
-		let ssid = BigEndian::read_u64(&ssid_hex);
+		let ssid = u64::from_be_bytes(self.short_channel_id);
 		RouteHopInfo {
 			pubkey: self.pubkey.serialize()[..].into(),
 			short_channel_id: ssid,
