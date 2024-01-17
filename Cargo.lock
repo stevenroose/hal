@@ -187,7 +187,6 @@ dependencies = [
  "base64-compat",
  "bip39",
  "bitcoin",
- "byteorder",
  "chrono",
  "clap",
  "fern",

@@ -1,6 +1,5 @@
 extern crate bip39 as bip39lib;
 extern crate bitcoin;
-extern crate byteorder;
 extern crate chrono;
 extern crate hex;
 #[macro_use]
