@@ -78,6 +78,8 @@ impl<'a> GetInfo<OutputScriptInfo> for OutputScript<'a> {
 					"p2wpkh"
 				} else if self.0.is_v0_p2wsh() {
 					"p2wsh"
+				} else if self.0.is_v1_p2tr() {
+					"p2tr"
 				} else {
 					"unknown"
 				}
