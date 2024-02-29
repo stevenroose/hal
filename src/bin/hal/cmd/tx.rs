@@ -2,6 +2,7 @@ use std::convert::TryInto;
 use std::io::Write;
 
 use bitcoin::consensus::encode::{deserialize, serialize};
+use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
 
 use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
@@ -11,12 +12,14 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("tx", "manipulate transactions")
 		.subcommand(cmd_create())
 		.subcommand(cmd_decode())
+		.subcommand(cmd_psbt())
 }
 
 pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 	match args.subcommand() {
 		("create", Some(ref m)) => exec_create(&m),
 		("decode", Some(ref m)) => exec_decode(&m),
+		("psbt", Some(ref m)) => exec_psbt(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -227,11 +230,26 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 		.arg(args::arg("raw-tx", "the raw transaction in hex").required(false))
 }
 
+fn cmd_psbt<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("psbt", "convert a raw transaction inside a PSBT and then to JSON")
+		.arg(args::arg("raw-tx", "the raw transaction in hex").required(false))
+}
+
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let hex_tx = util::arg_or_stdin(args, "raw-tx");
 	let raw_tx = hex::decode(hex_tx.as_ref()).need("could not decode raw tx");
 	let tx: Transaction = deserialize(&raw_tx).need("invalid tx format");
 
 	let info = hal::GetInfo::get_info(&tx, args.network());
+	args.print_output(&info)
+}
+
+fn exec_psbt<'a>(args: &clap::ArgMatches<'a>) {
+	let hex_tx = util::arg_or_stdin(args, "raw-tx");
+	let raw_tx = hex::decode(hex_tx.as_ref()).need("could not decode raw tx");
+	let tx: Transaction = deserialize(&raw_tx).need("invalid tx format");
+	let psbt = PartiallySignedTransaction::from_unsigned_tx(tx).need("cound not convert a tx to a psbt");
+
+	let info = hal::GetInfo::get_info(&psbt, args.network());
 	args.print_output(&info)
 }

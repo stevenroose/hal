@@ -75,7 +75,7 @@ impl<'de> ::serde::Deserialize<'de> for HexBytes {
 }
 
 /// Get JSON-able objects that describe the type.
-pub trait GetInfo<T: ::serde::Serialize> {
+pub trait GetInfo<T: ::serde::Serializ e> {
 	/// Get a description of this object given the network of interest.
 	fn get_info(&self, network: Network) -> T;
 }
