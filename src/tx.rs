@@ -40,7 +40,7 @@ impl GetInfo<InputInfo> for TxIn {
 			sequence: Some(self.sequence.to_consensus_u32()),
 			script_sig: Some(InputScript(&self.script_sig).get_info(network)),
 			witness: if self.witness.len() > 0 {
-				Some(self.witness.iter().map(|h| h.clone().into()).collect())
+				Some(self.witness.iter().map(|h| h.into()).collect())
 			} else {
 				None
 			},

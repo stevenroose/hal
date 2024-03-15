@@ -121,7 +121,7 @@ impl GetInfo<PsbtInputInfo> for psbt::Input {
 			final_script_sig: self.final_script_sig.as_ref()
 				.map(|s| tx::InputScript(s).get_info(network)),
 			final_script_witness: self.final_script_witness.as_ref()
-				.map(|w| w.iter().map(|p| p.clone().into()).collect()),
+				.map(|w| w.iter().map(|p| p.into()).collect()),
 		}
 	}
 }
