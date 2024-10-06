@@ -36,6 +36,7 @@ impl MnemonicInfo {
 				Language::Italian => "italian",
 				Language::Japanese => "japanese",
 				Language::Korean => "korean",
+				Language::Portuguese => "portuguese",
 				Language::Spanish => "spanish",
 				Language::SimplifiedChinese => "simplified-chinese",
 				Language::TraditionalChinese => "traditional-chinese",
@@ -101,6 +102,7 @@ pub fn parse_language(s: &str) -> Option<Language> {
 		"it" | "italian" => Language::Italian,
 		"ja" | "japanese" => Language::Japanese,
 		"ko" | "korean" => Language::Korean,
+		"pt" | "portuguese" => Language::Portuguese,
 		"es" | "spanish" => Language::Spanish,
 		_ => return None,
 	};
