@@ -1,3 +1,6 @@
+
+use std::borrow::Cow;
+
 use bip39lib::{Language, Mnemonic};
 use bitcoin::Network;
 use bitcoin::util::bip32;
@@ -65,6 +68,55 @@ impl GetInfo<SeedInfo> for [u8; 64] {
 			seed: self.to_vec().into(),
 			bip32_xpriv: xpriv,
 			bip32_xpub: xpub,
+		}
+	}
+}
+
+/// Parse a BIP-39 language from string.
+///
+/// Supported formats are (case-insensitive):
+/// - full name in English
+/// - full name in English with hyphen instead of space
+/// - ISO 639-1 code
+///   - except for Simplified Chinese: "sc" or "zhs"
+///   - except for Traditional Chinese: "tc" or "zht"
+pub fn parse_language(s: &str) -> Option<Language> {
+	if !s.is_ascii() {
+		return None;
+	}
+
+	let s = if s.chars().all(|c| c.is_lowercase()) {
+		Cow::Borrowed(s)
+	} else {
+		Cow::Owned(s.to_lowercase())
+	};
+	let ret = match s.as_ref() {
+		"en" | "english" => Language::English,
+		"sc" | "zhs" | "simplified chinese" | "simplified-chinese"
+			| "simplifiedchinese" => Language::SimplifiedChinese,
+		"tc" | "zht" | "traditional chinese"| "traditional-chinese"
+			| "traditionalchinese" => Language::TraditionalChinese,
+		"cs" | "czech" => Language::Czech,
+		"fr" | "french" => Language::French,
+		"it" | "italian" => Language::Italian,
+		"ja" | "japanese" => Language::Japanese,
+		"ko" | "korean" => Language::Korean,
+		"es" | "spanish" => Language::Spanish,
+		_ => return None,
+	};
+	Some(ret)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_parse_language() {
+		// a simple check all
+		for l in Language::all() {
+			assert_eq!(Some(*l), parse_language(&l.to_string()), "lang: {}", l);
+			assert_eq!(Some(*l), parse_language(&l.to_string().to_uppercase()), "lang: {}", l);
 		}
 	}
 }
