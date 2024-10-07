@@ -112,9 +112,9 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let hex_tx = util::arg_or_stdin(args, "raw-block");
 	let raw_tx = hex::decode(hex_tx.as_ref()).need("could not decode raw block hex");
-	let block: Block = deserialize(&raw_tx).need("invalid block format");
 
 	if args.is_present("txids") {
+		let block: Block = deserialize(&raw_tx).need("invalid block format");
 		let info = hal::block::BlockInfo {
 			header: hal::GetInfo::get_info(&block.header, args.network()),
 			bip34_block_height: block.bip34_block_height().ok(),
@@ -124,6 +124,17 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 		};
 		args.print_output(&info)
 	} else {
+		let block: Block = match deserialize(&raw_tx) {
+			Ok(block) => block,
+			Err(_) => {
+				let header: BlockHeader = deserialize(&raw_tx).expect("invalid block format");
+				let block = Block {
+					header: header,
+					txdata: Default::default(),
+				};
+				block
+			},
+		};
 		let info = hal::GetInfo::get_info(&block, args.network());
 		args.print_output(&info)
 	}
