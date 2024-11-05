@@ -1,4 +1,4 @@
-use bitcoin::hashes::hex::FromHex;
+use bitcoin::hashes::hex::{FromHex, ToHex};
 use bitcoin::Script;
 use clap;
 use hal::miniscript::{
@@ -17,6 +17,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_inspect())
 		.subcommand(cmd_parse())
 		.subcommand(cmd_policy())
+		.subcommand(cmd_script())
 }
 
 pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
@@ -25,6 +26,7 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("parse", Some(ref m)) => exec_parse(&m),
 		("policy", Some(ref m)) => exec_policy(&m),
+		("script", Some(ref m)) => exec_script(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -233,6 +235,61 @@ fn exec_policy<'a>(args: &clap::ArgMatches<'a>) {
 			Ok(info) => args.print_output(&info),
 			Err(e) => exit!("Invalid policy: {}", e),
 		}
+	}
+}
+
+fn cmd_script<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("script", "compile a policy into a script")
+		.arg(args::arg("policy", "the miniscript policy to compile").required(false))
+		.arg(
+			clap::Arg::with_name("type")
+				.long("type")
+				.takes_value(true)
+				.possible_values(&["bare", "p2sh", "segwitv0", "tapscript"])
+				.default_value("tapscript")
+				.help("script type to compile to"),
+		)
+}
+
+fn exec_script<'a>(args: &clap::ArgMatches<'a>) {
+	let policy_str = util::arg_or_stdin(args, "policy");
+	let script_type = args.value_of("type").unwrap();
+
+	// Try to parse as concrete policy with public keys
+	let result = policy_str
+		.parse::<policy::Concrete<bitcoin::PublicKey>>()
+		.map_err(|e| format!("Invalid concrete policy: {}", e))
+		.and_then(|concrete| {
+			match script_type {
+				"bare" => policy::compiler::best_compilation::<_, BareCtx>(&concrete)
+					.map(|ms| ms.encode()),
+				"p2sh" => policy::compiler::best_compilation::<_, Legacy>(&concrete)
+					.map(|ms| ms.encode()),
+				"segwitv0" => policy::compiler::best_compilation::<_, Segwitv0>(&concrete)
+					.map(|ms| ms.encode()),
+				"tapscript" => policy::compiler::best_compilation::<_, miniscript::Tap>(&concrete)
+					.map(|ms| ms.encode()),
+				_ => unreachable!("clap enforces valid values"),
+			}
+			.map_err(|e| format!("Compilation error: {}", e))
+		});
+
+	match result {
+		Ok(script) => {
+			// Create a struct to hold both representations
+			#[derive(serde::Serialize)]
+			struct ScriptOutput {
+				hex: String,
+				asm: String,
+			}
+			let output = ScriptOutput {
+				hex: script.as_bytes().to_hex(),
+				asm: script.to_string(), // Bitcoin Script automatically implements Display for assembly format
+			};
+			
+			args.print_output(&output)
+		}
+		Err(e) => exit!("{}", e),
 	}
 }
 
