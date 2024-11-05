@@ -1,5 +1,5 @@
 
-use bitcoin::hashes::hex::FromHex;
+use bitcoin::hex::{DisplayHex, FromHex};
 use bitcoin::ScriptBuf;
 use clap;
 use hal::miniscript::{
@@ -18,6 +18,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_inspect())
 		.subcommand(cmd_parse())
 		.subcommand(cmd_policy())
+		.subcommand(cmd_compile())
 }
 
 pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
@@ -26,6 +27,7 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("parse", Some(ref m)) => exec_parse(&m),
 		("policy", Some(ref m)) => exec_policy(&m),
+		("compile", Some(ref m)) => exec_compile(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -131,7 +133,7 @@ fn cmd_parse<'a>() -> clap::App<'a, 'a> {
 
 fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
 	let script_hex = util::arg_or_stdin(args, "script");
-	let script = ScriptBuf::from(Vec::<u8>::from_hex(&script_hex).need("invalid hex script"));
+	let script = ScriptBuf::from_hex(&script_hex).need("invalid hex script");
 
 	let segwit_info = Miniscript::<_, Segwitv0>::parse_insane(&script)
 		.map_err(|e| info!("Cannot parse as segwit Miniscript {}", e))
@@ -234,6 +236,59 @@ fn exec_policy<'a>(args: &clap::ArgMatches<'a>) {
 			Ok(info) => args.print_output(&info),
 			Err(e) => exit!("Invalid policy: {}", e),
 		}
+	}
+}
+
+fn cmd_compile<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("compile", "compile a policy into a script")
+		.arg(args::arg("policy", "the miniscript policy to compile").required(false))
+		.arg(
+			clap::Arg::with_name("type")
+				.long("type")
+				.takes_value(true)
+				.possible_values(&["bare", "p2sh", "segwitv0", "tapscript"])
+				.default_value("tapscript")
+				.help("script type to compile to"),
+		)
+}
+
+fn exec_compile<'a>(args: &clap::ArgMatches<'a>) {
+	let policy_str = util::arg_or_stdin(args, "policy");
+	let script_type = args.value_of("type").unwrap();
+
+	let result = policy_str
+		.parse::<policy::Concrete<bitcoin::PublicKey>>()
+		.map_err(|e| format!("Invalid concrete policy: {}", e))
+		.and_then(|concrete| {
+			match script_type {
+				"bare" => policy::compiler::best_compilation::<_, BareCtx>(&concrete)
+					.map(|ms| ms.encode()),
+				"p2sh" => policy::compiler::best_compilation::<_, Legacy>(&concrete)
+					.map(|ms| ms.encode()),
+				"segwitv0" => policy::compiler::best_compilation::<_, Segwitv0>(&concrete)
+					.map(|ms| ms.encode()),
+				"tapscript" => policy::compiler::best_compilation::<_, miniscript::Tap>(&concrete)
+					.map(|ms| ms.encode()),
+				_ => unreachable!("clap enforces valid values"),
+			}
+			.map_err(|e| format!("Compilation error: {}", e))
+		});
+
+	match result {
+		Ok(script) => {
+			#[derive(serde::Serialize)]
+			struct ScriptOutput {
+				hex: String,
+				asm: String,
+			}
+			let output = ScriptOutput {
+				hex: script.as_bytes().as_hex().to_string(),
+				asm: script.to_string(), 
+			};
+			
+			args.print_output(&output)
+		}
+		Err(e) => exit!("{}", e),
 	}
 }
 
