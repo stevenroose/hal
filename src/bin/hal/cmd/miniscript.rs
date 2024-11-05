@@ -255,7 +255,6 @@ fn exec_script<'a>(args: &clap::ArgMatches<'a>) {
 	let policy_str = util::arg_or_stdin(args, "policy");
 	let script_type = args.value_of("type").unwrap();
 
-	// Try to parse as concrete policy with public keys
 	let result = policy_str
 		.parse::<policy::Concrete<bitcoin::PublicKey>>()
 		.map_err(|e| format!("Invalid concrete policy: {}", e))
@@ -276,7 +275,6 @@ fn exec_script<'a>(args: &clap::ArgMatches<'a>) {
 
 	match result {
 		Ok(script) => {
-			// Create a struct to hold both representations
 			#[derive(serde::Serialize)]
 			struct ScriptOutput {
 				hex: String,
@@ -284,7 +282,7 @@ fn exec_script<'a>(args: &clap::ArgMatches<'a>) {
 			}
 			let output = ScriptOutput {
 				hex: script.as_bytes().to_hex(),
-				asm: script.to_string(), // Bitcoin Script automatically implements Display for assembly format
+				asm: script.to_string(), 
 			};
 			
 			args.print_output(&output)
