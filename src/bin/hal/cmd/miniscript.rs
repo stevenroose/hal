@@ -17,7 +17,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_inspect())
 		.subcommand(cmd_parse())
 		.subcommand(cmd_policy())
-		.subcommand(cmd_script())
+		.subcommand(cmd_compile())
 }
 
 pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
@@ -26,7 +26,7 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 		("inspect", Some(ref m)) => exec_inspect(&m),
 		("parse", Some(ref m)) => exec_parse(&m),
 		("policy", Some(ref m)) => exec_policy(&m),
-		("script", Some(ref m)) => exec_script(&m),
+		("compile", Some(ref m)) => exec_compile(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -238,8 +238,8 @@ fn exec_policy<'a>(args: &clap::ArgMatches<'a>) {
 	}
 }
 
-fn cmd_script<'a>() -> clap::App<'a, 'a> {
-	cmd::subcommand("script", "compile a policy into a script")
+fn cmd_compile<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("compile", "compile a policy into a script")
 		.arg(args::arg("policy", "the miniscript policy to compile").required(false))
 		.arg(
 			clap::Arg::with_name("type")
@@ -251,7 +251,7 @@ fn cmd_script<'a>() -> clap::App<'a, 'a> {
 		)
 }
 
-fn exec_script<'a>(args: &clap::ArgMatches<'a>) {
+fn exec_compile<'a>(args: &clap::ArgMatches<'a>) {
 	let policy_str = util::arg_or_stdin(args, "policy");
 	let script_type = args.value_of("type").unwrap();
 
