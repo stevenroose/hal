@@ -42,6 +42,7 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_create<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("create", "create addresses")
+		.arg(args::opt("scriptpubkey", "a scriptPubkey in hex"))
 		.arg(args::opt("pubkey", "a public key in hex"))
 		.arg(args::opt("script", "a script in hex"))
 		.arg(args::opt(
@@ -67,7 +68,12 @@ fn cmd_create<'a>() -> clap::App<'a, 'a> {
 fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let network = args.network();
 
-	if let Some(pubkey) = args.flexible_pubkey("pubkey") {
+	if let Some(spk) = args.value_of("scriptpubkey") {
+		let script_bytes = hex::decode(spk).need("invalid scriptpubkey hex");
+		let script = bitcoin::Script::from(script_bytes);
+		let addr = Address::from_script(&script, network).need("invalid scriptPubkey");
+		println!("{}", addr)
+	} else if let Some(pubkey) = args.flexible_pubkey("pubkey") {
 		let addr = match pubkey {
 			FlexiblePubkey::Regular(pk) => hal::address::Addresses::from_pubkey(&pk, network),
 			FlexiblePubkey::XOnly(pk) => hal::address::Addresses::from_xonly_pubkey(pk, network),
