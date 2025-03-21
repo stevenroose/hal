@@ -9,6 +9,8 @@ pub struct KeyInfo {
 	pub raw_private_key: HexBytes,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub wif_private_key: Option<PrivateKey>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub uncompressed_wif_private_key: Option<PrivateKey>,
 	pub public_key: PublicKey,
 	pub xonly_public_key: XOnlyPublicKey,
 	pub uncompressed_public_key: PublicKey,
@@ -18,9 +20,14 @@ pub struct KeyInfo {
 impl GetInfo<KeyInfo> for PrivateKey {
 	fn get_info(&self, network: Network) -> KeyInfo {
 		let pubkey = self.public_key(&SECP);
+		let mut compressed_wif_privkey = *self;
+		compressed_wif_privkey.compressed = true;
+		let mut uncompressed_wif_privkey = *self;
+		uncompressed_wif_privkey.compressed = false;
 		KeyInfo {
 			raw_private_key: (&self.inner[..]).into(),
-			wif_private_key: Some(*self),
+			wif_private_key: Some(compressed_wif_privkey),
+			uncompressed_wif_private_key: Some(uncompressed_wif_privkey),
 			public_key: pubkey,
 			xonly_public_key: pubkey.inner.into(),
 			uncompressed_public_key: {
@@ -43,6 +50,7 @@ impl GetInfo<KeyInfo> for secp256k1::SecretKey {
 		KeyInfo {
 			raw_private_key: self[..].into(),
 			wif_private_key: None,
+			uncompressed_wif_private_key: None,
 			public_key: btc_pubkey,
 			xonly_public_key: pubkey.into(),
 			uncompressed_public_key: PublicKey {
