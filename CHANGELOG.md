@@ -2,6 +2,17 @@ CHANGELOG
 =========
 
 
+# v0.10.0  --  2025-03-21
+- update dependencies:
+  - bitcoin to 0.32.5
+  - secp256k1 to 0.29
+  - bip32 to 2.1.0
+  - lightning-invoice to 0.32.0
+  - miniscript to 12.3.0
+- add support for p2tr addresses
+- support creating address from raw scriptPubkey
+- allow parsing block headers without txs
+
 # v0.9.5  --  2023-11-16
 
 - Use BIP-341-suggested NUMS key for p2tr tapscript address creation

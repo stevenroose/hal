@@ -2,8 +2,8 @@
 use std::borrow::Borrow;
 use std::str::FromStr;
 
-use bitcoin::consensus::encode::Decodable;
-use bitcoin::Network;
+use bitcoin::consensus::encode;
+use bitcoin::{Network, NetworkKind};
 use secp256k1::{self, XOnlyPublicKey};
 
 use crate::exit;
@@ -26,6 +26,10 @@ pub fn arg<'a>(name: &'a str, help: &'a str) -> clap::Arg<'a, 'a> {
 /// Global options for network selection.
 pub fn opts_networks() -> Vec<clap::Arg<'static, 'static>> {
 	vec![
+		flag("mainnet", "run in mainnet mode")
+			.short("m")
+			.required(false)
+			.global(true),
 		flag("testnet", "run in testnet mode")
 			.short("t")
 			.required(false)
@@ -59,15 +63,28 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 		self.borrow().is_present("verbose")
 	}
 
-	fn network(&self) -> bitcoin::Network {
-		if self.borrow().is_present("testnet") {
-			Network::Testnet
+	fn explicit_network(&self) -> Option<Network> {
+		if self.borrow().is_present("mainnet") {
+			Some(Network::Bitcoin)
+		} else if self.borrow().is_present("testnet") {
+			Some(Network::Testnet)
 		} else if self.borrow().is_present("signet") {
-			Network::Signet
+			Some(Network::Signet)
 		} else if self.borrow().is_present("regtest") {
-			Network::Regtest
+			Some(Network::Regtest)
 		} else {
-			Network::Bitcoin
+			None
+		}
+	}
+
+	fn network(&self) -> Network {
+		self.explicit_network().unwrap_or(Network::Bitcoin)
+	}
+
+	fn network_from_kind(&self, kind: NetworkKind) -> Network {
+		match kind {
+			NetworkKind::Main => Network::Bitcoin,
+			NetworkKind::Test => self.explicit_network().unwrap_or(Network::Testnet),
 		}
 	}
 
@@ -79,7 +96,7 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 				});
 				bitcoin::PrivateKey {
 					compressed: true,
-					network: self.network(),
+					network: self.network().into(),
 					inner: key,
 				}
 			})
@@ -134,12 +151,10 @@ pub trait ArgMatchesExt<'a>: Borrow<clap::ArgMatches<'a>> {
 		})
 	}
 
-	fn hex_consensus<T: Decodable>(&self, key: &str) -> Option<Result<T, String>> {
+	fn hex_consensus<T: encode::Decodable>(&self, key: &str) -> Option<Result<T, String>> {
 		self.borrow().value_of(key).map(|s| -> Result<T, String> {
-			let mut hex = bitcoin::hashes::hex::HexIterator::new(s)
-				.map_err(|e| format!("invalid hex: {}", e))?;
-			let ret = Decodable::consensus_decode(&mut hex)
-				.map_err(|e| format!("invalid format: {}", e))?;
+			let hex = hex::decode(s).map_err(|e| format!("invalid hex: {}", e))?;
+			let ret = encode::deserialize(&hex).map_err(|e| format!("invalid format: {}", e))?;
 			Ok(ret)
 		})
 	}

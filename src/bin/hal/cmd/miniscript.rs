@@ -1,12 +1,13 @@
+
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::Script;
+use bitcoin::ScriptBuf;
 use clap;
 use hal::miniscript::{
 	DescriptorInfo, MiniscriptInfo, MiniscriptKeyType, Miniscripts, PolicyInfo, ScriptContexts,
 };
 use miniscript::miniscript::{BareCtx, Legacy, Miniscript, Segwitv0};
 use miniscript::policy::Liftable;
-use miniscript::{Descriptor, policy, MiniscriptKey};
+use miniscript::{policy, Descriptor, FromStrKey, MiniscriptKey};
 
 use crate::prelude::*;
 
@@ -47,7 +48,7 @@ fn exec_descriptor<'a>(args: &clap::ArgMatches<'a>) {
 			script_pubkey: Some(desc.script_pubkey().into_bytes().into()),
 			unsigned_script_sig: Some(desc.unsigned_script_sig().into_bytes().into()),
 			witness_script: desc.explicit_script().map(|s| s.into_bytes().into()).ok(),
-			max_satisfaction_weight: desc.max_satisfaction_weight().ok(),
+			max_satisfaction_weight: desc.max_weight_to_satisfy().ok().map(|w| w.to_wu()),
 			policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
 		})
 		.or_else(|e| {
@@ -60,7 +61,7 @@ fn exec_descriptor<'a>(args: &clap::ArgMatches<'a>) {
 				script_pubkey: None,
 				unsigned_script_sig: None,
 				witness_script: None,
-				max_satisfaction_weight: desc.max_satisfaction_weight().ok(),
+				max_satisfaction_weight: desc.max_weight_to_satisfy().ok().map(|w| w.to_wu()),
 				policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
 			})
 		})
@@ -130,7 +131,7 @@ fn cmd_parse<'a>() -> clap::App<'a, 'a> {
 
 fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
 	let script_hex = util::arg_or_stdin(args, "script");
-	let script = Script::from(Vec::<u8>::from_hex(&script_hex).need("invalid hex script"));
+	let script = ScriptBuf::from(Vec::<u8>::from_hex(&script_hex).need("invalid hex script"));
 
 	let segwit_info = Miniscript::<_, Segwitv0>::parse_insane(&script)
 		.map_err(|e| info!("Cannot parse as segwit Miniscript {}", e))
@@ -161,7 +162,7 @@ fn cmd_policy<'a>() -> clap::App<'a, 'a> {
 		.arg(args::arg("policy", "the miniscript policy to inspect").required(false))
 }
 
-fn get_policy_info<Pk: MiniscriptKey>(
+fn get_policy_info<Pk: MiniscriptKey + FromStrKey>(
 	policy_str: &str,
 	key_type: MiniscriptKeyType,
 ) -> Result<PolicyInfo, miniscript::Error>
@@ -240,17 +241,17 @@ trait FromScriptContexts: Sized {
 	fn from_bare<Pk: MiniscriptKey>(
 		ms: Miniscript<Pk, BareCtx>,
 		key_type: MiniscriptKeyType,
-		script: Option<bitcoin::Script>,
+		script: Option<bitcoin::ScriptBuf>,
 	) -> Self;
 	fn from_p2sh<Pk: MiniscriptKey>(
 		ms: Miniscript<Pk, Legacy>,
 		key_type: MiniscriptKeyType,
-		script: Option<bitcoin::Script>,
+		script: Option<bitcoin::ScriptBuf>,
 	) -> Self;
 	fn from_segwitv0<Pk: MiniscriptKey>(
 		ms: Miniscript<Pk, Segwitv0>,
 		key_type: MiniscriptKeyType,
-		script: Option<bitcoin::Script>,
+		script: Option<bitcoin::ScriptBuf>,
 	) -> Self;
 	fn combine(a: Option<Self>, b: Option<Self>) -> Option<Self>;
 }
@@ -259,7 +260,7 @@ impl FromScriptContexts for MiniscriptInfo {
 	fn from_bare<Pk: MiniscriptKey>(
 		ms: Miniscript<Pk, BareCtx>,
 		key_type: MiniscriptKeyType,
-		script: Option<bitcoin::Script>,
+		script: Option<bitcoin::ScriptBuf>,
 	) -> Self {
 		Self {
 			key_type: key_type,
@@ -288,7 +289,7 @@ impl FromScriptContexts for MiniscriptInfo {
 	fn from_p2sh<Pk: MiniscriptKey>(
 		ms: Miniscript<Pk, Legacy>,
 		key_type: MiniscriptKeyType,
-		script: Option<bitcoin::Script>,
+		script: Option<bitcoin::ScriptBuf>,
 	) -> Self {
 		Self {
 			key_type: key_type,
@@ -317,7 +318,7 @@ impl FromScriptContexts for MiniscriptInfo {
 	fn from_segwitv0<Pk: MiniscriptKey>(
 		ms: Miniscript<Pk, Segwitv0>,
 		key_type: MiniscriptKeyType,
-		script: Option<bitcoin::Script>,
+		script: Option<bitcoin::ScriptBuf>,
 	) -> Self {
 		Self {
 			key_type: key_type,

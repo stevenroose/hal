@@ -1,11 +1,8 @@
-use std::convert::TryFrom;
 
+use bitcoin::{address, Address, Network};
 use bitcoin::hashes::{sha256, Hash};
-use bitcoin::util::address::{Payload, WitnessVersion};
-use bitcoin::{Address, Network};
-use byteorder::{BigEndian, ByteOrder};
 use chrono::{offset::Local, DateTime, Duration};
-use lightning_invoice::{Currency, Fallback, Invoice, InvoiceDescription, RouteHop};
+use lightning_invoice::{Bolt11Invoice, Currency, Bolt11InvoiceDescription, RouteHintHop};
 use serde::{Deserialize, Serialize};
 
 use crate::{GetInfo, HexBytes};
@@ -40,7 +37,7 @@ pub fn fmt_short_channel_id(cid: u64) -> String {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct RouteHopInfo {
-	pub pubkey: HexBytes,
+	pub src_node_id: HexBytes,
 	pub short_channel_id: u64,
 	pub short_channel_id_hex: HexBytes,
 	pub short_channel_id_hrf: String,
@@ -49,17 +46,15 @@ pub struct RouteHopInfo {
 	pub cltv_expiry_delta: u16,
 }
 
-impl GetInfo<RouteHopInfo> for RouteHop {
+impl GetInfo<RouteHopInfo> for RouteHintHop {
 	fn get_info(&self, _network: Network) -> RouteHopInfo {
-		let ssid_hex = &self.short_channel_id[..];
-		let ssid = BigEndian::read_u64(&ssid_hex);
 		RouteHopInfo {
-			pubkey: self.pubkey.serialize()[..].into(),
-			short_channel_id: ssid,
-			short_channel_id_hex: ssid_hex.into(),
-			short_channel_id_hrf: fmt_short_channel_id(ssid),
-			fee_base_msat: self.fee_base_msat,
-			fee_proportional_millionths: self.fee_proportional_millionths,
+			src_node_id: self.src_node_id.serialize()[..].into(),
+			short_channel_id: self.short_channel_id,
+			short_channel_id_hex: self.short_channel_id.to_be_bytes()[..].into(),
+			short_channel_id_hrf: fmt_short_channel_id(self.short_channel_id),
+			fee_base_msat: self.fees.base_msat,
+			fee_proportional_millionths: self.fees.proportional_millionths,
 			cltv_expiry_delta: self.cltv_expiry_delta,
 		}
 	}
@@ -77,12 +72,10 @@ pub struct InvoiceInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub min_final_cltv_expiry: Option<u64>,
 	#[serde(skip_serializing_if = "Vec::is_empty")]
-	pub fallback_addresses: Vec<Address>,
+	pub fallback_addresses: Vec<Address<address::NetworkUnchecked>>,
 	#[serde(skip_serializing_if = "Vec::is_empty")]
 	pub routes: Vec<Vec<RouteHopInfo>>,
 	pub currency: String,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub amount_pico_btc: Option<u64>,
 
 	// For signed invoices.
 	pub signature: HexBytes,
@@ -90,7 +83,7 @@ pub struct InvoiceInfo {
 	pub payee_pubkey: Option<HexBytes>,
 }
 
-impl GetInfo<InvoiceInfo> for Invoice {
+impl GetInfo<InvoiceInfo> for Bolt11Invoice {
 	fn get_info(&self, network: Network) -> InvoiceInfo {
 		let signed_raw = self.clone().into_signed_raw();
 		let (sig_rec, sig) = signed_raw.signature().0.serialize_compact();
@@ -99,59 +92,33 @@ impl GetInfo<InvoiceInfo> for Invoice {
 			timestamp: self.timestamp().clone().into(),
 			payment_hash: sha256::Hash::from_slice(&self.payment_hash()[..]).unwrap(),
 			description: match self.description() {
-				InvoiceDescription::Direct(s) => s.clone().into_inner(),
-				InvoiceDescription::Hash(h) => h.0.to_string(),
+				Bolt11InvoiceDescription::Direct(s) => s.clone().into_inner().0,
+				Bolt11InvoiceDescription::Hash(h) => h.0.to_string(),
 			},
 			payee_pub_key: self.payee_pub_key().map(|pk| pk.serialize()[..].into()),
 			expiry_time: Some(
 				Local::now() + Duration::from_std(self.expiry_time())
 					.expect("invalid expiry in invoice"),
 			),
-			min_final_cltv_expiry: self.min_final_cltv_expiry().map(|e| *e),
-			fallback_addresses: self
-				.fallbacks()
-				.iter()
-				.map(|f| {
-					//TODO(stevenroose) see https://github.com/rust-bitcoin/rust-lightning-invoice/issues/24
-					Address {
-						payload: match f {
-							Fallback::PubKeyHash(pkh) => {
-								Payload::PubkeyHash(Hash::from_slice(&pkh[..]).unwrap())
-							}
-							Fallback::ScriptHash(sh) => {
-								Payload::ScriptHash(Hash::from_slice(&sh[..]).unwrap())
-							}
-							Fallback::SegWitProgram {
-								version: v,
-								program: p,
-							} => Payload::WitnessProgram {
-								version: WitnessVersion::try_from(v.to_u8())
-									.expect("invalid segwit version in invoice"),
-								program: p.to_vec(),
-							},
-						},
-						network: network,
-					}
-				})
-				.collect(),
-			routes: self
-				.routes()
-				.iter()
-				.map(|r| r.iter().map(|h| GetInfo::get_info(h, network)).collect())
+			min_final_cltv_expiry: Some(self.min_final_cltv_expiry_delta()),
+			fallback_addresses: self.fallback_addresses().into_iter()
+				.map(|a| a.to_string().parse().unwrap()).collect(),
+			routes: self.route_hints()
+				.iter().map(|r| r.0.iter().map(|h| GetInfo::get_info(h, network)).collect())
 				.collect(),
 			currency: match self.currency() {
 				Currency::Bitcoin => "bitcoin".to_owned(),
 				Currency::BitcoinTestnet => "bitcoin-testnet".to_owned(),
 				Currency::Regtest => "bitcoin-regtest".to_owned(),
-				Currency::Simnet => "bitcoin-signet".to_owned(),
+				Currency::Simnet => "bitcoin-simnet".to_owned(),
+				Currency::Signet => "bitcoin-signet".to_owned(),
 			},
-			amount_pico_btc: self.amount_pico_btc(),
-			signature: sig.as_ref().into(),
+			signature: sig[..].into(),
 			signature_recover_id: sig_rec.to_i32(),
 			payee_pubkey: signed_raw
 				.recover_payee_pub_key()
 				.ok()
-				.map(|s| s.0.serialize().as_ref().into()),
+				.map(|s| s.0.serialize()[..].into()),
 		}
 	}
 }

@@ -1,5 +1,7 @@
+use std::str::FromStr;
+
 use clap;
-use lightning_invoice::Invoice;
+use lightning_invoice::Bolt11Invoice;
 
 use crate::prelude::*;
 
@@ -26,10 +28,8 @@ fn cmd_invoice_decode<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_invoice_decode<'a>(args: &clap::ArgMatches<'a>) {
-	::lightning_invoice::check_platform();
-
 	let invoice_str = util::arg_or_stdin(args, "invoice");
-	let invoice: Invoice = invoice_str.as_ref().parse().need("invalid invoice encoding");
+	let invoice = Bolt11Invoice::from_str(invoice_str.as_ref()).need("invalid invoice encoding");
 
 	let info = hal::GetInfo::get_info(&invoice, args.network());
 	args.print_output(&info)

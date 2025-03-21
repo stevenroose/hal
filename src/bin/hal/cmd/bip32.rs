@@ -1,6 +1,7 @@
+
 use std::str::FromStr;
 
-use bitcoin::util::bip32;
+use bitcoin::bip32;
 use clap;
 
 use crate::prelude::*;
@@ -32,14 +33,14 @@ fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 
 	let master_fingerprint;
 	let mut derived_xpriv = None;
-	let derived_xpub = match bip32::ExtendedPrivKey::from_str(&key_str) {
+	let derived_xpub = match bip32::Xpriv::from_str(&key_str) {
 		Ok(ext_priv) => {
 			derived_xpriv = Some(ext_priv.derive_priv(&SECP, &path).need("derivation error"));
 			master_fingerprint = ext_priv.fingerprint(&SECP);
-			bip32::ExtendedPubKey::from_priv(&SECP, derived_xpriv.as_ref().unwrap())
+			bip32::Xpub::from_priv(&SECP, derived_xpriv.as_ref().unwrap())
 		}
 		Err(_) => {
-			let ext_pub: bip32::ExtendedPubKey = key_str.parse().need("invalid extended key");
+			let ext_pub = bip32::Xpub::from_str(key_str).need("invalid extended key");
 			master_fingerprint = ext_pub.fingerprint();
 			ext_pub.derive_pub(&SECP, &path).need("derivation error")
 		}
@@ -57,7 +58,8 @@ fn exec_derive<'a>(args: &clap::ArgMatches<'a>) {
 		public_key: derived_xpub.public_key,
 		private_key: derived_xpriv.map(|x| x.private_key),
 		addresses: hal::address::Addresses::from_pubkey(
-			&bitcoin::PublicKey::new(derived_xpub.public_key), derived_xpub.network,
+			&bitcoin::PublicKey::new(derived_xpub.public_key),
+			args.network_from_kind(derived_xpub.network),
 		),
 	};
 
@@ -74,10 +76,10 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 
 	let mut xpriv = None;
 
-	let xpub = match bip32::ExtendedPrivKey::from_str(&key_str) {
+	let xpub = match bip32::Xpriv::from_str(&key_str) {
 		Ok(ext_priv) => {
 			xpriv = Some(ext_priv);
-			bip32::ExtendedPubKey::from_priv(&SECP, xpriv.as_ref().unwrap())
+			bip32::Xpub::from_priv(&SECP, xpriv.as_ref().unwrap())
 		}
 		Err(_) => key_str.parse().need("invalid extended key"),
 	};
@@ -94,7 +96,8 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 		public_key: xpub.public_key,
 		private_key: xpriv.map(|x| x.private_key),
 		addresses: hal::address::Addresses::from_pubkey(
-			&bitcoin::PublicKey::new(xpub.public_key), xpub.network,
+			&bitcoin::PublicKey::new(xpub.public_key),
+			args.network_from_kind(xpub.network),
 		),
 	};
 

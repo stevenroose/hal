@@ -1,4 +1,4 @@
-use bitcoin::{Block, BlockHash, BlockHeader, Network, TxMerkleNode, Txid};
+use bitcoin::{block, Block, BlockHash, Network, TxMerkleNode, Txid};
 use serde::{Deserialize, Serialize};
 
 use crate::tx::TransactionInfo;
@@ -16,15 +16,15 @@ pub struct BlockHeaderInfo {
 	pub nonce: u32,
 }
 
-impl<'a> GetInfo<BlockHeaderInfo> for BlockHeader {
+impl<'a> GetInfo<BlockHeaderInfo> for block::Header {
 	fn get_info(&self, _network: Network) -> BlockHeaderInfo {
 		BlockHeaderInfo {
 			block_hash: Some(self.block_hash()),
-			version: self.version,
+			version: self.version.to_consensus(),
 			previous_block_hash: self.prev_blockhash,
 			merkle_root: self.merkle_root,
 			time: self.time,
-			bits: self.bits,
+			bits: self.bits.to_consensus(),
 			nonce: self.nonce,
 		}
 	}

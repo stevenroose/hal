@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use bitcoin::consensus::encode::{deserialize, serialize};
-use bitcoin::{Block, BlockHeader};
+use bitcoin::{block, Block};
 
 use hal::block::{BlockHeaderInfo, BlockInfo};
 use crate::prelude::*;
@@ -59,17 +59,17 @@ Example format:
 	)
 }
 
-fn create_block_header(info: BlockHeaderInfo) -> BlockHeader {
+fn create_block_header(info: BlockHeaderInfo) -> block::Header {
 	if info.block_hash.is_some() {
 		warn!("Field \"block_hash\" is ignored.");
 	}
 
-	BlockHeader {
-		version: info.version,
+	block::Header {
+		version: block::Version::from_consensus(info.version),
 		prev_blockhash: info.previous_block_hash,
 		merkle_root: info.merkle_root,
 		time: info.time,
-		bits: info.bits,
+		bits: bitcoin::pow::CompactTarget::from_consensus(info.bits),
 		nonce: info.nonce,
 	}
 }
@@ -82,12 +82,15 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 		warn!("Field \"txids\" is ignored.");
 	}
 
+	let mut used_network = cmd::tx::UsedNetwork::new(args.explicit_network());
 	let block = Block {
 		header: create_block_header(info.header),
 		txdata: match (info.transactions, info.raw_transactions) {
 			(Some(_), Some(_)) => exit!("Can't provide transactions both in JSON and raw."),
 			(None, None) => exit!("No transactions provided."),
-			(Some(infos), None) => infos.into_iter().map(create_transaction).collect(),
+			(Some(infos), None) => infos.into_iter().map(|t| {
+				create_transaction(t, &mut used_network)
+			}).collect(),
 			(None, Some(raws)) => raws
 				.into_iter()
 				.map(|r| deserialize(&r.0).need("invalid raw transaction"))
@@ -118,7 +121,7 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 		let info = hal::block::BlockInfo {
 			header: hal::GetInfo::get_info(&block.header, args.network()),
 			bip34_block_height: block.bip34_block_height().ok(),
-			txids: Some(block.txdata.iter().map(|t| t.txid()).collect()),
+			txids: Some(block.txdata.iter().map(|t| t.compute_txid()).collect()),
 			transactions: None,
 			raw_transactions: None,
 		};
@@ -127,7 +130,7 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 		let block: Block = match deserialize(&raw_tx) {
 			Ok(block) => block,
 			Err(_) => {
-				let header: BlockHeader = deserialize(&raw_tx).expect("invalid block format");
+				let header = deserialize::<block::Header>(&raw_tx).expect("invalid block format");
 				let block = Block {
 					header: header,
 					txdata: Default::default(),

@@ -168,7 +168,7 @@ pub fn more_than_one(bools: &[bool]) -> bool {
 }
 
 pub trait ResultExt<T, E: fmt::Display>: Into<Result<T, E>> {
-    #[cfg_attr(rust_v_1_46, track_caller)]
+    #[track_caller]
     fn need(self, msg: &str) -> T {
         match self.into() {
             Ok(t) => t,
@@ -180,7 +180,7 @@ pub trait ResultExt<T, E: fmt::Display>: Into<Result<T, E>> {
 impl<T, E: fmt::Display> ResultExt<T, E> for std::result::Result<T, E> {}
 
 pub trait OptionExt<T>: Into<Option<T>> {
-    #[cfg_attr(rust_v_1_46, track_caller)]
+    #[track_caller]
     fn need(self, msg: &str) -> T {
         match self.into() {
             Some(t) => t,

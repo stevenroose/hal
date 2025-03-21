@@ -75,7 +75,7 @@ pub struct DescriptorInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub witness_script: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub max_satisfaction_weight: Option<usize>,
+	pub max_satisfaction_weight: Option<u64>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub policy: Option<String>,
 }

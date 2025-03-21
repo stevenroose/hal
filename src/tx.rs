@@ -1,5 +1,5 @@
 use bitcoin::consensus::encode::serialize;
-use bitcoin::{Address, Network, Script, Transaction, TxIn, TxOut, Txid, Wtxid};
+use bitcoin::{address, Address, Amount, Network, Script, Transaction, TxIn, TxOut, Txid, Wtxid};
 use serde::{Deserialize, Serialize};
 
 use crate::{GetInfo, HexBytes};
@@ -16,7 +16,7 @@ impl<'a> GetInfo<InputScriptInfo> for InputScript<'a> {
 	fn get_info(&self, _network: Network) -> InputScriptInfo {
 		InputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
-			asm: Some(self.0.asm()),
+			asm: Some(self.0.to_asm_string()),
 		}
 	}
 }
@@ -55,7 +55,7 @@ pub struct OutputScriptInfo {
 	#[serde(skip_serializing_if = "Option::is_none", rename = "type")]
 	pub type_: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub address: Option<Address>,
+	pub address: Option<Address<address::NetworkUnchecked>>,
 }
 
 pub struct OutputScript<'a>(pub &'a Script);
@@ -64,7 +64,7 @@ impl<'a> GetInfo<OutputScriptInfo> for OutputScript<'a> {
 	fn get_info(&self, network: Network) -> OutputScriptInfo {
 		OutputScriptInfo {
 			hex: Some(self.0.to_bytes().into()),
-			asm: Some(self.0.asm()),
+			asm: Some(self.0.to_asm_string()),
 			type_: Some(
 				if self.0.is_p2pk() {
 					"p2pk"
@@ -74,25 +74,26 @@ impl<'a> GetInfo<OutputScriptInfo> for OutputScript<'a> {
 					"opreturn"
 				} else if self.0.is_p2sh() {
 					"p2sh"
-				} else if self.0.is_v0_p2wpkh() {
+				} else if self.0.is_p2wpkh() {
 					"p2wpkh"
-				} else if self.0.is_v0_p2wsh() {
+				} else if self.0.is_p2wsh() {
 					"p2wsh"
-				} else if self.0.is_v1_p2tr() {
+				} else if self.0.is_p2tr() {
 					"p2tr"
 				} else {
 					"unknown"
 				}
 				.to_owned(),
 			),
-			address: Address::from_script(&self.0, network).ok(),
+			address: Address::from_script(&self.0, network).ok().map(|a| a.as_unchecked().clone()),
 		}
 	}
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct OutputInfo {
-	pub value: Option<u64>,
+	#[serde(with = "bitcoin::amount::serde::as_sat::opt")]
+	pub value: Option<Amount>,
 	pub script_pub_key: Option<OutputScriptInfo>,
 }
 
@@ -121,18 +122,18 @@ pub struct TransactionInfo {
 
 impl GetInfo<TransactionInfo> for Transaction {
 	fn get_info(&self, network: Network) -> TransactionInfo {
-		let weight = self.weight() as usize;
+		let weight = self.weight().to_wu() as usize;
 		TransactionInfo {
-			txid: Some(self.txid()),
-			wtxid: Some(self.wtxid()),
-			version: Some(self.version),
-			locktime: Some(self.lock_time.to_u32()),
+			txid: Some(self.compute_txid()),
+			wtxid: Some(self.compute_wtxid()),
+			version: Some(self.version.0),
+			locktime: Some(self.lock_time.to_consensus_u32()),
 			size: Some(serialize(self).len()),
 			weight: Some(weight),
 			vsize: Some(weight / 4),
 			inputs: Some(self.input.iter().map(|i| i.get_info(network)).collect()),
 			outputs: Some(self.output.iter().map(|o| o.get_info(network)).collect()),
-			total_output_value: Some(self.output.iter().map(|o| o.value).sum()),
+			total_output_value: Some(self.output.iter().map(|o| o.value.to_sat()).sum()),
 		}
 	}
 }

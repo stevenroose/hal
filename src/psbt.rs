@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use bitcoin::util::{bip32, sighash, psbt};
-use bitcoin::Network;
+use bitcoin::{bip32, sighash, psbt, Network};
 
 use crate::{tx, GetInfo, HexBytes};
 
@@ -22,15 +21,15 @@ pub fn sighashtype_to_string(sht: psbt::PsbtSighashType) -> &'static str {
 			sighash::EcdsaSighashType::NonePlusAnyoneCanPay => "NONE|ANYONECANPAY",
 			sighash::EcdsaSighashType::SinglePlusAnyoneCanPay => "SINGLE|ANYONECANPAY",
 		}
-	} else if let Ok(t) = sht.schnorr_hash_ty() {
+	} else if let Ok(t) = sht.taproot_hash_ty() {
 		match t {
-            sighash::SchnorrSighashType::Default => "SIGHASH_DEFAULT",
-            sighash::SchnorrSighashType::All => "SIGHASH_ALL",
-            sighash::SchnorrSighashType::None => "SIGHASH_NONE",
-            sighash::SchnorrSighashType::Single => "SIGHASH_SINGLE",
-            sighash::SchnorrSighashType::AllPlusAnyoneCanPay => "SIGHASH_ALL|SIGHASH_ANYONECANPAY",
-            sighash::SchnorrSighashType::NonePlusAnyoneCanPay => "SIGHASH_NONE|SIGHASH_ANYONECANPAY",
-            sighash::SchnorrSighashType::SinglePlusAnyoneCanPay => "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY",
+            sighash::TapSighashType::Default => "SIGHASH_DEFAULT",
+            sighash::TapSighashType::All => "SIGHASH_ALL",
+            sighash::TapSighashType::None => "SIGHASH_NONE",
+            sighash::TapSighashType::Single => "SIGHASH_SINGLE",
+            sighash::TapSighashType::AllPlusAnyoneCanPay => "SIGHASH_ALL|SIGHASH_ANYONECANPAY",
+            sighash::TapSighashType::NonePlusAnyoneCanPay => "SIGHASH_NONE|SIGHASH_ANYONECANPAY",
+            sighash::TapSighashType::SinglePlusAnyoneCanPay => "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY",
 		}
 	} else {
 		unreachable!();
@@ -93,7 +92,7 @@ impl GetInfo<PsbtInputInfo> for psbt::Input {
 			for (key, value) in self.bip32_derivation.iter() {
 				ret.insert(key.serialize().to_vec().into(),
 					HDPathInfo {
-						master_fingerprint: value.0[..].into(),
+						master_fingerprint: value.0,
 						path: value.1.clone(),
 					},
 				);
@@ -148,7 +147,7 @@ impl GetInfo<PsbtOutputInfo> for psbt::Output {
 				for (key, value) in self.bip32_derivation.iter() {
 					hd_keypaths.insert(key.serialize().to_vec().into(),
 						HDPathInfo {
-							master_fingerprint: value.0[..].into(),
+							master_fingerprint: value.0,
 							path: value.1.clone(),
 						},
 					);
@@ -166,7 +165,7 @@ pub struct PsbtInfo {
 	pub outputs: Vec<PsbtOutputInfo>,
 }
 
-impl GetInfo<PsbtInfo> for psbt::PartiallySignedTransaction {
+impl GetInfo<PsbtInfo> for psbt::Psbt {
 	fn get_info(&self, network: Network) -> PsbtInfo {
 		PsbtInfo {
 			unsigned_tx: self.unsigned_tx.get_info(network),

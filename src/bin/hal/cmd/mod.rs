@@ -9,7 +9,6 @@ pub mod ln;
 pub mod merkle;
 pub mod message;
 pub mod miniscript;
-pub mod musig;
 pub mod psbt;
 pub mod random;
 pub mod script;
@@ -29,7 +28,6 @@ pub fn subcommands() -> Vec<clap::App<'static, 'static>> {
 		merkle::subcommand(),
 		message::subcommand(),
 		miniscript::subcommand(),
-		musig::subcommand(),
 		psbt::subcommand(),
 		random::subcommand(),
 		script::subcommand(),

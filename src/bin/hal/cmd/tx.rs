@@ -1,8 +1,10 @@
 use std::convert::TryInto;
 use std::io::Write;
 
+use bitcoin::address::NetworkUnchecked;
 use bitcoin::consensus::encode::{deserialize, serialize};
-use bitcoin::{Network, OutPoint, Script, Transaction, TxIn, TxOut};
+use bitcoin::blockdata::transaction;
+use bitcoin::{Address, Network, OutPoint, ScriptBuf, Transaction, TxIn, TxOut};
 
 use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
 use crate::prelude::*;
@@ -95,7 +97,7 @@ fn outpoint_from_input_info(input: &InputInfo) -> OutPoint {
 	}
 }
 
-fn create_script_sig(ss: InputScriptInfo) -> Script {
+fn create_script_sig(ss: InputScriptInfo) -> ScriptBuf {
 	if let Some(hex) = ss.hex {
 		if ss.asm.is_some() {
 			warn!("Field \"asm\" of input is ignored.");
@@ -115,13 +117,31 @@ fn create_input(input: InputInfo) -> TxIn {
 		script_sig: input.script_sig.map(create_script_sig).unwrap_or_default(),
 		sequence: bitcoin::Sequence::from_height(input.sequence.unwrap_or_default().try_into().need("Invalid sequence")),
 		witness: match input.witness {
-			Some(ref w) => bitcoin::Witness::from_vec(w.iter().map(|h| h.clone().0).collect()),
+			Some(ref w) => bitcoin::Witness::from_slice(&w.iter().map(|h| &h.0).collect::<Vec<_>>()),
 			None => bitcoin::Witness::new(),
 		},
 	}
 }
 
-fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network>) -> Script {
+/// We use this type to track possible networks used by the user.
+pub struct UsedNetwork {
+	possible: Vec<Network>,
+}
+
+impl UsedNetwork {
+	pub fn new(network: Option<Network>) -> UsedNetwork {
+		UsedNetwork { possible: network.into_iter().collect() }
+	}
+
+	fn register_addr(&mut self, addr: &Address<NetworkUnchecked>) {
+		self.possible.retain(|n| addr.is_valid_for_network(*n));
+		if self.possible.is_empty() {
+			exit!("incompatible use of networks in addresses: {:?}", addr);
+		}
+	}
+}
+
+fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut UsedNetwork) -> ScriptBuf {
 	if spk.type_.is_some() {
 		warn!("Field \"type\" of output is ignored.");
 	}
@@ -129,9 +149,7 @@ fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network
 	// First check consistency of the address, if given.
 	if let Some(ref addr) = spk.address {
 		// Error if another network had already been used.
-		if used_network.replace(addr.network).unwrap_or(addr.network) != addr.network {
-			exit!("Addresses for different networks are used in the output scripts.");
-		}
+		used_network.register_addr(addr);
 	}
 
 	if let Some(hex) = spk.hex {
@@ -152,27 +170,23 @@ fn create_script_pubkey(spk: OutputScriptInfo, used_network: &mut Option<Network
 		//TODO(stevenroose) support script disassembly
 		exit!("Decoding script assembly is not yet supported.");
 	} else if let Some(address) = spk.address {
-		address.script_pubkey()
+		address.assume_checked().script_pubkey()
 	} else {
 		exit!("No scriptPubKey info provided.");
 	}
 }
 
-fn create_output(output: OutputInfo) -> TxOut {
-	// Keep track of which network has been used in addresses and error if two different networks
-	// are used.
-	let mut used_network = None;
-
+fn create_output(output: OutputInfo, used_network: &mut UsedNetwork) -> TxOut {
 	TxOut {
 		value: output.value.need("Field \"value\" is required for outputs."),
 		script_pubkey: output
 			.script_pub_key
-			.map(|s| create_script_pubkey(s, &mut used_network))
+			.map(|s| create_script_pubkey(s, used_network))
 			.unwrap_or_default(),
 	}
 }
 
-pub fn create_transaction(info: TransactionInfo) -> Transaction {
+pub fn create_transaction(info: TransactionInfo, used_network: &mut UsedNetwork) -> Transaction {
 	// Fields that are ignored.
 	if info.txid.is_some() {
 		warn!("Field \"txid\" is ignored.");
@@ -191,21 +205,21 @@ pub fn create_transaction(info: TransactionInfo) -> Transaction {
 	}
 
 	Transaction {
-		version: info.version.need("Field \"version\" is required."),
-		lock_time: bitcoin::LockTime::from_height(info.locktime.need("Field \"locktime\" is required."))
-			.need("Field \"lockime\" is invalid").into(),
+		version: transaction::Version(info.version.need("Field \"version\" is required.")),
+		lock_time: bitcoin::absolute::LockTime::from_height(
+			info.locktime.need("Field \"locktime\" is required.")
+		).need("Field \"lockime\" is invalid").into(),
 		input: info
 			.inputs
 			.need("Field \"inputs\" is required.")
 			.into_iter()
 			.map(create_input)
 			.collect(),
-		output: info
-			.outputs
-			.need("Field \"outputs\" is required.")
-			.into_iter()
-			.map(create_output)
-			.collect(),
+		output: {
+			info.outputs.need("Field \"outputs\" is required.")
+			.into_iter().map(|o| create_output(o, used_network))
+			.collect()
+		},
 	}
 }
 
@@ -213,7 +227,8 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 	let info = serde_json::from_str::<TransactionInfo>(&util::arg_or_stdin(args, "tx-info"))
 		.need("invalid JSON provided");
 
-	let tx = create_transaction(info);
+	let mut used_network = UsedNetwork::new(args.explicit_network());
+	let tx = create_transaction(info, &mut used_network);
 	let tx_bytes = serialize(&tx);
 	if args.is_present("raw-stdout") {
 		::std::io::stdout().write_all(&tx_bytes).unwrap();

@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::process;
 
 use bitcoin::{Block, Txid};
-use bitcoin::util::merkleblock::PartialMerkleTree;
+use bitcoin::merkle_tree::PartialMerkleTree;
 use clap;
 
 use crate::prelude::*;
@@ -37,7 +37,7 @@ fn exec_proof_create<'a>(args: &clap::ArgMatches<'a>) {
 	let block_txids: Vec<Txid> = {
 		if let Some(block_res) = args.hex_consensus::<Block>("block") {
 			let block = block_res.need("invalid block");
-			block.txdata.iter().map(|tx| tx.txid()).collect()
+			block.txdata.iter().map(|tx| tx.compute_txid()).collect()
 		} else if let Some(txids) = args.value_of("block-txid") {
 			txids.split(",").map(|s| Txid::from_str(s).need("invalid block txid")).collect()
 		} else {

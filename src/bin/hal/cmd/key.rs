@@ -54,7 +54,7 @@ fn exec_generate<'a>(args: &clap::ArgMatches<'a>) {
 	let secret_key = secp256k1::SecretKey::from_slice(&entropy[..]).unwrap();
 	let privkey = bitcoin::PrivateKey {
 		compressed: true,
-		network: network,
+		network: network.into(),
 		inner: secret_key,
 	};
 
@@ -104,7 +104,8 @@ fn exec_ecdsa_sign<'a>(args: &clap::ArgMatches<'a>) {
 	if args.is_present("reverse") {
 		msg_bytes.reverse();
 	}
-	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
+	let msg = secp256k1::Message::from_digest_slice(&msg_bytes[..])
+		.need("invalid message to be signed");
 	let privkey = args.need_privkey("privkey");
 	let signature = SECP.sign_ecdsa(&msg, &privkey.inner);
 	args.print_output(&signature.get_info(network))
@@ -129,7 +130,8 @@ fn exec_ecdsa_verify<'a>(args: &clap::ArgMatches<'a>) {
 	if args.is_present("reverse") {
 		msg_bytes.reverse();
 	}
-	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
+	let msg = secp256k1::Message::from_digest_slice(&msg_bytes[..])
+		.need("invalid message to be signed");
 	let pubkey = args.need_pubkey("pubkey");
 	let sig = {
 		let hex = args.value_of("signature").need("no signature provided");
@@ -146,7 +148,7 @@ fn exec_ecdsa_verify<'a>(args: &clap::ArgMatches<'a>) {
 	// Perhaps the user should have passed --reverse.
 	if !valid && !args.is_present("no-try-reverse") {
 		msg_bytes.reverse();
-		let msg = secp256k1::Message::from_slice(&msg_bytes[..])
+		let msg = secp256k1::Message::from_digest_slice(&msg_bytes[..])
 			.need("invalid message to be signed");
 		if SECP.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok() {
 			eprintln!("Signature is valid for the reverse message.");
@@ -183,9 +185,10 @@ fn exec_schnorr_sign<'a>(args: &clap::ArgMatches<'a>) {
 	if args.is_present("reverse") {
 		msg_bytes.reverse();
 	}
-	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
+	let msg = secp256k1::Message::from_digest_slice(&msg_bytes[..])
+		.need("invalid message to be signed");
 	let privkey = args.need_privkey("privkey");
-	let keypair = secp256k1::KeyPair::from_secret_key(&SECP, &privkey.inner);
+	let keypair = secp256k1::Keypair::from_secret_key(&SECP, &privkey.inner);
 	let signature = SECP.sign_schnorr_with_rng(&msg, &keypair, &mut rand::thread_rng());
 	print!("{:x}", &signature);
 }
@@ -209,7 +212,8 @@ fn exec_schnorr_verify<'a>(args: &clap::ArgMatches<'a>) {
 	if args.is_present("reverse") {
 		msg_bytes.reverse();
 	}
-	let msg = secp256k1::Message::from_slice(&msg_bytes[..]).need("invalid message to be signed");
+	let msg = secp256k1::Message::from_digest_slice(&msg_bytes[..])
+		.need("invalid message to be signed");
 	let pubkey = args.need_xonly_pubkey("pubkey");
 	let sig = {
 		let hex = args.value_of("signature").need("no signature provided");
@@ -222,7 +226,7 @@ fn exec_schnorr_verify<'a>(args: &clap::ArgMatches<'a>) {
 	// Perhaps the user should have passed --reverse.
 	if !valid && !args.is_present("no-try-reverse") {
 		msg_bytes.reverse();
-		let msg = secp256k1::Message::from_slice(&msg_bytes[..])
+		let msg = secp256k1::Message::from_digest_slice(&msg_bytes[..])
 			.need("invalid message to be signed");
 		if SECP.verify_schnorr(&sig, &msg, &pubkey).is_ok() {
 			eprintln!("Signature is valid for the reverse message.");

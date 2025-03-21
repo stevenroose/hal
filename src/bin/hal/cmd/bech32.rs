@@ -1,4 +1,5 @@
-use bitcoin::bech32::{decode, encode, CheckBase32, FromBase32, ToBase32, Variant};
+
+use bitcoin::bech32;
 use clap;
 use hex;
 
@@ -26,32 +27,24 @@ fn cmd_encode<'a>() -> clap::App<'a, 'a> {
 			"payload-hex",
 			"hex-encoded payload bytes, 8-bit values\nunless --no-convert is specified",
 		))
-		.arg(args::flag("no-convert", "Do not convert payload to base32"))
+		.arg(args::opt("legacy", "encode using legacy bech32, not bech32m"))
 }
 
 fn exec_encode<'a>(args: &clap::ArgMatches<'a>) {
 	let hrp = args.value_of("hrp").need("missing required argument");
+	let hrp = bech32::Hrp::parse(hrp).need("invalid HRP");
 	let hex = util::arg_or_stdin(args, "payload-hex");
 
-	let payload: Vec<u8> = hex::decode(hex.as_ref()).need("invalid hex");
-
-	let payload_base32 = if args.is_present("no-convert") {
-		payload.check_base32().need("invalid base32 payload")
+	let payload = hex::decode(hex.as_ref()).need("invalid hex");
+	let bech32 = if args.is_present("legacy") {
+		bech32::encode::<bech32::Bech32>(hrp, &payload).need("encode failure")
 	} else {
-		payload.to_base32()
+		bech32::encode::<bech32::Bech32m>(hrp, &payload).need("encode failure")
 	};
-
-	let bech32 = encode(hrp, payload_base32.to_vec(), Variant::Bech32).need("encode failure");
-	let payload_as_u8: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
-
 	let info = hal::bech32::Bech32Info {
 		bech32,
 		hrp: hrp.to_string(),
-		payload: payload_as_u8.into(),
-		payload_bytes: match Vec::<u8>::from_base32(&payload_base32) {
-			Ok(p) => Some(p.into()),
-			Err(_) => None,
-		},
+		payload: payload.into(),
 	};
 
 	args.print_output(&info)
@@ -59,30 +52,18 @@ fn exec_encode<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("decode", "decode bech32 format")
-		.arg(args::arg("string", "a bech32 string"))
-		.arg(args::flag(
-			"convert-bits",
-			"Attempt to convert payload from 5-bit to 8-bit values.\nNOTE: Does not work for BIP-173 addresses."
-		).short("c"))
+		.arg(args::arg("bech32", "a bech32 string"))
 }
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let s = util::arg_or_stdin(args, "string");
 
-	let (hrp, payload_base32, _variant) = decode(&s).need("decode failure");
-	let payload_as_u8: Vec<u8> = payload_base32.to_vec().iter().map(|b| b.to_u8()).collect();
+	let (hrp, payload) = bech32::decode(&s).need("invalid bech32");
 
 	let info = hal::bech32::Bech32Info {
 		bech32: s.to_string(),
-		hrp,
-		payload: payload_as_u8.into(),
-		payload_bytes: if args.is_present("convert-bits") {
-			let converted =
-				Vec::<u8>::from_base32(&payload_base32).need("error converting payload to 8-bit");
-			Some(converted.into())
-		} else {
-			None
-		},
+		hrp: hrp.to_string(),
+		payload: payload.into(),
 	};
 
 	args.print_output(&info)

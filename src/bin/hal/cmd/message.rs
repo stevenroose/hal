@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use bitcoin::hashes::Hash;
 use bitcoin::secp256k1;
 use bitcoin::{Address, AddressType, PublicKey};
 use clap;
@@ -30,12 +31,11 @@ fn cmd_hash<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_hash<'a>(args: &clap::ArgMatches<'a>) {
-	use bitcoin::hashes::Hash;
 	let msg = args.value_of("message").need("no message provided");
 	let res = hal::message::MessageHash {
 		sha256: bitcoin::hashes::sha256::Hash::hash(msg.as_bytes()),
 		sha256d: bitcoin::hashes::sha256d::Hash::hash(msg.as_bytes()),
-		sign_hash: bitcoin::util::misc::signed_msg_hash(&msg),
+		sign_hash: bitcoin::sign_message::signed_msg_hash(&msg),
 	};
 
 	args.print_output(&res)
@@ -51,10 +51,10 @@ fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
 	let privkey = args.need_privkey("key");
 
 	let msg = util::arg_or_stdin(args, "message");
-	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
+	let hash = bitcoin::sign_message::signed_msg_hash(&msg);
 
 	let signature = SECP.sign_ecdsa_recoverable(
-		&secp256k1::Message::from_slice(&hash).unwrap(), &privkey.inner,
+		&secp256k1::Message::from_digest(hash.to_byte_array()), &privkey.inner,
 	);
 
 	let (recid, raw) = signature.serialize_compact();
@@ -114,11 +114,11 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 		.need("invalid recoverable signature");
 
 	let msg = util::arg_or_stdin(args, "message");
-	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
+	let hash = bitcoin::sign_message::signed_msg_hash(&msg);
 
 	let pubkey = PublicKey {
 		inner: SECP
-			.recover_ecdsa(&secp256k1::Message::from_slice(&hash).unwrap(), &signature)
+			.recover_ecdsa(&secp256k1::Message::from_digest(hash.to_byte_array()), &signature)
 			.need("invalid signature"),
 		compressed: compressed,
 	};
@@ -129,15 +129,23 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 			exit!("Signed for pubkey {}, expected {}", pubkey, pk);
 		}
 	} else if let Ok(expected) = signer_addr_res {
+		let expected = expected.require_network(network)
+			.need("invalid network on expected address");
 		let addr = match expected.address_type() {
 			None => exit!("Unknown address type provided"),
 			Some(AddressType::P2pkh) => Address::p2pkh(&pubkey, network),
-			Some(AddressType::P2wpkh) => {
-				Address::p2wpkh(&pubkey, network).need("Uncompressed key in Segwit")
-			}
-			Some(AddressType::P2sh) => {
-				Address::p2shwpkh(&pubkey, network).need("Uncompressed key in Segwit")
-			}
+			Some(AddressType::P2wpkh) => if compressed {
+				let pk = bitcoin::CompressedPublicKey(pubkey.inner);
+				Address::p2wpkh(&pk, network)
+			} else {
+				exit!("Uncompressed key in Segwit");
+			},
+			Some(AddressType::P2sh) => if compressed {
+				let pk = bitcoin::CompressedPublicKey(pubkey.inner);
+				Address::p2shwpkh(&pk, network)
+			} else {
+				exit!("Uncompressed key in Segwit")
+			},
 			Some(tp) => exit!("Address of type {} can't sign messages.", tp),
 		};
 		// We need to use to_string because regtest and testnet addresses are the same.
@@ -183,10 +191,10 @@ fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {
 		.need("invalid recoverable signature");
 
 	let msg = args.value_of("message").need("no message given");
-	let hash = bitcoin::util::misc::signed_msg_hash(&msg);
+	let hash = bitcoin::sign_message::signed_msg_hash(&msg);
 
 	let pubkey = SECP
-		.recover_ecdsa(&secp256k1::Message::from_slice(&hash).unwrap(), &signature)
+		.recover_ecdsa(&secp256k1::Message::from_digest(hash.to_byte_array()), &signature)
 		.need("invalid signature");
 
 	let bitcoin_key = PublicKey {

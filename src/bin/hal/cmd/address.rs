@@ -1,9 +1,10 @@
 
 use std::str::FromStr;
 
+use bitcoin::address::AddressData;
 use bitcoin::hashes::Hash;
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::{Address, WPubkeyHash, WScriptHash};
+use bitcoin::{Address, ScriptBuf, WPubkeyHash, WScriptHash};
 use clap;
 
 use hal;
@@ -70,7 +71,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 
 	if let Some(spk) = args.value_of("scriptpubkey") {
 		let script_bytes = hex::decode(spk).need("invalid scriptpubkey hex");
-		let script = bitcoin::Script::from(script_bytes);
+		let script = ScriptBuf::from(script_bytes);
 		let addr = Address::from_script(&script, network).need("invalid scriptPubkey");
 		println!("{}", addr)
 	} else if let Some(pubkey) = args.flexible_pubkey("pubkey") {
@@ -81,7 +82,7 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 		args.print_output(&addr)
 	} else if let Some(script_hex) = args.value_of("script") {
 		let script_bytes = hex::decode(script_hex).need("invalid script hex");
-		let script = bitcoin::Script::from(script_bytes);
+		let script = ScriptBuf::from(script_bytes);
 
 		let p2tr = {
 			// If the user provided NUMS information we can add a p2tr address.
@@ -113,11 +114,11 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 				eprintln!("No NUMS key info provided, will use H NUMS from BIP-341 for p2tr.");
 				*NUMS_H
 			};
-			Address::from_script(&script.to_v1_p2tr(&SECP, internal.into()), network).unwrap()
+			Address::from_script(&script.to_p2tr(&SECP, internal.into()), network).unwrap()
 		};
 
 		let mut ret = hal::address::Addresses::from_script(&script, network);
-		assert!(ret.p2tr.replace(p2tr).is_none(), "Addresses::from_script shouldn't set p2tr");
+		assert!(ret.p2tr.replace(p2tr.as_unchecked().clone()).is_none(), "Addresses::from_script shouldn't set p2tr");
 
 		args.print_output(&ret)
 	} else {
@@ -133,14 +134,15 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 	let address_str = args.value_of("address").need("no address provided");
-	let address: Address = address_str.parse().need("invalid address format");
+	let address = Address::from_str(address_str)
+		.need("invalid address format")
+		.assume_checked();
 	let script_pk = address.script_pubkey();
 
 	let mut info = hal::address::AddressInfo {
-		network: address.network,
 		script_pub_key: hal::tx::OutputScriptInfo {
 			hex: Some(script_pk.to_bytes().into()),
-			asm: Some(script_pk.asm()),
+			asm: Some(script_pk.to_asm_string()),
 			address: None,
 			type_: None,
 		},
@@ -152,39 +154,37 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 		witness_program_version: None,
 	};
 
-	use bitcoin::util::address::Payload;
-	match address.payload {
-		Payload::PubkeyHash(pkh) => {
+	match address.to_address_data() {
+		AddressData::P2pkh { pubkey_hash } => {
 			info.type_ = Some("p2pkh".to_owned());
-			info.pubkey_hash = Some(pkh);
-		}
-		Payload::ScriptHash(sh) => {
+			info.pubkey_hash = Some(pubkey_hash);
+		},
+		AddressData::P2sh { script_hash } => {
 			info.type_ = Some("p2sh".to_owned());
-			info.script_hash = Some(sh);
-		}
-		Payload::WitnessProgram {
-			version,
-			program,
-		} => {
-			let version = version.to_num() as usize;
+			info.script_hash = Some(script_hash);
+		},
+		AddressData::Segwit { witness_program } => {
+			let version = witness_program.version().to_num() as usize;
 			info.witness_program_version = Some(version);
+			let program = witness_program.program();
 
 			if version == 0 {
 				if program.len() == 20 {
 					info.type_ = Some("p2wpkh".to_owned());
 					info.witness_pubkey_hash =
-						Some(WPubkeyHash::from_slice(&program).need("size 20"));
+						Some(WPubkeyHash::from_slice(program.as_bytes()).need("size 20"));
 				} else if program.len() == 32 {
 					info.type_ = Some("p2wsh".to_owned());
 					info.witness_script_hash =
-						Some(WScriptHash::from_slice(&program).need("size 32"));
+						Some(WScriptHash::from_slice(program.as_bytes()).need("size 32"));
 				} else {
 					info.type_ = Some("invalid-witness-program".to_owned());
 				}
 			} else {
 				info.type_ = Some("unknown-witness-program-version".to_owned());
 			}
-		}
+		},
+		_ => exit!("unknown address type"),
 	}
 
 	args.print_output(&info)

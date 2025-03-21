@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use bip39lib::{Language, Mnemonic};
 use bitcoin::Network;
-use bitcoin::util::bip32;
+use bitcoin::bip32;
 use serde::{Deserialize, Serialize};
 
 use crate::{SECP, GetInfo, HexBytes};
@@ -56,15 +56,15 @@ impl GetInfo<MnemonicInfo> for Mnemonic {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct SeedInfo {
 	pub seed: HexBytes,
-	pub bip32_xpriv: bip32::ExtendedPrivKey,
-	pub bip32_xpub: bip32::ExtendedPubKey,
+	pub bip32_xpriv: bip32::Xpriv,
+	pub bip32_xpub: bip32::Xpub,
 }
 
 impl GetInfo<SeedInfo> for [u8; 64] {
 	fn get_info(&self, network: Network) -> SeedInfo {
-		let xpriv = bip32::ExtendedPrivKey::new_master(network, &self[..]).unwrap();
+		let xpriv = bip32::Xpriv::new_master(network, &self[..]).unwrap();
 		let xpub =
-			bip32::ExtendedPubKey::from_priv(&SECP, &xpriv);
+			bip32::Xpub::from_priv(&SECP, &xpriv);
 		SeedInfo {
 			seed: self.to_vec().into(),
 			bip32_xpriv: xpriv,
@@ -116,7 +116,7 @@ mod tests {
 	#[test]
 	fn test_parse_language() {
 		// a simple check all
-		for l in Language::all() {
+		for l in Language::ALL {
 			assert_eq!(Some(*l), parse_language(&l.to_string()), "lang: {}", l);
 			assert_eq!(Some(*l), parse_language(&l.to_string().to_uppercase()), "lang: {}", l);
 		}
