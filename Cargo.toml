@@ -26,6 +26,7 @@ cli = ["base64-compat", "clap", "fern", "log", "jobserver", "shell-escape"]
 [dependencies]
 bitcoin = { version = "0.32.5", features = [ "std", "serde", "rand", "rand-std" ] }
 secp256k1 = { version = "0.29", features = [ "recovery" ] }
+secp256k1_zkp_musig = { package = "secp256k1-zkp", git = "https://github.com/sanket1729/rust-secp256k1-zkp.git", rev = "0de61c2cc536a58f08822851528a5dfa5968d155" }
 bip39 = { version = "2.1.0", features = [ "all-languages" ] }
 lightning-invoice = { version = "0.32.0", features = [ "std" ] }
 miniscript = { version = "12.3.0", features = ["compiler"] }

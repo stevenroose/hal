@@ -141,6 +141,7 @@ fn main() {
 		("merkle", Some(ref m)) => cmd::merkle::execute(&m),
 		("message", Some(ref m)) => cmd::message::execute(&m),
 		("miniscript", Some(ref m)) => cmd::miniscript::execute(&m),
+		("musig", Some(ref m)) => cmd::musig::execute(&m),
 		("psbt", Some(ref m)) => cmd::psbt::execute(&m),
 		("random", Some(ref m)) => cmd::random::execute(&m),
 		("script", Some(ref m)) => cmd::script::execute(&m),
