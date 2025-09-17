@@ -191,21 +191,26 @@ pub trait OptionExt<T>: Into<Option<T>> {
 
 impl<T> OptionExt<T> for std::option::Option<T> {}
 
-#[test]
-fn test_lev_distance() {
-	use std::char::{from_u32, MAX};
-	// Test bytelength agnosticity
-	for c in (0u32..MAX as u32).filter_map(from_u32).map(|i| i.to_string()) {
-		assert_eq!(lev_distance(&c, &c), 0);
-	}
+#[cfg(test)]
+mod test {
+	use super::*;
 
-	let a = "\nMäry häd ä little lämb\n\nLittle lämb\n";
-	let b = "\nMary häd ä little lämb\n\nLittle lämb\n";
-	let c = "Mary häd ä little lämb\n\nLittle lämb\n";
-	assert_eq!(lev_distance(a, b), 1);
-	assert_eq!(lev_distance(b, a), 1);
-	assert_eq!(lev_distance(a, c), 2);
-	assert_eq!(lev_distance(c, a), 2);
-	assert_eq!(lev_distance(b, c), 1);
-	assert_eq!(lev_distance(c, b), 1);
+	#[test]
+	fn test_lev_distance() {
+		use std::char::{from_u32, MAX};
+		// Test bytelength agnosticity
+		for c in (0u32..MAX as u32).filter_map(from_u32).map(|i| i.to_string()) {
+			assert_eq!(lev_distance(&c, &c), 0);
+		}
+
+		let a = "\nMäry häd ä little lämb\n\nLittle lämb\n";
+		let b = "\nMary häd ä little lämb\n\nLittle lämb\n";
+		let c = "Mary häd ä little lämb\n\nLittle lämb\n";
+		assert_eq!(lev_distance(a, b), 1);
+		assert_eq!(lev_distance(b, a), 1);
+		assert_eq!(lev_distance(a, c), 2);
+		assert_eq!(lev_distance(c, a), 2);
+		assert_eq!(lev_distance(b, c), 1);
+		assert_eq!(lev_distance(c, b), 1);
+	}
 }
