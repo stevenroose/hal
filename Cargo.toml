@@ -29,6 +29,7 @@ secp256k1 = { version = "0.29", features = [ "recovery" ] }
 bip39 = { version = "2.1.0", features = [ "all-languages" ] }
 lightning-invoice = { version = "0.33.2", features = [ "std" ] }
 miniscript = { version = "12.3.0", features = ["compiler"] }
+ark-lib = "0.1.0-beta.3"
 
 byteorder = "1.3.1"
 chrono = { version = "0.4.6", features = ["serde"] }

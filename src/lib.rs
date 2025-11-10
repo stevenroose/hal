@@ -11,6 +11,7 @@ extern crate secp256k1;
 extern crate serde;
 
 pub mod address;
+pub mod ark;
 pub mod bech32;
 pub mod bip32;
 pub mod bip39;

@@ -131,6 +131,7 @@ fn main() {
 
 	match args.subcommand() {
 		("address", Some(ref m)) => cmd::address::execute(&m),
+		("ark", Some(ref m)) => cmd::ark::execute(&m),
 		("bech32", Some(ref m)) => cmd::bech32::execute(&m),
 		("bip32", Some(ref m)) => cmd::bip32::execute(&m),
 		("bip39", Some(ref m)) => cmd::bip39::execute(&m),
