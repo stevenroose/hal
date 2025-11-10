@@ -86,8 +86,8 @@ $ cargo install --locked hal
 
 ## Minimum Supported Rust Version (MSRV)
 
-`hal` should always compile on **Rust 1.41.1**.
-Note that it should be build using the `Cargo.lock` file, so using `--locked`.
+`hal` should always compile on **Rust 1.74.0**.
+Note that it should be built using the provided `Cargo.lock` file, so using `--locked`.
 
 # Extensions
 
