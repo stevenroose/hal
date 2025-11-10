@@ -1,4 +1,5 @@
 pub mod address;
+pub mod ark;
 pub mod bech32;
 pub mod bip32;
 pub mod bip39;
@@ -18,6 +19,7 @@ pub mod tx;
 pub fn subcommands() -> Vec<clap::App<'static, 'static>> {
 	vec![
 		address::subcommand(),
+		ark::subcommand(),
 		bech32::subcommand(),
 		bip32::subcommand(),
 		bip39::subcommand(),
