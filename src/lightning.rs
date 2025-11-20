@@ -2,7 +2,7 @@
 use bitcoin::{address, Address, Network};
 use bitcoin::hashes::{sha256, Hash};
 use chrono::{offset::Local, DateTime, Duration};
-use lightning_invoice::{Bolt11Invoice, Currency, Bolt11InvoiceDescription, RouteHintHop};
+use lightning_invoice::{Bolt11Invoice, Bolt11InvoiceDescriptionRef, Currency, RouteHintHop};
 use serde::{Deserialize, Serialize};
 
 use crate::{GetInfo, HexBytes};
@@ -92,8 +92,8 @@ impl GetInfo<InvoiceInfo> for Bolt11Invoice {
 			timestamp: self.timestamp().clone().into(),
 			payment_hash: sha256::Hash::from_slice(&self.payment_hash()[..]).unwrap(),
 			description: match self.description() {
-				Bolt11InvoiceDescription::Direct(s) => s.clone().into_inner().0,
-				Bolt11InvoiceDescription::Hash(h) => h.0.to_string(),
+				Bolt11InvoiceDescriptionRef::Direct(s) => s.clone().into_inner().0,
+				Bolt11InvoiceDescriptionRef::Hash(h) => h.0.to_string(),
 			},
 			payee_pub_key: self.payee_pub_key().map(|pk| pk.serialize()[..].into()),
 			expiry_time: Some(

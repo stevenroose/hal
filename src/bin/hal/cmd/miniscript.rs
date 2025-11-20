@@ -1,5 +1,5 @@
 
-use bitcoin::hex::{DisplayHex, FromHex};
+use bitcoin::hex::DisplayHex;
 use bitcoin::ScriptBuf;
 use clap;
 use hal::miniscript::{
