@@ -2,7 +2,14 @@ CHANGELOG
 =========
 
 
+# v0.10.1  --  2025-11-20
+
+- add miniscript script command
+- add additional BOLT-11 invoice fields
+
+
 # v0.10.0  --  2025-03-21
+
 - update dependencies:
   - bitcoin to 0.32.5
   - secp256k1 to 0.29
