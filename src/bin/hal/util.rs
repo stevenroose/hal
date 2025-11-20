@@ -50,15 +50,6 @@ pub fn arg_or_stdin<'a>(args: &'a clap::ArgMatches<'a>, arg: &str) -> Cow<'a, st
 	}
 }
 
-/// Return all directories in which to search for external executables.
-pub fn search_directories() -> Vec<PathBuf> {
-	let mut dirs = Vec::new();
-	if let Some(val) = env::var_os("PATH") {
-		dirs.extend(env::split_paths(&val));
-	}
-	dirs
-}
-
 #[cfg(unix)]
 pub fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 	use std::os::unix::prelude::*;
@@ -83,27 +74,27 @@ pub fn list_commands() -> BTreeSet<CommandInfo> {
 		});
 	}
 
-	for dir in search_directories() {
-		let entries = match fs::read_dir(dir) {
-			Ok(entries) => entries,
+	let path = env::var_os("PATH").unwrap_or_default();
+	let all_execs = env::split_paths(&path)
+		.map(fs::read_dir)
+		.filter_map(Result::ok)
+		.flatten()
+		.filter_map(Result::ok);
+	for entry in all_execs {
+		let path = entry.path();
+		let filename = match path.file_name().and_then(|s| s.to_str()) {
+			Some(filename) => filename,
 			_ => continue,
 		};
-		for entry in entries.filter_map(|e| e.ok()) {
-			let path = entry.path();
-			let filename = match path.file_name().and_then(|s| s.to_str()) {
-				Some(filename) => filename,
-				_ => continue,
-			};
-			if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
-				continue;
-			}
-			if is_executable(entry.path()) {
-				let end = filename.len() - suffix.len();
-				commands.insert(CommandInfo::External {
-					name: filename[prefix.len()..end].to_string(),
-					path: path.clone(),
-				});
-			}
+		if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
+			continue;
+		}
+		if is_executable(entry.path()) {
+			let end = filename.len() - suffix.len();
+			commands.insert(CommandInfo::External {
+				name: filename[prefix.len()..end].to_string(),
+				path: path.clone(),
+			});
 		}
 	}
 
@@ -194,6 +185,12 @@ impl<T> OptionExt<T> for std::option::Option<T> {}
 #[cfg(test)]
 mod test {
 	use super::*;
+
+	#[test]
+	fn empty_path() {
+		let mut all_execs = env::split_paths(&"");
+		assert!(all_execs.next().unwrap().is_err());
+	}
 
 	#[test]
 	fn test_lev_distance() {

@@ -149,11 +149,11 @@ fn main() {
 			// Try execute an external subcommand.
 
 			let command_exe = format!("hal-{}{}", cmd, env::consts::EXE_SUFFIX);
-			let path = util::search_directories()
-				.iter()
+			let path = env::var_os("PATH").unwrap_or_default();
+			let execs = env::split_paths(&path)
 				.map(|dir| dir.join(&command_exe))
 				.find(|file| util::is_executable(file));
-			let command = match path {
+			let command = match execs {
 				Some(command) => command,
 				None => {
 					if let Some(closest) = util::find_closest(cmd) {
