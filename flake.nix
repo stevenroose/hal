@@ -1,52 +1,38 @@
 {
 	inputs = {
-		nixpkgs.url = "nixpkgs/nixos-24.05";
-		flake-utils = {
-			url = "github:numtide/flake-utils";
-		};
-		rust-overlay = {
-			url = "github:oxalica/rust-overlay";
+		nixpkgs.url = "nixpkgs/nixos-25.05";
+		flake-utils.url = "github:numtide/flake-utils";
+		fenix = {
+			url = "github:nix-community/fenix";
 			inputs.nixpkgs.follows = "nixpkgs";
 		};
 	};
 
-	outputs = { self, nixpkgs, flake-utils, rust-overlay }:
+	outputs = { self, nixpkgs, flake-utils, fenix }:
 		flake-utils.lib.eachDefaultSystem (system:
 			let
-				lib = nixpkgs.lib;
-				overlays = [ rust-overlay.overlays.default ];
-				target = lib.strings.replaceStrings [ "-" ] [ "_" ] pkgs.stdenv.buildPlatform.config;
 				pkgs = import nixpkgs {
-					inherit system overlays;
+					inherit system;
 				};
+				lib = pkgs.lib;
 
-				rustDefault = pkgs.rust-bin.stable."1.84.0".default.override {
-					extensions = [ "rust-src" "rust-analyzer" ];
-				};
-				rustMsrv = pkgs.rust-bin.stable."1.56.1".default.override {
-					extensions = [ "rust-src" ];
+				rustVersion = "1.74.0";
+				rustToolchain = fenix.packages.${system}.fromToolchainName {
+					name = rustVersion;
+					sha256 = "sha256-U2yfueFohJHjif7anmJB5vZbpP7G6bICH4ZsjtufRoU=";
 				};
 			in
 			{
 				devShells.default = pkgs.mkShell {
-					nativeBuildInput = [ ];
-					buildInputs = [
+					packages = [
+						rustToolchain.toolchain
+						rustToolchain.rust-analyzer
 						pkgs.git
 						pkgs.llvmPackages.clang
-						rustDefault
 					];
 
 					LIBCLANG_PATH = "${pkgs.llvmPackages.clang-unwrapped.lib}/lib/";
-				};
-				devShells.msrv = pkgs.mkShell {
-					nativeBuildInput = [ ];
-					buildInputs = [
-						pkgs.git
-						pkgs.llvmPackages.clang
-						rustMsrv
-					];
-
-					LIBCLANG_PATH = "${pkgs.llvmPackages.clang-unwrapped.lib}/lib/";
+					RUSTDOCS_STDLIB = "${rustToolchain.rust-docs}/share/doc/rust/html/std/index.html";
 				};
 			}
 		);
