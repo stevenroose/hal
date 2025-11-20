@@ -1,5 +1,5 @@
 
-use bitcoin::{address, Address, Network};
+use bitcoin::{address, Address, Amount, Network};
 use bitcoin::hashes::{sha256, Hash};
 use chrono::{offset::Local, DateTime, Duration};
 use lightning_invoice::{Bolt11Invoice, Bolt11InvoiceDescriptionRef, Currency, RouteHintHop};
@@ -8,6 +8,17 @@ use serde::{Deserialize, Serialize};
 use crate::{GetInfo, HexBytes};
 
 const WRONG_CID: &'static str = "incorrect short channel ID HRF format";
+
+/// taken from rust stdlib v1.73, can be removed once msrv moves
+fn div_ceil(v: u64, rhs: u64) -> u64 {
+	let d = v / rhs;
+	let r = v % rhs;
+	if r > 0 && rhs > 0 {
+		d + 1
+	} else {
+		d
+	}
+}
 
 /// Parse a short channel is in the form of `${blockheight)x$(txindex}x${outputindex}`.
 pub fn parse_short_channel_id(cid: &str) -> Result<u64, &'static str> {
@@ -63,6 +74,12 @@ impl GetInfo<RouteHopInfo> for RouteHintHop {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InvoiceInfo {
 	pub timestamp: DateTime<Local>,
+	pub network: Network,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub amount_msat: Option<u64>,
+	/// rounded amount to msat
+	#[serde(with = "bitcoin::amount::serde::as_sat::opt", skip_serializing_if = "Option::is_none")]
+	pub amount_sat: Option<Amount>,
 	pub payment_hash: sha256::Hash,
 	pub description: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -75,11 +92,19 @@ pub struct InvoiceInfo {
 	pub fallback_addresses: Vec<Address<address::NetworkUnchecked>>,
 	#[serde(skip_serializing_if = "Vec::is_empty")]
 	pub routes: Vec<Vec<RouteHopInfo>>,
+	#[serde(skip_serializing_if = "Vec::is_empty")]
+	pub private_routes: Vec<Vec<RouteHopInfo>>,
 	pub currency: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub features: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub payment_metadata: Option<HexBytes>,
+	pub payment_secret: HexBytes,
 
 	// For signed invoices.
 	pub signature: HexBytes,
 	pub signature_recover_id: i32,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub payee_pubkey: Option<HexBytes>,
 }
 
@@ -90,6 +115,10 @@ impl GetInfo<InvoiceInfo> for Bolt11Invoice {
 
 		InvoiceInfo {
 			timestamp: self.timestamp().clone().into(),
+			network: self.network(),
+			amount_msat: self.amount_milli_satoshis(),
+			amount_sat: self.amount_milli_satoshis()
+				.map(|msat| Amount::from_sat(div_ceil(msat, 1000))),
 			payment_hash: sha256::Hash::from_slice(&self.payment_hash()[..]).unwrap(),
 			description: match self.description() {
 				Bolt11InvoiceDescriptionRef::Direct(s) => s.clone().into_inner().0,
@@ -103,8 +132,11 @@ impl GetInfo<InvoiceInfo> for Bolt11Invoice {
 			min_final_cltv_expiry: Some(self.min_final_cltv_expiry_delta()),
 			fallback_addresses: self.fallback_addresses().into_iter()
 				.map(|a| a.to_string().parse().unwrap()).collect(),
-			routes: self.route_hints()
-				.iter().map(|r| r.0.iter().map(|h| GetInfo::get_info(h, network)).collect())
+			routes: self.route_hints().iter()
+				.map(|r| r.0.iter().map(|h| GetInfo::get_info(h, network)).collect())
+				.collect(),
+			private_routes: self.private_routes().iter()
+				.map(|r| r.0.iter().map(|h| GetInfo::get_info(h, network)).collect())
 				.collect(),
 			currency: match self.currency() {
 				Currency::Bitcoin => "bitcoin".to_owned(),
@@ -113,6 +145,10 @@ impl GetInfo<InvoiceInfo> for Bolt11Invoice {
 				Currency::Simnet => "bitcoin-simnet".to_owned(),
 				Currency::Signet => "bitcoin-signet".to_owned(),
 			},
+			features: self.features().map(|f| f.to_string()),
+			payment_metadata: self.payment_metadata().map(|b| b.clone().into()),
+			payment_secret: self.payment_secret().0.to_vec().into(),
+
 			signature: sig[..].into(),
 			signature_recover_id: sig_rec.to_i32(),
 			payee_pubkey: signed_raw
