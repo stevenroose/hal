@@ -2,6 +2,12 @@ CHANGELOG
 =========
 
 
+# v0.11.0  --  2025-11-20
+
+- bump MSRV to v1.74.0 confirm rust-bitcoin
+- add `hal ark address inspect` command for inspecting Ark addresses
+  - supports both Bark and Arkade addresses
+
 # v0.10.1  --  2025-11-20
 
 - add miniscript script command
