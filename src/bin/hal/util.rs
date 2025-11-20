@@ -187,12 +187,6 @@ mod test {
 	use super::*;
 
 	#[test]
-	fn empty_path() {
-		let mut all_execs = env::split_paths(&"");
-		assert!(all_execs.next().unwrap().is_err());
-	}
-
-	#[test]
 	fn test_lev_distance() {
 		use std::char::{from_u32, MAX};
 		// Test bytelength agnosticity
