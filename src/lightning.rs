@@ -9,17 +9,6 @@ use crate::{GetInfo, HexBytes};
 
 const WRONG_CID: &'static str = "incorrect short channel ID HRF format";
 
-/// taken from rust stdlib v1.73, can be removed once msrv moves
-fn div_ceil(v: u64, rhs: u64) -> u64 {
-	let d = v / rhs;
-	let r = v % rhs;
-	if r > 0 && rhs > 0 {
-		d + 1
-	} else {
-		d
-	}
-}
-
 /// Parse a short channel is in the form of `${blockheight)x$(txindex}x${outputindex}`.
 pub fn parse_short_channel_id(cid: &str) -> Result<u64, &'static str> {
 	let mut split = cid.split("x");
@@ -118,7 +107,7 @@ impl GetInfo<InvoiceInfo> for Bolt11Invoice {
 			network: self.network(),
 			amount_msat: self.amount_milli_satoshis(),
 			amount_sat: self.amount_milli_satoshis()
-				.map(|msat| Amount::from_sat(div_ceil(msat, 1000))),
+				.map(|msat| Amount::from_sat(msat.div_ceil(1000))),
 			payment_hash: sha256::Hash::from_slice(&self.payment_hash()[..]).unwrap(),
 			description: match self.description() {
 				Bolt11InvoiceDescriptionRef::Direct(s) => s.clone().into_inner().0,
