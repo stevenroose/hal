@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use std::io::Write;
 
 use bitcoin::address::NetworkUnchecked;
@@ -115,7 +114,7 @@ fn create_input(input: InputInfo) -> TxIn {
 	TxIn {
 		previous_output: outpoint_from_input_info(&input),
 		script_sig: input.script_sig.map(create_script_sig).unwrap_or_default(),
-		sequence: bitcoin::Sequence::from_height(input.sequence.unwrap_or_default().try_into().need("Invalid sequence")),
+		sequence: bitcoin::Sequence::from_consensus(input.sequence.unwrap_or_default()),
 		witness: match input.witness {
 			Some(ref w) => bitcoin::Witness::from_slice(&w.iter().map(|h| &h.0).collect::<Vec<_>>()),
 			None => bitcoin::Witness::new(),
