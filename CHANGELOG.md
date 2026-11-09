@@ -17,6 +17,12 @@ CHANGELOG
 - `psbt decode`: add global `version`, `fee`, `xpubs`, `proprietary` and `unknown`; add hash
   preimages, all taproot fields, `proprietary` and `unknown` to inputs and outputs
 - `psbt decode`: deprecate output field `hd_keypaths` in favor of `bip32_derivation`
+- `psbt`: support PSBT version 2 (BIP-370) in all commands; `create` gets `--v2`, `edit` gets
+  PSBTv2-only options `--sequence`, `--required-time-locktime`, `--required-height-locktime`,
+  `--amount` and `--script-pubkey`; `decode` shows the PSBTv2 fields
+- `psbt convert`: new command to convert between PSBT version 0 and 2
+- `psbt rawsign`: make the `psbt` argument required (reading from stdin never worked) and
+  don't enforce the fee rate limit when signing
 - `address inspect`: recognize `p2tr` and `p2a`; add `witness_program`, `taproot_output_key`,
   `valid_networks` and `is_spend_standard`
 - `key`: add `network` and `compressed` to private key info; add `xonly_public_key`,
