@@ -15,6 +15,10 @@ pub struct DerivationInfo {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub xpriv: Option<bip32::Xpriv>,
 	pub xpub: bip32::Xpub,
+	pub depth: u8,
+	pub parent_fingerprint: bip32::Fingerprint,
+	/// The index of this key under its parent, formatted like in a derivation path.
+	pub child_number: String,
 	pub chain_code: bip32::ChainCode,
 	pub identifier: bip32::XKeyIdentifier,
 	pub fingerprint: bip32::Fingerprint,
