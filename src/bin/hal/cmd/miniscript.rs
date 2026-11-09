@@ -7,7 +7,8 @@ use hal::miniscript::{
 };
 use miniscript::miniscript::{BareCtx, Legacy, Miniscript, Segwitv0, Tap};
 use miniscript::policy::Liftable;
-use miniscript::{policy, Descriptor, FromStrKey, MiniscriptKey};
+use miniscript::{policy, Descriptor, DescriptorPublicKey, FromStrKey, MiniscriptKey};
+use miniscript::descriptor::DescriptorType;
 
 use crate::prelude::*;
 
@@ -37,32 +38,98 @@ fn cmd_descriptor<'a>() -> clap::App<'a, 'a> {
 		.args(&[args::arg("descriptor", "the output descriptor to inspect").required(false)])
 }
 
+fn descriptor_type_name(desc_type: DescriptorType) -> &'static str {
+	match desc_type {
+		DescriptorType::Bare => "bare",
+		DescriptorType::Sh => "sh",
+		DescriptorType::Pkh => "pkh",
+		DescriptorType::Wpkh => "wpkh",
+		DescriptorType::Wsh => "wsh",
+		DescriptorType::ShWsh => "sh-wsh",
+		DescriptorType::ShWpkh => "sh-wpkh",
+		DescriptorType::ShSortedMulti => "sh-sortedmulti",
+		DescriptorType::WshSortedMulti => "wsh-sortedmulti",
+		DescriptorType::ShWshSortedMulti => "sh-wsh-sortedmulti",
+		DescriptorType::Tr => "tr",
+	}
+}
+
+/// Create the info for a descriptor with concrete keys.
+fn concrete_descriptor_info(
+	desc: &Descriptor<bitcoin::PublicKey>,
+	network: bitcoin::Network,
+) -> DescriptorInfo {
+	DescriptorInfo {
+		descriptor: desc.to_string(),
+		type_: descriptor_type_name(desc.desc_type()).to_owned(),
+		key_type: MiniscriptKeyType::PublicKey,
+		is_sane: desc.sanity_check().is_ok(),
+		has_wildcard: None,
+		is_multipath: None,
+		address: desc.address(network).map(|a| a.to_string()).ok(),
+		script_pubkey: Some(desc.script_pubkey().into_bytes().into()),
+		unsigned_script_sig: Some(desc.unsigned_script_sig().into_bytes().into()),
+		witness_script: desc.explicit_script().map(|s| s.into_bytes().into()).ok(),
+		script_code: desc.script_code().map(|s| s.into_bytes().into()).ok(),
+		max_satisfaction_weight: desc.max_weight_to_satisfy().ok().map(|w| w.to_wu()),
+		policy: policy::Liftable::lift(desc).map(|pol| pol.to_string()).ok(),
+	}
+}
+
 fn exec_descriptor<'a>(args: &clap::ArgMatches<'a>) {
 	let desc_str = util::arg_or_stdin(args, "descriptor");
 	let network = args.network();
 
 	let info = desc_str
 		.parse::<Descriptor<bitcoin::PublicKey>>()
-		.map(|desc| DescriptorInfo {
-			descriptor: desc.to_string(),
-			key_type: MiniscriptKeyType::PublicKey,
-			address: desc.address(network).map(|a| a.to_string()).ok(),
-			script_pubkey: Some(desc.script_pubkey().into_bytes().into()),
-			unsigned_script_sig: Some(desc.unsigned_script_sig().into_bytes().into()),
-			witness_script: desc.explicit_script().map(|s| s.into_bytes().into()).ok(),
-			max_satisfaction_weight: desc.max_weight_to_satisfy().ok().map(|w| w.to_wu()),
-			policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
-		})
+		.map(|desc| concrete_descriptor_info(&desc, network))
 		.or_else(|e| {
 			debug!("Can't parse descriptor with public keys: {}", e);
+			// Then try with descriptor keys (xpubs etc).
+			desc_str.parse::<Descriptor<DescriptorPublicKey>>().map(|desc| {
+				let has_wildcard = desc.has_wildcard();
+				let is_multipath = desc.is_multipath();
+				// If the descriptor is definite, we can derive the concrete one.
+				let concrete = if !has_wildcard && !is_multipath {
+					desc.derived_descriptor(&SECP, 0)
+						.map_err(|e| debug!("Can't derive descriptor: {}", e)).ok()
+						.map(|d| concrete_descriptor_info(&d, network))
+				} else {
+					None
+				};
+				DescriptorInfo {
+					descriptor: desc.to_string(),
+					type_: descriptor_type_name(desc.desc_type()).to_owned(),
+					key_type: MiniscriptKeyType::DescriptorPublicKey,
+					is_sane: desc.sanity_check().is_ok(),
+					has_wildcard: Some(has_wildcard),
+					is_multipath: Some(is_multipath),
+					address: concrete.as_ref().and_then(|c| c.address.clone()),
+					script_pubkey: concrete.as_ref().and_then(|c| c.script_pubkey.clone()),
+					unsigned_script_sig: concrete.as_ref()
+						.and_then(|c| c.unsigned_script_sig.clone()),
+					witness_script: concrete.as_ref().and_then(|c| c.witness_script.clone()),
+					script_code: concrete.as_ref().and_then(|c| c.script_code.clone()),
+					max_satisfaction_weight: desc.max_weight_to_satisfy().ok().map(|w| w.to_wu()),
+					policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
+				}
+			})
+		})
+		.or_else(|e| {
+			debug!("Can't parse descriptor with descriptor keys: {}", e);
 			// Then try with strings.
 			desc_str.parse::<Descriptor<String>>().map(|desc| DescriptorInfo {
 				descriptor: desc.to_string(),
+				type_: descriptor_type_name(desc.desc_type()).to_owned(),
 				key_type: MiniscriptKeyType::String,
+				is_sane: desc.sanity_check().is_ok(),
+				has_wildcard: None,
+				is_multipath: None,
 				address: None,
 				script_pubkey: None,
 				unsigned_script_sig: None,
 				witness_script: None,
+				script_code: None,
 				max_satisfaction_weight: desc.max_weight_to_satisfy().ok().map(|w| w.to_wu()),
 				policy: policy::Liftable::lift(&desc).map(|pol| pol.to_string()).ok(),
 			})

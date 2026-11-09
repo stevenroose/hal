@@ -8,6 +8,8 @@ pub enum MiniscriptKeyType {
 	PublicKey,
 	#[serde(rename = "xonly_public_key")]
 	XOnlyPublicKey,
+	/// Descriptor keys like xpubs with derivation paths and wildcards.
+	DescriptorPublicKey,
 	String,
 }
 
@@ -83,7 +85,17 @@ pub struct Miniscripts {
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct DescriptorInfo {
 	pub descriptor: String,
+	#[serde(rename = "type")]
+	pub type_: String,
 	pub key_type: MiniscriptKeyType,
+	/// Whether the descriptor passes miniscript's sanity checks.
+	pub is_sane: bool,
+	/// Whether any key has a wildcard derivation step.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub has_wildcard: Option<bool>,
+	/// Whether any key is a multipath key (BIP-389).
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub is_multipath: Option<bool>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub address: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -92,6 +104,9 @@ pub struct DescriptorInfo {
 	pub unsigned_script_sig: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub witness_script: Option<HexBytes>,
+	/// The script code used for sighash computation (BIP-143).
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub script_code: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub max_satisfaction_weight: Option<u64>,
 	#[serde(skip_serializing_if = "Option::is_none")]
