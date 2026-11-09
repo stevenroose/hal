@@ -114,10 +114,10 @@ impl GetInfo<InvoiceInfo> for Bolt11Invoice {
 				Bolt11InvoiceDescriptionRef::Hash(h) => h.0.to_string(),
 			},
 			payee_pub_key: self.payee_pub_key().map(|pk| pk.serialize()[..].into()),
-			expiry_time: Some(
-				Local::now() + Duration::from_std(self.expiry_time())
-					.expect("invalid expiry in invoice"),
-			),
+			expiry_time: self.expires_at().and_then(|d| {
+				let d = Duration::from_std(d).ok()?;
+				DateTime::from_timestamp(d.num_seconds(), 0).map(|t| t.with_timezone(&Local))
+			}),
 			min_final_cltv_expiry: Some(self.min_final_cltv_expiry_delta()),
 			fallback_addresses: self.fallback_addresses().into_iter()
 				.map(|a| a.to_string().parse().unwrap()).collect(),
