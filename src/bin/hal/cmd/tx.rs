@@ -129,7 +129,18 @@ pub struct UsedNetwork {
 
 impl UsedNetwork {
 	pub fn new(network: Option<Network>) -> UsedNetwork {
-		UsedNetwork { possible: network.into_iter().collect() }
+		UsedNetwork {
+			possible: match network {
+				Some(n) => vec![n],
+				None => vec![
+					Network::Bitcoin,
+					Network::Testnet,
+					Network::Testnet4,
+					Network::Signet,
+					Network::Regtest,
+				],
+			},
+		}
 	}
 
 	fn register_addr(&mut self, addr: &Address<NetworkUnchecked>) {
