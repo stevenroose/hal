@@ -608,8 +608,7 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 		exit!("PSBT input index out of range")
 	}
 
-	let tx = psbt_v0.clone().extract_tx().need("failed to extract tx from psbt");
-	let mut cache = bitcoin::sighash::SighashCache::new(&tx);
+	let mut cache = bitcoin::sighash::SighashCache::new(&psbt_v0.unsigned_tx);
 
 	let pk = secp256k1::PublicKey::from_secret_key(&SECP, &sk);
 	let pk = bitcoin::PublicKey { compressed, inner: pk };
