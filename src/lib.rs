@@ -21,6 +21,7 @@ pub mod lightning;
 pub mod message;
 pub mod miniscript;
 pub mod psbt;
+pub mod script;
 pub mod tx;
 mod serde_utils;
 pub use serde_utils::HexBytes;

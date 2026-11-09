@@ -26,5 +26,6 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	let raw_script = hex::decode(hex_script).need("could not decode raw script");
 	let script = ScriptBuf::from_bytes(raw_script);
 
-	print!("{}", script.to_asm_string());
+	let info = hal::GetInfo::get_info(script.as_script(), args.network());
+	args.print_output(&info)
 }
