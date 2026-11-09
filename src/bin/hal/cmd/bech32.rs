@@ -1,5 +1,6 @@
 
 use bitcoin::bech32;
+use bitcoin::bech32::primitives::decode::CheckedHrpstring;
 use clap;
 use hex;
 
@@ -33,13 +34,14 @@ fn exec_encode<'a>(args: &clap::ArgMatches<'a>) {
 	let hex = util::arg_or_stdin(args, "payload-hex");
 
 	let payload = hex::decode(hex.as_ref()).need("invalid hex");
-	let bech32 = if args.is_present("legacy") {
-		bech32::encode::<bech32::Bech32>(hrp, &payload).need("encode failure")
+	let (bech32, variant) = if args.is_present("legacy") {
+		(bech32::encode::<bech32::Bech32>(hrp, &payload).need("encode failure"), "bech32")
 	} else {
-		bech32::encode::<bech32::Bech32m>(hrp, &payload).need("encode failure")
+		(bech32::encode::<bech32::Bech32m>(hrp, &payload).need("encode failure"), "bech32m")
 	};
 	let info = hal::bech32::Bech32Info {
 		bech32,
+		variant: Some(variant.to_owned()),
 		hrp: hrp.to_string(),
 		payload: payload.into(),
 	};
@@ -57,8 +59,17 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 
 	let (hrp, payload) = bech32::decode(&s).need("invalid bech32");
 
+	let variant = if CheckedHrpstring::new::<bech32::Bech32>(&s).is_ok() {
+		Some("bech32".to_owned())
+	} else if CheckedHrpstring::new::<bech32::Bech32m>(&s).is_ok() {
+		Some("bech32m".to_owned())
+	} else {
+		None
+	};
+
 	let info = hal::bech32::Bech32Info {
 		bech32: s.to_string(),
+		variant: variant,
 		hrp: hrp.to_string(),
 		payload: payload.into(),
 	};
