@@ -5,6 +5,7 @@ CHANGELOG
 # Unreleased
 
 - update bitcoin dependency to v0.32.102
+- update ark-lib dependency to v0.8.1
 - `tx decode`: add `base_size`, `locktime_type`, `locktime_enabled`, `is_coinbase`,
   `is_explicitly_rbf`; add `is_rbf`, `relative_locktime` and best-effort `tapscript`,
   `taproot_control_block` and `taproot_annex` to inputs; recognize `p2a`, `multisig` and

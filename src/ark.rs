@@ -22,10 +22,26 @@ pub enum BarkVtxoPolicyInfo {
 		payment_hash: PaymentHash,
 		htlc_expiry: u32,
 	},
+	/// The legacy version of the server HTLC send policy.
+	#[serde(rename = "server-htlc-send-v0")]
+	ServerHtlcSendV0 {
+		user_pubkey: PublicKey,
+		payment_hash: PaymentHash,
+		htlc_expiry: u32,
+	},
 	#[serde(rename = "server-htlc-receive")]
 	ServerHtlcRecv {
 		user_pubkey: PublicKey,
 		payment_hash: PaymentHash,
+		htlc_expiry_delta: u16,
+		htlc_expiry: u32,
+	},
+	/// The legacy version of the server HTLC receive policy.
+	#[serde(rename = "server-htlc-receive-v0")]
+	ServerHtlcRecvV0 {
+		user_pubkey: PublicKey,
+		payment_hash: PaymentHash,
+		htlc_expiry_delta: u16,
 		htlc_expiry: u32,
 	},
 }
@@ -39,12 +55,24 @@ impl GetInfo<BarkVtxoPolicyInfo> for VtxoPolicy {
 			VtxoPolicy::ServerHtlcSend(p) => BarkVtxoPolicyInfo::ServerHtlcSend {
 				user_pubkey: p.user_pubkey,
 				payment_hash: p.payment_hash,
-				htlc_expiry: p.htlc_expiry as u32,
+				htlc_expiry: p.htlc_expiry.to_u32(),
+			},
+			VtxoPolicy::ServerHtlcSend_v0(p) => BarkVtxoPolicyInfo::ServerHtlcSendV0 {
+				user_pubkey: p.user_pubkey,
+				payment_hash: p.payment_hash,
+				htlc_expiry: p.htlc_expiry.to_u32(),
 			},
 			VtxoPolicy::ServerHtlcRecv(p) => BarkVtxoPolicyInfo::ServerHtlcRecv {
 				user_pubkey: p.user_pubkey,
 				payment_hash: p.payment_hash,
-				htlc_expiry: p.htlc_expiry as u32,
+				htlc_expiry_delta: p.htlc_expiry_delta.to_u16(),
+				htlc_expiry: p.htlc_expiry.to_u32(),
+			},
+			VtxoPolicy::ServerHtlcRecv_v0(p) => BarkVtxoPolicyInfo::ServerHtlcRecvV0 {
+				user_pubkey: p.user_pubkey,
+				payment_hash: p.payment_hash,
+				htlc_expiry_delta: p.htlc_expiry_delta.to_u16(),
+				htlc_expiry: p.htlc_expiry.to_u32(),
 			},
 		}
 	}
