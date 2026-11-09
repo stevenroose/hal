@@ -2,6 +2,40 @@ CHANGELOG
 =========
 
 
+# Unreleased
+
+- update bitcoin dependency to v0.32.102
+- `tx decode`: add `base_size`, `locktime_type`, `locktime_enabled`, `is_coinbase`,
+  `is_explicitly_rbf`; add `is_rbf`, `relative_locktime` and best-effort `tapscript`,
+  `taproot_control_block` and `taproot_annex` to inputs; recognize `p2a`, `multisig` and
+  `unknown-witness-program-version` output types
+- `tx decode`: fix `vsize` being rounded down instead of up
+- `tx create`: fix sequence numbers above 65535 being rejected
+- `tx create`: fix address outputs being rejected when no network flag is given
+- `block decode`: add `target`, `difficulty` and `work` to the header; add `size`, `weight`,
+  `nb_transactions`, `merkle_root_valid`, `witness_root` and `witness_commitment_valid`
+- `psbt decode`: add global `version`, `fee`, `xpubs`, `proprietary` and `unknown`; add hash
+  preimages, all taproot fields, `proprietary` and `unknown` to inputs and outputs
+- `psbt decode`: deprecate output field `hd_keypaths` in favor of `bip32_derivation`
+- `address inspect`: recognize `p2tr` and `p2a`; add `witness_program`, `taproot_output_key`,
+  `valid_networks` and `is_spend_standard`
+- `key`: add `network` and `compressed` to private key info; add `xonly_public_key`,
+  `compressed` and `pubkey_hash` to public key info
+- `key pubkey-tweak-add`: fix printing the untweaked key
+- `bip32`: add `depth`, `parent_fingerprint` and `child_number`
+- `bip39`: add `word_count` and `checksum`
+- `bech32`: add checksum `variant`
+- `bech32 decode`: fix positional argument being ignored
+- `bech32 encode`: fix `--legacy` requiring a value
+- `merkle proof-create`: fix `--block-txids` being ignored
+- `message recover`: fix compressed flag detection
+- `ln invoice decode`: fix `expiry_time` being relative to now instead of the invoice
+  timestamp; add `description_hash`, `expiry_seconds` and `is_expired`
+- `miniscript`: add tapscript context to `inspect`, `parse` and `policy`
+- `miniscript descriptor`: add `type`, `is_sane` and `script_code`; support descriptors with
+  extended keys (`has_wildcard`, `is_multipath`)
+- `script decode`: output JSON with more information instead of only the assembly
+
 # v0.11.0  --  2025-11-20
 
 - bump MSRV to v1.74.0 confirm rust-bitcoin
