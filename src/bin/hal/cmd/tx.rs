@@ -111,6 +111,21 @@ fn create_script_sig(ss: InputScriptInfo) -> ScriptBuf {
 }
 
 fn create_input(input: InputInfo) -> TxIn {
+	if input.is_rbf.is_some() {
+		warn!("Field \"is_rbf\" of input is ignored.");
+	}
+	if input.relative_locktime.is_some() {
+		warn!("Field \"relative_locktime\" of input is ignored.");
+	}
+	if input.tapscript.is_some() {
+		warn!("Field \"tapscript\" of input is ignored.");
+	}
+	if input.taproot_control_block.is_some() {
+		warn!("Field \"taproot_control_block\" of input is ignored.");
+	}
+	if input.taproot_annex.is_some() {
+		warn!("Field \"taproot_annex\" of input is ignored.");
+	}
 	TxIn {
 		previous_output: outpoint_from_input_info(&input),
 		script_sig: input.script_sig.map(create_script_sig).unwrap_or_default(),
@@ -212,6 +227,21 @@ pub fn create_transaction(info: TransactionInfo, used_network: &mut UsedNetwork)
 	}
 	if info.vsize.is_some() {
 		warn!("Field \"vsize\" is ignored.");
+	}
+	if info.base_size.is_some() {
+		warn!("Field \"base_size\" is ignored.");
+	}
+	if info.locktime_type.is_some() {
+		warn!("Field \"locktime_type\" is ignored.");
+	}
+	if info.locktime_enabled.is_some() {
+		warn!("Field \"locktime_enabled\" is ignored.");
+	}
+	if info.is_coinbase.is_some() {
+		warn!("Field \"is_coinbase\" is ignored.");
+	}
+	if info.is_explicitly_rbf.is_some() {
+		warn!("Field \"is_explicitly_rbf\" is ignored.");
 	}
 
 	Transaction {
