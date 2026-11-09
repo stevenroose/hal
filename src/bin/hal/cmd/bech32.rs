@@ -56,7 +56,7 @@ fn cmd_decode<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
-	let s = util::arg_or_stdin(args, "string");
+	let s = util::arg_or_stdin(args, "bech32");
 
 	let (hrp, payload) = bech32::decode(&s).need("invalid bech32");
 
