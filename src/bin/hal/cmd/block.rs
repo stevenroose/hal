@@ -63,6 +63,15 @@ fn create_block_header(info: BlockHeaderInfo) -> block::Header {
 	if info.block_hash.is_some() {
 		warn!("Field \"block_hash\" is ignored.");
 	}
+	if info.target.is_some() {
+		warn!("Field \"target\" is ignored.");
+	}
+	if info.difficulty.is_some() {
+		warn!("Field \"difficulty\" is ignored.");
+	}
+	if info.work.is_some() {
+		warn!("Field \"work\" is ignored.");
+	}
 
 	block::Header {
 		version: block::Version::from_consensus(info.version),
@@ -80,6 +89,27 @@ fn exec_create<'a>(args: &clap::ArgMatches<'a>) {
 
 	if info.txids.is_some() {
 		warn!("Field \"txids\" is ignored.");
+	}
+	if info.bip34_block_height.is_some() {
+		warn!("Field \"bip34_block_height\" is ignored.");
+	}
+	if info.size.is_some() {
+		warn!("Field \"size\" is ignored.");
+	}
+	if info.weight.is_some() {
+		warn!("Field \"weight\" is ignored.");
+	}
+	if info.nb_transactions.is_some() {
+		warn!("Field \"nb_transactions\" is ignored.");
+	}
+	if info.merkle_root_valid.is_some() {
+		warn!("Field \"merkle_root_valid\" is ignored.");
+	}
+	if info.witness_root.is_some() {
+		warn!("Field \"witness_root\" is ignored.");
+	}
+	if info.witness_commitment_valid.is_some() {
+		warn!("Field \"witness_commitment_valid\" is ignored.");
 	}
 
 	let mut used_network = cmd::tx::UsedNetwork::new(args.explicit_network());
@@ -119,11 +149,8 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 	if args.is_present("txids") {
 		let block: Block = deserialize(&raw_tx).need("invalid block format");
 		let info = hal::block::BlockInfo {
-			header: hal::GetInfo::get_info(&block.header, args.network()),
-			bip34_block_height: block.bip34_block_height().ok(),
 			txids: Some(block.txdata.iter().map(|t| t.compute_txid()).collect()),
-			transactions: None,
-			raw_transactions: None,
+			..BlockInfo::without_transactions(&block, args.network())
 		};
 		args.print_output(&info)
 	} else {
