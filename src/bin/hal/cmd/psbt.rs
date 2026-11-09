@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{self, BufRead, Read, Write};
 use std::str::FromStr;
@@ -6,7 +7,11 @@ use base64;
 use clap;
 use hex;
 
-use bitcoin::{absolute, bip32, ecdsa, EcdsaSighashType, Psbt, PublicKey, Transaction};
+use bitcoin::{
+	absolute, bip32, ecdsa, EcdsaSighashType, PrivateKey, Psbt, PublicKey, Transaction,
+	XOnlyPublicKey,
+};
+use bitcoin::psbt::{GetKey, SignError, SigningKeys};
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::hashes::Hash;
 use miniscript::psbt::PsbtExt;
@@ -24,6 +29,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_finalize())
 		.subcommand(cmd_merge())
 		.subcommand(cmd_rawsign())
+		.subcommand(cmd_sign())
 		.subcommand(cmd_convert())
 }
 
@@ -35,6 +41,7 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 		("finalize", Some(ref m)) => exec_finalize(&m),
 		("merge", Some(ref m)) => exec_merge(&m),
 		("rawsign", Some(ref m)) => exec_rawsign(&m),
+		("sign", Some(ref m)) => exec_sign(&m),
 		("convert", Some(ref m)) => exec_convert(&m),
 		(c, _) => eprintln!("command {} unknown", c),
 	};
@@ -666,6 +673,145 @@ fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
 			}
 		}
 	}
+}
+
+fn cmd_sign<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("sign", "sign a PSBT with private keys or extended private keys")
+		.args(&[
+			args::arg("psbt", "PSBT to sign, either base64/hex or a file path").required(true),
+			args::opt("key", "a private key in WIF or hex; can be repeated")
+				.multiple(true).number_of_values(1),
+			args::opt("xpriv", "an extended private key; can be repeated")
+				.multiple(true).number_of_values(1),
+			args::flag("raw-stdout", "output the raw bytes of the result to stdout")
+				.short("r"),
+			args::opt("output", "where to save the resulting PSBT file -- in place if omitted")
+				.short("o"),
+		])
+		.long_about(r#"
+Sign a PSBT with the given keys.
+
+Keys are matched against the BIP-32 derivation information in the inputs
+(the hd-keypaths and taproot key origins): extended private keys are used
+when their fingerprint matches a derivation's master fingerprint, and plain
+private keys when their public key appears in a derivation.
+
+Supports ECDSA signatures for legacy and segwit v0 inputs and Schnorr
+signatures for taproot key-path spends. Inputs that can't be signed with
+the given keys are reported on stderr but don't cause a failure as long as
+at least one input could be signed.
+"#)
+}
+
+/// Sign the PSBTv0 with the given keys and merge the results into the
+/// signed and errors maps.
+fn sign_with<K: GetKey>(
+	psbt: &mut Psbt,
+	keys: &K,
+	signed: &mut BTreeMap<usize, Vec<SigningKeys>>,
+	errors: &mut BTreeMap<usize, Vec<SignError>>,
+) {
+	let (used, errs) = match psbt.sign(keys, &SECP) {
+		Ok(used) => (used, BTreeMap::new()),
+		Err((used, errs)) => (used, errs),
+	};
+	for (idx, keys) in used {
+		// Inputs for which no key matched are reported with an empty key list.
+		let empty = match keys {
+			SigningKeys::Ecdsa(ref pks) => pks.is_empty(),
+			SigningKeys::Schnorr(ref pks) => pks.is_empty(),
+		};
+		if !empty {
+			signed.entry(idx).or_insert_with(Vec::new).push(keys);
+		}
+	}
+	for (idx, err) in errs {
+		errors.entry(idx).or_insert_with(Vec::new).push(err);
+	}
+}
+
+fn exec_sign<'a>(args: &clap::ArgMatches<'a>) {
+	let input = args.value_of("psbt").need("no PSBT provided");
+	let (raw, source) = file_or_raw(input);
+	let mut psbt = AnyPsbt::deserialize(&raw);
+	// The signer works on PSBTv0.
+	let mut psbt_v0 = psbt.to_v0();
+
+	let keys = args.values_of("key").map(|v| {
+		v.map(|k| args.parse_privkey(k, "key")).collect::<Vec<PrivateKey>>()
+	}).unwrap_or_default();
+	let xprivs = args.values_of("xpriv").map(|v| {
+		v.map(|x| bip32::Xpriv::from_str(x).need("invalid xpriv")).collect::<Vec<_>>()
+	}).unwrap_or_default();
+	if keys.is_empty() && xprivs.is_empty() {
+		exit!("provide at least one --key or --xpriv");
+	}
+
+	let mut signed = BTreeMap::new();
+	let mut errors = BTreeMap::new();
+	for xpriv in &xprivs {
+		sign_with(&mut psbt_v0, xpriv, &mut signed, &mut errors);
+	}
+	if !keys.is_empty() {
+		// Index the keys by both their compressed and uncompressed public key.
+		let mut by_pubkey = BTreeMap::<PublicKey, PrivateKey>::new();
+		let mut by_xonly = BTreeMap::<XOnlyPublicKey, PrivateKey>::new();
+		for key in &keys {
+			let pk = key.public_key(&SECP);
+			by_pubkey.insert(PublicKey { compressed: true, ..pk }, *key);
+			by_pubkey.insert(PublicKey { compressed: false, ..pk }, *key);
+			by_xonly.insert(pk.inner.into(), *key);
+		}
+		sign_with(&mut psbt_v0, &by_pubkey, &mut signed, &mut errors);
+		sign_with(&mut psbt_v0, &by_xonly, &mut signed, &mut errors);
+	}
+
+	for (idx, keys) in &signed {
+		let mut keys = keys.iter().flat_map(|k| match k {
+			SigningKeys::Ecdsa(pks) => pks.iter().map(|pk| pk.to_string()).collect::<Vec<_>>(),
+			SigningKeys::Schnorr(pks) => pks.iter().map(|pk| pk.to_string()).collect(),
+		}).collect::<Vec<_>>();
+		keys.sort();
+		keys.dedup();
+		eprintln!("Signed input {} with key(s) {}", idx, keys.join(", "));
+	}
+	for idx in 0..psbt_v0.inputs.len() {
+		if signed.contains_key(&idx) {
+			continue;
+		}
+		let errs = match errors.get(&idx) {
+			Some(errs) => errs,
+			None => {
+				eprintln!("Could not sign input {}: no matching key", idx);
+				continue;
+			},
+		};
+		// The key sets that don't apply to an input yield "not supported"
+		// errors, so only show those when there is nothing else.
+		let mut msgs = errs.iter().map(|e| e.to_string()).collect::<Vec<_>>();
+		msgs.sort();
+		msgs.dedup();
+		let relevant = msgs.iter().filter(|m| !m.contains("not supported")).cloned()
+			.collect::<Vec<_>>();
+		let msgs = if relevant.is_empty() { msgs } else { relevant };
+		eprintln!("Could not sign input {}: {}", idx, msgs.join("; "));
+	}
+	if signed.is_empty() {
+		exit!("no input could be signed");
+	}
+
+	// Put the signatures back into the original PSBT.
+	match psbt {
+		AnyPsbt::V0(ref mut p) => *p = psbt_v0,
+		AnyPsbt::V2(ref mut p) => {
+			for (input, signed) in p.inputs.iter_mut().zip(psbt_v0.inputs.into_iter()) {
+				input.partial_sigs = signed.partial_sigs;
+				input.tap_key_sig = signed.tap_key_sig;
+				input.tap_script_sigs = signed.tap_script_sigs;
+			}
+		},
+	}
+	write_psbt(args, &psbt.serialize(), Some(source));
 }
 
 fn cmd_convert<'a>() -> clap::App<'a, 'a> {
