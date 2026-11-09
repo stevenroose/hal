@@ -122,15 +122,14 @@ pub struct TransactionInfo {
 
 impl GetInfo<TransactionInfo> for Transaction {
 	fn get_info(&self, network: Network) -> TransactionInfo {
-		let weight = self.weight().to_wu() as usize;
 		TransactionInfo {
 			txid: Some(self.compute_txid()),
 			wtxid: Some(self.compute_wtxid()),
 			version: Some(self.version.0),
 			locktime: Some(self.lock_time.to_consensus_u32()),
 			size: Some(serialize(self).len()),
-			weight: Some(weight),
-			vsize: Some(weight / 4),
+			weight: Some(self.weight().to_wu() as usize),
+			vsize: Some(self.vsize()),
 			inputs: Some(self.input.iter().map(|i| i.get_info(network)).collect()),
 			outputs: Some(self.output.iter().map(|o| o.get_info(network)).collect()),
 			total_output_value: Some(self.output.iter().map(|o| o.value.to_sat()).sum()),
