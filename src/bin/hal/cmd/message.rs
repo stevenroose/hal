@@ -107,6 +107,9 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 	if sig_bytes.len() != 65 {
 		exit!("Invalid signature: length is {} instead of 65 bytes", sig_bytes.len());
 	}
+	if sig_bytes[0] < 27 || sig_bytes[0] > 34 {
+		exit!("Invalid signature: invalid header byte {}", sig_bytes[0]);
+	}
 	let recid = secp256k1::ecdsa::RecoveryId::from_i32(((sig_bytes[0] - 27) & 0x03) as i32)
 		.need("invalid recoverable signature (invalid recid)");
 	let compressed = ((sig_bytes[0] - 27) & 0x04) != 0;
@@ -184,9 +187,12 @@ fn exec_recover<'a>(args: &clap::ArgMatches<'a>) {
 	if sig_bytes.len() != 65 {
 		exit!("Invalid signature: length is {} instead of 65 bytes", sig_bytes.len());
 	}
-	let recid = secp256k1::ecdsa::RecoveryId::from_i32((sig_bytes[0] - 27 & 0x03) as i32)
+	if sig_bytes[0] < 27 || sig_bytes[0] > 34 {
+		exit!("Invalid signature: invalid header byte {}", sig_bytes[0]);
+	}
+	let recid = secp256k1::ecdsa::RecoveryId::from_i32(((sig_bytes[0] - 27) & 0x03) as i32)
 		.need("invalid recoverable signature (invalid recid)");
-	let compressed = sig_bytes[0] & 0x04 != 0x04;
+	let compressed = ((sig_bytes[0] - 27) & 0x04) != 0;
 	let signature = secp256k1::ecdsa::RecoverableSignature::from_compact(&sig_bytes[1..], recid)
 		.need("invalid recoverable signature");
 
