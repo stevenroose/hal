@@ -273,8 +273,8 @@ fn exec_pubkey_tweak_add<'a>(args: &clap::ArgMatches<'a>) {
 	};
 
 	match point.inner.add_exp_tweak(&SECP, &scalar.into()) {
-		Ok(..) => {
-			print!("{}", point.to_string());
+		Ok(tweaked) => {
+			print!("{}", bitcoin::PublicKey { compressed: point.compressed, inner: tweaked });
 		}
 		Err(err) => {
 			eprintln!("error: {}", err);
