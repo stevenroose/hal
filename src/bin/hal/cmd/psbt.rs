@@ -400,7 +400,7 @@ fn exec_merge<'a>(args: &clap::ArgMatches<'a>) {
 
 fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("rawsign", "sign a psbt with private key and add sig to partial sigs").args(&[
-		args::arg("psbt", "PSBT to finalize, either base64/hex or a file path").required(false),
+		args::arg("psbt", "PSBT to sign, either base64/hex or a file path").required(true),
 		args::arg("input-idx", "the input index to edit").required(true),
 		args::arg("priv-key", "the private key in WIF/hex").required(true),
 		args::flag("compressed", "Whether the corresponding pk is compressed")
@@ -414,8 +414,8 @@ fn cmd_rawsign<'a>() -> clap::App<'a, 'a> {
 }
 
 fn exec_rawsign<'a>(args: &clap::ArgMatches<'a>) {
-	let input = util::arg_or_stdin(args, "psbt");
-	let (raw, source) = file_or_raw(input.as_ref());
+	let input = args.value_of("psbt").need("no PSBT provided");
+	let (raw, source) = file_or_raw(input);
 	let mut psbt = Psbt::deserialize(&raw).need("invalid PSBT format");
 
 	let sk = args.need_privkey("priv-key").inner;
