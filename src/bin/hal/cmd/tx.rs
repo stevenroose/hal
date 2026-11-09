@@ -475,13 +475,14 @@ fn cmd_verify<'a>() -> Vec<clap::App<'a, 'a>> {
 				.required(true))
 			.arg(args::opt("input-idx", "only verify the input with this index"))
 			.arg(args::opt("flags", "the script verification flags as a number; defaults to \
-				all flags supported by libbitcoinconsensus"))
+				all flags supported by libbitcoinconsensus, including taproot"))
 			.long_about(r#"
-Verify the scripts of a signed transaction using libbitcoinconsensus, given
-the outputs it spends.
+Verify the scripts of a signed transaction using libbitcoinconsensus (from
+Bitcoin Core v26), given the outputs it spends.
 
-NB The libbitcoinconsensus bindings used (v0.105) don't support taproot
-verification, so transactions spending p2tr outputs fail verification.
+All inputs are verified unless --input-idx is given. Inputs spending witness
+programs with a version above 1 are rejected, because consensus rules treat
+them as anyone-can-spend and verifying them would be meaningless.
 "#)
 	]
 }
@@ -493,8 +494,7 @@ fn cmd_verify<'a>() -> Vec<clap::App<'a, 'a>> {
 
 #[cfg(feature = "bitcoinconsensus")]
 fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
-	use std::collections::HashMap;
-	use bitcoin::consensus::validation;
+	use bitcoin::WitnessVersion;
 
 	let hex_tx = args.value_of("raw-tx").need("no raw tx provided");
 	let raw_tx = hex::decode(hex_tx).need("could not decode raw tx");
@@ -510,35 +510,55 @@ fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
 	if prevouts.len() != tx.input.len() {
 		exit!("expected {} prevouts, one for each input, got {}", tx.input.len(), prevouts.len());
 	}
-	let flags = args.value_of("flags").map(|f| f.parse::<u32>().need("invalid flags"));
+	let flags = args.value_of("flags").map(|f| f.parse::<u32>().need("invalid flags"))
+		.unwrap_or(bitcoinconsensus::VERIFY_ALL_PRE_TAPROOT | bitcoinconsensus::VERIFY_TAPROOT);
 
-	let result = if let Some(idx) = args.value_of("input-idx") {
-		let idx = idx.parse::<usize>().need("invalid input index");
-		if idx >= tx.input.len() {
-			exit!("input index out of range: tx has {} inputs", tx.input.len());
-		}
-		let prevout = &prevouts[idx];
-		match flags {
-			Some(flags) => validation::verify_script_with_flags(
-				&prevout.script_pubkey, idx, prevout.value, &raw_tx, flags,
-			),
-			None => validation::verify_script(&prevout.script_pubkey, idx, prevout.value, &raw_tx),
-		}.map_err(|e| format!("input {}: {}", idx, e))
-	} else {
-		let spent = tx.input.iter().map(|i| i.previous_output).zip(prevouts.iter().cloned())
-			.collect::<HashMap<_, _>>();
-		let lookup = |outpoint: &OutPoint| spent.get(outpoint).cloned();
-		match flags {
-			Some(flags) => tx.verify_with_flags(lookup, flags),
-			None => tx.verify(lookup),
-		}.map_err(|e| e.to_string())
+	let indices: Vec<usize> = match args.value_of("input-idx") {
+		Some(idx) => {
+			let idx = idx.parse::<usize>().need("invalid input index");
+			if idx >= tx.input.len() {
+				exit!("input index out of range: tx has {} inputs", tx.input.len());
+			}
+			vec![idx]
+		},
+		None => (0..tx.input.len()).collect(),
 	};
 
-	match result {
-		Ok(()) => println!("Transaction is valid."),
-		Err(e) => {
-			eprintln!("Transaction is invalid: {}", e);
-			std::process::exit(1);
-		},
+	// Future witness versions are anyone-can-spend for the library, so
+	// a positive result would be meaningless.
+	for idx in &indices {
+		if let Some(version) = prevouts[*idx].script_pubkey.witness_version() {
+			if version > WitnessVersion::V1 {
+				exit!("input {} spends a witness program of version {}, which can't be verified",
+					idx, version.to_num());
+			}
+		}
 	}
+
+	let utxos = prevouts.iter().map(|p| bitcoinconsensus::Utxo {
+		script_pubkey: p.script_pubkey.as_bytes().as_ptr(),
+		script_pubkey_len: p.script_pubkey.len() as u32,
+		value: p.value.to_sat() as i64,
+	}).collect::<Vec<_>>();
+
+	for idx in indices {
+		let prevout = &prevouts[idx];
+		if let Err(e) = bitcoinconsensus::verify_with_flags(
+			prevout.script_pubkey.as_bytes(),
+			prevout.value.to_sat(),
+			&raw_tx,
+			Some(&utxos),
+			idx,
+			flags,
+		) {
+			// The library reports a script failure with a confusing message.
+			let msg = match e {
+				bitcoinconsensus::Error::ERR_SCRIPT => "script verification failed".to_owned(),
+				e => e.to_string(),
+			};
+			eprintln!("Transaction is invalid: input {}: {}", idx, msg);
+			std::process::exit(1);
+		}
+	}
+	println!("Transaction is valid.");
 }
