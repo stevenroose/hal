@@ -3,9 +3,251 @@ use std::collections::HashMap;
 
 use bitcoin::hashes::{hash160, ripemd160, sha256, sha256d};
 use bitcoin::taproot::{self, TapLeafHash, TapNodeHash, TapTree};
-use bitcoin::{bip32, sighash, psbt, Amount, Network, XOnlyPublicKey};
+use bitcoin::{
+	absolute, bip32, psbt, secp256k1, sighash, Amount, Network, OutPoint, PublicKey, ScriptBuf,
+	Sequence, Transaction, TxIn, TxOut, Txid, Witness, XOnlyPublicKey,
+};
+use std::collections::BTreeMap;
+use psbt_v2::v2 as psbtv2;
+pub use psbt_v2::v2::DetermineLockTimeError;
 
 use crate::{tx, GetInfo, HexBytes};
+
+/// BIP-370 PSBT_GLOBAL_TX_MODIFIABLE flag: inputs can be added or removed.
+pub const TX_MODIFIABLE_INPUTS: u8 = 1 << 0;
+/// BIP-370 PSBT_GLOBAL_TX_MODIFIABLE flag: outputs can be added or removed.
+pub const TX_MODIFIABLE_OUTPUTS: u8 = 1 << 1;
+/// BIP-370 PSBT_GLOBAL_TX_MODIFIABLE flag: a SIGHASH_SINGLE signature is present.
+pub const TX_MODIFIABLE_SIGHASH_SINGLE: u8 = 1 << 2;
+
+// The psbt-v2 crate has its own versions of some of the auxiliary types.
+
+fn sighash_type_v0_to_v2(t: psbt::PsbtSighashType) -> psbt_v2::PsbtSighashType {
+	psbt_v2::PsbtSighashType::from_u32(t.to_u32())
+}
+
+fn sighash_type_v2_to_v0(t: psbt_v2::PsbtSighashType) -> psbt::PsbtSighashType {
+	psbt::PsbtSighashType::from_u32(t.to_u32())
+}
+
+fn bip32_v0_to_v2(
+	map: BTreeMap<secp256k1::PublicKey, bip32::KeySource>,
+) -> BTreeMap<PublicKey, bip32::KeySource> {
+	map.into_iter().map(|(k, v)| (PublicKey::new(k), v)).collect()
+}
+
+fn bip32_v2_to_v0(
+	map: BTreeMap<PublicKey, bip32::KeySource>,
+) -> BTreeMap<secp256k1::PublicKey, bip32::KeySource> {
+	map.into_iter().map(|(k, v)| (k.inner, v)).collect()
+}
+
+fn proprietary_v0_to_v2(
+	map: BTreeMap<psbt::raw::ProprietaryKey, Vec<u8>>,
+) -> BTreeMap<psbt_v2::raw::ProprietaryKey, Vec<u8>> {
+	map.into_iter().map(|(k, v)| (psbt_v2::raw::ProprietaryKey {
+		prefix: k.prefix,
+		subtype: k.subtype,
+		key: k.key,
+	}, v)).collect()
+}
+
+fn proprietary_v2_to_v0(
+	map: BTreeMap<psbt_v2::raw::ProprietaryKey, Vec<u8>>,
+) -> BTreeMap<psbt::raw::ProprietaryKey, Vec<u8>> {
+	map.into_iter().map(|(k, v)| (psbt::raw::ProprietaryKey {
+		prefix: k.prefix,
+		subtype: k.subtype,
+		key: k.key,
+	}, v)).collect()
+}
+
+fn unknown_v0_to_v2(
+	map: BTreeMap<psbt::raw::Key, Vec<u8>>,
+) -> BTreeMap<psbt_v2::raw::Key, Vec<u8>> {
+	map.into_iter().map(|(k, v)| (psbt_v2::raw::Key {
+		type_value: k.type_value,
+		key: k.key,
+	}, v)).collect()
+}
+
+fn unknown_v2_to_v0(
+	map: BTreeMap<psbt_v2::raw::Key, Vec<u8>>,
+) -> BTreeMap<psbt::raw::Key, Vec<u8>> {
+	map.into_iter().map(|(k, v)| (psbt::raw::Key {
+		type_value: k.type_value,
+		key: k.key,
+	}, v)).collect()
+}
+
+/// Convert a PSBTv0 input together with its transaction input to a PSBTv2 input.
+pub fn input_v0_to_v2(txin: &TxIn, input: psbt::Input) -> psbtv2::Input {
+	let mut ret = psbtv2::Input::new(&txin.previous_output);
+	ret.sequence = if txin.sequence == Sequence::MAX {
+		None
+	} else {
+		Some(txin.sequence)
+	};
+	ret.non_witness_utxo = input.non_witness_utxo;
+	ret.witness_utxo = input.witness_utxo;
+	ret.partial_sigs = input.partial_sigs;
+	ret.sighash_type = input.sighash_type.map(sighash_type_v0_to_v2);
+	ret.redeem_script = input.redeem_script;
+	ret.witness_script = input.witness_script;
+	ret.bip32_derivations = bip32_v0_to_v2(input.bip32_derivation);
+	ret.final_script_sig = input.final_script_sig;
+	ret.final_script_witness = input.final_script_witness;
+	ret.ripemd160_preimages = input.ripemd160_preimages;
+	ret.sha256_preimages = input.sha256_preimages;
+	ret.hash160_preimages = input.hash160_preimages;
+	ret.hash256_preimages = input.hash256_preimages;
+	ret.tap_key_sig = input.tap_key_sig;
+	ret.tap_script_sigs = input.tap_script_sigs;
+	ret.tap_scripts = input.tap_scripts;
+	ret.tap_key_origins = input.tap_key_origins;
+	ret.tap_internal_key = input.tap_internal_key;
+	ret.tap_merkle_root = input.tap_merkle_root;
+	ret.proprietaries = proprietary_v0_to_v2(input.proprietary);
+	ret.unknowns = unknown_v0_to_v2(input.unknown);
+	ret
+}
+
+/// Convert a PSBTv2 input to a PSBTv0 input and its transaction input.
+///
+/// The required locktime fields are dropped as they are part of the
+/// transaction's locktime in PSBTv0.
+pub fn input_v2_to_v0(input: psbtv2::Input) -> (TxIn, psbt::Input) {
+	let txin = TxIn {
+		previous_output: OutPoint::new(input.previous_txid, input.spent_output_index),
+		script_sig: ScriptBuf::new(),
+		sequence: input.sequence.unwrap_or(Sequence::MAX),
+		witness: Witness::new(),
+	};
+	let ret = psbt::Input {
+		non_witness_utxo: input.non_witness_utxo,
+		witness_utxo: input.witness_utxo,
+		partial_sigs: input.partial_sigs,
+		sighash_type: input.sighash_type.map(sighash_type_v2_to_v0),
+		redeem_script: input.redeem_script,
+		witness_script: input.witness_script,
+		bip32_derivation: bip32_v2_to_v0(input.bip32_derivations),
+		final_script_sig: input.final_script_sig,
+		final_script_witness: input.final_script_witness,
+		ripemd160_preimages: input.ripemd160_preimages,
+		sha256_preimages: input.sha256_preimages,
+		hash160_preimages: input.hash160_preimages,
+		hash256_preimages: input.hash256_preimages,
+		tap_key_sig: input.tap_key_sig,
+		tap_script_sigs: input.tap_script_sigs,
+		tap_scripts: input.tap_scripts,
+		tap_key_origins: input.tap_key_origins,
+		tap_internal_key: input.tap_internal_key,
+		tap_merkle_root: input.tap_merkle_root,
+		proprietary: proprietary_v2_to_v0(input.proprietaries),
+		unknown: unknown_v2_to_v0(input.unknowns),
+	};
+	(txin, ret)
+}
+
+/// Convert a PSBTv0 output together with its transaction output to a PSBTv2 output.
+pub fn output_v0_to_v2(txout: &TxOut, output: psbt::Output) -> psbtv2::Output {
+	let mut ret = psbtv2::Output::new(txout.clone());
+	ret.redeem_script = output.redeem_script;
+	ret.witness_script = output.witness_script;
+	ret.bip32_derivations = bip32_v0_to_v2(output.bip32_derivation);
+	ret.tap_internal_key = output.tap_internal_key;
+	ret.tap_tree = output.tap_tree;
+	ret.tap_key_origins = output.tap_key_origins;
+	ret.proprietaries = proprietary_v0_to_v2(output.proprietary);
+	ret.unknowns = unknown_v0_to_v2(output.unknown);
+	ret
+}
+
+/// Convert a PSBTv2 output to a PSBTv0 output and its transaction output.
+pub fn output_v2_to_v0(output: psbtv2::Output) -> (TxOut, psbt::Output) {
+	let txout = TxOut {
+		value: output.amount,
+		script_pubkey: output.script_pubkey,
+	};
+	let ret = psbt::Output {
+		redeem_script: output.redeem_script,
+		witness_script: output.witness_script,
+		bip32_derivation: bip32_v2_to_v0(output.bip32_derivations),
+		tap_internal_key: output.tap_internal_key,
+		tap_tree: output.tap_tree,
+		tap_key_origins: output.tap_key_origins,
+		proprietary: proprietary_v2_to_v0(output.proprietaries),
+		unknown: unknown_v2_to_v0(output.unknowns),
+	};
+	(txout, ret)
+}
+
+/// Convert a PSBTv0 to a PSBTv2.
+///
+/// Since the transaction of a PSBTv0 is fixed, the resulting PSBTv2 has no
+/// modifiable flags set.
+pub fn psbt_v0_to_v2(psbt: psbt::Psbt) -> psbtv2::Psbt {
+	let tx = psbt.unsigned_tx;
+	let mut global = psbtv2::Global::default();
+	global.tx_version = tx.version;
+	global.fallback_lock_time = if tx.lock_time == absolute::LockTime::ZERO {
+		None
+	} else {
+		Some(tx.lock_time)
+	};
+	global.tx_modifiable_flags = 0;
+	global.input_count = tx.input.len();
+	global.output_count = tx.output.len();
+	global.xpubs = psbt.xpub;
+	global.proprietaries = proprietary_v0_to_v2(psbt.proprietary);
+	global.unknowns = unknown_v0_to_v2(psbt.unknown);
+	psbtv2::Psbt {
+		global: global,
+		inputs: tx.input.iter().zip(psbt.inputs.into_iter())
+			.map(|(txin, input)| input_v0_to_v2(txin, input)).collect(),
+		outputs: tx.output.iter().zip(psbt.outputs.into_iter())
+			.map(|(txout, output)| output_v0_to_v2(txout, output)).collect(),
+	}
+}
+
+/// Construct the unsigned transaction a PSBTv2 represents.
+///
+/// Fails when the inputs have conflicting locktime requirements.
+pub fn psbt_v2_unsigned_tx(psbt: &psbtv2::Psbt) -> Result<Transaction, DetermineLockTimeError> {
+	Ok(Transaction {
+		version: psbt.global.tx_version,
+		lock_time: psbt.determine_lock_time()?,
+		input: psbt.inputs.iter().map(|i| input_v2_to_v0(i.clone()).0).collect(),
+		output: psbt.outputs.iter().map(|o| output_v2_to_v0(o.clone()).0).collect(),
+	})
+}
+
+/// Convert a PSBTv2 to a PSBTv0.
+///
+/// The modifiable flags and the per-input locktime requirements are lost,
+/// the latter being folded into the transaction's locktime.
+/// Fails when the inputs have conflicting locktime requirements.
+pub fn psbt_v2_to_v0(psbt: psbtv2::Psbt) -> Result<psbt::Psbt, DetermineLockTimeError> {
+	let lock_time = psbt.determine_lock_time()?;
+	let (txins, inputs): (Vec<TxIn>, Vec<psbt::Input>) =
+		psbt.inputs.into_iter().map(input_v2_to_v0).unzip();
+	let (txouts, outputs): (Vec<TxOut>, Vec<psbt::Output>) =
+		psbt.outputs.into_iter().map(output_v2_to_v0).unzip();
+	Ok(psbt::Psbt {
+		unsigned_tx: Transaction {
+			version: psbt.global.tx_version,
+			lock_time: lock_time,
+			input: txins,
+			output: txouts,
+		},
+		version: 0,
+		xpub: psbt.global.xpubs,
+		proprietary: proprietary_v2_to_v0(psbt.global.proprietaries),
+		unknown: unknown_v2_to_v0(psbt.global.unknowns),
+		inputs: inputs,
+		outputs: outputs,
+	})
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct HDPathInfo {
@@ -163,6 +405,18 @@ fn tap_key_origins_info(
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct PsbtInputInfo {
+	// PSBTv2 fields
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub previous_txid: Option<Txid>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub previous_vout: Option<u32>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub sequence: Option<u32>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub required_time_locktime: Option<u32>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub required_height_locktime: Option<u32>,
+
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub non_witness_utxo: Option<tx::TransactionInfo>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -221,6 +475,11 @@ impl GetInfo<PsbtInputInfo> for psbt::Input {
 		};
 		#[allow(deprecated)] // for hd_keypaths
 		PsbtInputInfo {
+			previous_txid: None,
+			previous_vout: None,
+			sequence: None,
+			required_time_locktime: None,
+			required_height_locktime: None,
 			non_witness_utxo: self.non_witness_utxo.as_ref().map(|u| u.get_info(network)),
 			witness_utxo: self.witness_utxo.as_ref().map(|u| u.get_info(network)),
 			partial_sigs: {
@@ -270,6 +529,20 @@ impl GetInfo<PsbtInputInfo> for psbt::Input {
 	}
 }
 
+impl GetInfo<PsbtInputInfo> for psbtv2::Input {
+	fn get_info(&self, network: Network) -> PsbtInputInfo {
+		let (txin, input) = input_v2_to_v0(self.clone());
+		PsbtInputInfo {
+			previous_txid: Some(txin.previous_output.txid),
+			previous_vout: Some(txin.previous_output.vout),
+			sequence: self.sequence.map(|s| s.to_consensus_u32()),
+			required_time_locktime: self.min_time.map(|t| t.to_consensus_u32()),
+			required_height_locktime: self.min_height.map(|h| h.to_consensus_u32()),
+			..input.get_info(network)
+		}
+	}
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct TapTreeLeafInfo {
 	pub depth: u8,
@@ -300,6 +573,12 @@ impl GetInfo<TapTreeInfo> for TapTree {
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct PsbtOutputInfo {
+	// PSBTv2 fields
+	#[serde(default, with = "bitcoin::amount::serde::as_sat::opt", skip_serializing_if = "Option::is_none")]
+	pub amount: Option<Amount>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub script_pubkey: Option<tx::OutputScriptInfo>,
+
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub redeem_script: Option<tx::OutputScriptInfo>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -332,6 +611,8 @@ impl GetInfo<PsbtOutputInfo> for psbt::Output {
 		};
 		#[allow(deprecated)] // for hd_keypaths
 		PsbtOutputInfo {
+			amount: None,
+			script_pubkey: None,
 			redeem_script: self.redeem_script.as_ref()
 				.map(|s| tx::OutputScript(s).get_info(network)),
 			witness_script: self.witness_script.as_ref()
@@ -347,11 +628,54 @@ impl GetInfo<PsbtOutputInfo> for psbt::Output {
 	}
 }
 
+impl GetInfo<PsbtOutputInfo> for psbtv2::Output {
+	fn get_info(&self, network: Network) -> PsbtOutputInfo {
+		let (txout, output) = output_v2_to_v0(self.clone());
+		PsbtOutputInfo {
+			amount: Some(txout.value),
+			script_pubkey: Some(tx::OutputScript(&txout.script_pubkey).get_info(network)),
+			..output.get_info(network)
+		}
+	}
+}
+
+/// The PSBTv2 PSBT_GLOBAL_TX_MODIFIABLE flags.
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+pub struct TxModifiableInfo {
+	pub inputs_modifiable: bool,
+	pub outputs_modifiable: bool,
+	pub has_sighash_single: bool,
+}
+
+impl TxModifiableInfo {
+	pub fn from_flags(flags: u8) -> TxModifiableInfo {
+		TxModifiableInfo {
+			inputs_modifiable: flags & TX_MODIFIABLE_INPUTS != 0,
+			outputs_modifiable: flags & TX_MODIFIABLE_OUTPUTS != 0,
+			has_sighash_single: flags & TX_MODIFIABLE_SIGHASH_SINGLE != 0,
+		}
+	}
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct PsbtInfo {
 	#[serde(default)]
 	pub version: u32,
-	pub unsigned_tx: tx::TransactionInfo,
+	/// The unsigned transaction. For PSBTv2 this is constructed from the
+	/// PSBT fields and absent when the locktime requirements conflict.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub unsigned_tx: Option<tx::TransactionInfo>,
+	// PSBTv2 fields
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub tx_version: Option<i32>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub fallback_locktime: Option<u32>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub input_count: Option<usize>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub output_count: Option<usize>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub tx_modifiable: Option<TxModifiableInfo>,
 	/// The fee paid by the transaction. Only present when the previous
 	/// outputs of all inputs are known.
 	#[serde(default, with = "bitcoin::amount::serde::as_sat::opt", skip_serializing_if = "Option::is_none")]
@@ -370,11 +694,36 @@ impl GetInfo<PsbtInfo> for psbt::Psbt {
 	fn get_info(&self, network: Network) -> PsbtInfo {
 		PsbtInfo {
 			version: self.version,
-			unsigned_tx: self.unsigned_tx.get_info(network),
+			unsigned_tx: Some(self.unsigned_tx.get_info(network)),
+			tx_version: None,
+			fallback_locktime: None,
+			input_count: None,
+			output_count: None,
+			tx_modifiable: None,
 			fee: self.fee().ok(),
 			xpubs: self.xpub.iter().map(|(k, v)| (*k, HDPathInfo::from(v))).collect(),
 			proprietary: proprietary_info(&self.proprietary),
 			unknown: unknown_info(&self.unknown),
+			inputs: self.inputs.iter().map(|i| i.get_info(network)).collect(),
+			outputs: self.outputs.iter().map(|o| o.get_info(network)).collect(),
+		}
+	}
+}
+
+impl GetInfo<PsbtInfo> for psbtv2::Psbt {
+	fn get_info(&self, network: Network) -> PsbtInfo {
+		PsbtInfo {
+			version: self.global.version.to_u32(),
+			unsigned_tx: psbt_v2_unsigned_tx(self).ok().map(|tx| tx.get_info(network)),
+			tx_version: Some(self.global.tx_version.0),
+			fallback_locktime: self.global.fallback_lock_time.map(|l| l.to_consensus_u32()),
+			input_count: Some(self.global.input_count),
+			output_count: Some(self.global.output_count),
+			tx_modifiable: Some(TxModifiableInfo::from_flags(self.global.tx_modifiable_flags)),
+			fee: self.fee().ok(),
+			xpubs: self.global.xpubs.iter().map(|(k, v)| (*k, HDPathInfo::from(v))).collect(),
+			proprietary: proprietary_info(&proprietary_v2_to_v0(self.global.proprietaries.clone())),
+			unknown: unknown_info(&unknown_v2_to_v0(self.global.unknowns.clone())),
 			inputs: self.inputs.iter().map(|i| i.get_info(network)).collect(),
 			outputs: self.outputs.iter().map(|o| o.get_info(network)).collect(),
 		}

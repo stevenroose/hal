@@ -7,6 +7,7 @@ extern crate hex;
 extern crate lazy_static;
 extern crate lightning_invoice;
 extern crate miniscript as miniscriptlib;
+extern crate psbt_v2;
 extern crate secp256k1;
 extern crate serde;
 
