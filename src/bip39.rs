@@ -11,8 +11,11 @@ use crate::{SECP, GetInfo, HexBytes};
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct MnemonicInfo {
 	pub mnemonic: String,
+	pub word_count: usize,
 	pub entropy: HexBytes,
 	pub entropy_bits: usize,
+	/// The checksum bits of the mnemonic, right-aligned in a byte.
+	pub checksum: u8,
 	pub language: &'static str,
 	pub passphrase: String,
 	pub seed: SeedInfo,
@@ -27,7 +30,9 @@ impl MnemonicInfo {
 		let entropy: Vec<u8> = mnemonic.to_entropy().into();
 		MnemonicInfo {
 			mnemonic: mnemonic.to_string(),
+			word_count: mnemonic.word_count(),
 			entropy_bits: entropy.len() * 8,
+			checksum: mnemonic.checksum(),
 			entropy: entropy.into(),
 			language: match mnemonic.language() {
 				Language::English => "english",
