@@ -1,11 +1,11 @@
 
 use bitcoin::hex::DisplayHex;
-use bitcoin::ScriptBuf;
+use bitcoin::{ScriptBuf, XOnlyPublicKey};
 use clap;
 use hal::miniscript::{
 	DescriptorInfo, MiniscriptInfo, MiniscriptKeyType, Miniscripts, PolicyInfo, ScriptContexts,
 };
-use miniscript::miniscript::{BareCtx, Legacy, Miniscript, Segwitv0};
+use miniscript::miniscript::{BareCtx, Legacy, Miniscript, Segwitv0, Tap};
 use miniscript::policy::Liftable;
 use miniscript::{policy, Descriptor, FromStrKey, MiniscriptKey};
 
@@ -102,7 +102,21 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 			MiniscriptInfo::from_segwitv0(x, MiniscriptKeyType::PublicKey, Some(script))
 		})
 		.ok();
-	let info = if bare_info.is_none() && p2sh_info.is_none() && segwit_info.is_none() {
+	// Tapscript uses x-only keys, so it can't be combined with the others.
+	let tap_info = Miniscript::<XOnlyPublicKey, Tap>::from_str_insane(miniscript_str)
+		.map_err(|e| info!("Cannot parse as Tapscript Miniscript {}", e))
+		.map(|x| {
+			let script = x.encode();
+			MiniscriptInfo::from_tapscript(x, MiniscriptKeyType::XOnlyPublicKey, Some(script))
+		})
+		.ok();
+	let pubkey_info =
+		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info);
+	let info = if let Some(info) = pubkey_info {
+		info
+	} else if let Some(info) = tap_info {
+		info
+	} else {
 		// Try as Strings
 		let bare_info = Miniscript::<String, BareCtx>::from_str_insane(miniscript_str)
 			.map_err(|e| debug!("Cannot parse as Bare Miniscript {}", e))
@@ -116,12 +130,15 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 			.map_err(|e| info!("Cannot parse as Segwitv0 Miniscript {}", e))
 			.map(|x| MiniscriptInfo::from_segwitv0(x, MiniscriptKeyType::String, None))
 			.ok();
+		let tap_info = Miniscript::<String, Tap>::from_str_insane(miniscript_str)
+			.map_err(|e| info!("Cannot parse as Tapscript Miniscript {}", e))
+			.map(|x| MiniscriptInfo::from_tapscript(x, MiniscriptKeyType::String, None))
+			.ok();
 
-		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
-			.need("Invalid Miniscript")
-	} else {
-		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info)
-			.unwrap()
+		MiniscriptInfo::combine(
+			MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, p2sh_info), segwit_info),
+			tap_info,
+		).need("Invalid Miniscript")
 	};
 	args.print_output(&info);
 }
@@ -147,15 +164,20 @@ fn exec_parse<'a>(args: &clap::ArgMatches<'a>) {
 		.ok();
 	let bare_info = Miniscript::<_, BareCtx>::parse_insane(&script)
 		.map_err(|e| debug!("Cannot parse as Bare Miniscript {}", e))
-		.map(|x| MiniscriptInfo::from_bare(x, MiniscriptKeyType::PublicKey, Some(script)))
+		.map(|x| MiniscriptInfo::from_bare(x, MiniscriptKeyType::PublicKey, Some(script.clone())))
 		.ok();
-	if segwit_info.is_none() && legacy_info.is_none() && bare_info.is_none() {
+	let tap_info = Miniscript::<XOnlyPublicKey, Tap>::parse_insane(&script)
+		.map_err(|e| debug!("Cannot parse as Tapscript Miniscript {}", e))
+		.map(|x| MiniscriptInfo::from_tapscript(x, MiniscriptKeyType::XOnlyPublicKey, Some(script)))
+		.ok();
+	if segwit_info.is_none() && legacy_info.is_none() && bare_info.is_none() && tap_info.is_none() {
 		exit!("Invalid Miniscript under all script contexts")
 	}
 
-	let comb_info =
-		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, legacy_info), segwit_info)
-			.unwrap();
+	let comb_info = MiniscriptInfo::combine(
+		MiniscriptInfo::combine(MiniscriptInfo::combine(bare_info, legacy_info), segwit_info),
+		tap_info,
+	).unwrap();
 	args.print_output(&comb_info);
 }
 
@@ -211,6 +233,13 @@ where
 				}
 			},
 			segwitv0: match policy::compiler::best_compilation::<Pk, Segwitv0>(&p) {
+				Ok(ms) => Some(ms.to_string()),
+				Err(e) => {
+					debug!("Compiler error: {}", e);
+					None
+				}
+			},
+			tapscript: match policy::compiler::best_compilation::<Pk, Tap>(&p) {
 				Ok(ms) => Some(ms.to_string()),
 				Err(e) => {
 					debug!("Compiler error: {}", e);
@@ -308,6 +337,11 @@ trait FromScriptContexts: Sized {
 		key_type: MiniscriptKeyType,
 		script: Option<bitcoin::ScriptBuf>,
 	) -> Self;
+	fn from_tapscript<Pk: MiniscriptKey>(
+		ms: Miniscript<Pk, Tap>,
+		key_type: MiniscriptKeyType,
+		script: Option<bitcoin::ScriptBuf>,
+	) -> Self;
 	fn combine(a: Option<Self>, b: Option<Self>) -> Option<Self>;
 }
 
@@ -324,6 +358,7 @@ impl FromScriptContexts for MiniscriptInfo {
 			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
 			max_satisfaction_size_segwit: None,
 			max_satisfaction_size_non_segwit: ms.max_satisfaction_size().ok(),
+			max_satisfaction_size_tapscript: None,
 			script: script.map(|x| x.into_bytes().into()),
 			policy: match ms.lift() {
 				Ok(pol) => Some(pol.to_string()),
@@ -353,6 +388,7 @@ impl FromScriptContexts for MiniscriptInfo {
 			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
 			max_satisfaction_size_segwit: None,
 			max_satisfaction_size_non_segwit: ms.max_satisfaction_size().ok(),
+			max_satisfaction_size_tapscript: None,
 			script: script.map(|x| x.into_bytes().into()),
 			policy: match ms.lift() {
 				Ok(pol) => Some(pol.to_string()),
@@ -382,6 +418,7 @@ impl FromScriptContexts for MiniscriptInfo {
 			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
 			max_satisfaction_size_segwit: ms.max_satisfaction_size().ok(),
 			max_satisfaction_size_non_segwit: None,
+			max_satisfaction_size_tapscript: None,
 			script: script.map(|x| x.into_bytes().into()),
 			policy: match ms.lift() {
 				Ok(pol) => Some(pol.to_string()),
@@ -399,15 +436,46 @@ impl FromScriptContexts for MiniscriptInfo {
 		}
 	}
 
-	// Helper function to combine two Miniscript Infos of same key types
-	// Used to combine Infos from different scriptContexts
+	fn from_tapscript<Pk: MiniscriptKey>(
+		ms: Miniscript<Pk, Tap>,
+		key_type: MiniscriptKeyType,
+		script: Option<bitcoin::ScriptBuf>,
+	) -> Self {
+		Self {
+			key_type: key_type,
+			valid_script_contexts: ScriptContexts::from_tapscript(true),
+			script_size: ms.script_size(),
+			max_satisfaction_witness_elements: ms.max_satisfaction_witness_elements().ok(),
+			max_satisfaction_size_segwit: None,
+			max_satisfaction_size_non_segwit: None,
+			max_satisfaction_size_tapscript: ms.max_satisfaction_size().ok(),
+			script: script.map(|x| x.into_bytes().into()),
+			policy: match ms.lift() {
+				Ok(pol) => Some(pol.to_string()),
+				Err(e) => {
+					info!("Lift error {}: Tapscript Context", e);
+					None
+				}
+			},
+			requires_sig: ms.requires_sig(),
+			non_malleable: ScriptContexts::from_tapscript(ms.is_non_malleable()),
+			within_resource_limits: ScriptContexts::from_tapscript(ms.within_resource_limits()),
+			has_mixed_timelocks: ms.has_mixed_timelocks(),
+			has_repeated_keys: ms.has_repeated_keys(),
+			sane_miniscript: ScriptContexts::from_tapscript(ms.sanity_check().is_ok()),
+		}
+	}
+
+	// Helper function to combine two Miniscript Infos.
+	// Used to combine Infos from different scriptContexts.
+	// The key type of the first one is kept; they can only differ for
+	// scripts without keys, where the key type is meaningless anyway.
 	fn combine(a: Option<Self>, b: Option<Self>) -> Option<Self> {
 		match (a, b) {
 			(None, None) => None,
 			(None, Some(b)) => Some(b),
 			(Some(a), None) => Some(a),
 			(Some(a), Some(b)) => {
-				debug_assert!(a.key_type == b.key_type);
 				Some(Self {
 					key_type: a.key_type,
 					valid_script_contexts: ScriptContexts::or(
@@ -424,6 +492,9 @@ impl FromScriptContexts for MiniscriptInfo {
 					max_satisfaction_size_non_segwit: a
 						.max_satisfaction_size_non_segwit
 						.or(b.max_satisfaction_size_non_segwit),
+					max_satisfaction_size_tapscript: a
+						.max_satisfaction_size_tapscript
+						.or(b.max_satisfaction_size_tapscript),
 					script: a.script,
 					policy: a.policy.or(b.policy),
 					requires_sig: a.requires_sig,

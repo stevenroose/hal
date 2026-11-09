@@ -6,6 +6,8 @@ use crate::HexBytes;
 #[serde(rename_all = "snake_case")]
 pub enum MiniscriptKeyType {
 	PublicKey,
+	#[serde(rename = "xonly_public_key")]
+	XOnlyPublicKey,
 	String,
 }
 
@@ -14,6 +16,8 @@ pub struct ScriptContexts {
 	pub bare: bool, // in bare script pubkey
 	pub p2sh: bool,
 	pub segwitv0: bool,
+	#[serde(default)]
+	pub tapscript: bool,
 }
 
 impl ScriptContexts {
@@ -23,6 +27,7 @@ impl ScriptContexts {
 			bare: bare,
 			p2sh: false,
 			segwitv0: false,
+			tapscript: false,
 		}
 	}
 
@@ -31,6 +36,7 @@ impl ScriptContexts {
 			bare: false,
 			p2sh: p2sh,
 			segwitv0: false,
+			tapscript: false,
 		}
 	}
 
@@ -39,6 +45,16 @@ impl ScriptContexts {
 			bare: false,
 			p2sh: false,
 			segwitv0: segwitv0,
+			tapscript: false,
+		}
+	}
+
+	pub fn from_tapscript(tapscript: bool) -> Self {
+		Self {
+			bare: false,
+			p2sh: false,
+			segwitv0: false,
+			tapscript: tapscript,
 		}
 	}
 
@@ -47,6 +63,7 @@ impl ScriptContexts {
 			bare: a.bare || b.bare,
 			p2sh: a.p2sh || b.p2sh,
 			segwitv0: a.segwitv0 || b.segwitv0,
+			tapscript: a.tapscript || b.tapscript,
 		}
 	}
 }
@@ -59,7 +76,8 @@ pub struct Miniscripts {
 	pub p2sh: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub segwitv0: Option<String>,
-	// Taproot to come
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub tapscript: Option<String>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -97,6 +115,8 @@ pub struct MiniscriptInfo {
 	pub max_satisfaction_size_segwit: Option<usize>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub max_satisfaction_size_non_segwit: Option<usize>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub max_satisfaction_size_tapscript: Option<usize>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub script: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
