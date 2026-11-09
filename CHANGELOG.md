@@ -42,6 +42,11 @@ CHANGELOG
 - `miniscript descriptor`: add `type`, `is_sane` and `script_code`; support descriptors with
   extended keys (`has_wildcard`, `is_multipath`)
 - `script decode`: output JSON with more information instead of only the assembly
+- add `tx sighash` command to calculate legacy, segwit v0 and taproot signature hashes
+- add `psbt sign` command signing with private keys or xprivs, including taproot key-path
+- add `tx verify` command verifying a signed transaction with libbitcoinconsensus (behind the
+  new default `bitcoinconsensus` feature)
+- add `pow target` and `pow next-target` commands
 
 # v0.11.0  --  2025-11-20
 
