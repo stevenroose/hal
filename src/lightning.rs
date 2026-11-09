@@ -70,11 +70,18 @@ pub struct InvoiceInfo {
 	#[serde(with = "bitcoin::amount::serde::as_sat::opt", skip_serializing_if = "Option::is_none")]
 	pub amount_sat: Option<Amount>,
 	pub payment_hash: sha256::Hash,
+	/// The description, or the hex description hash if only a hash is included.
 	pub description: String,
+	/// The description hash, if the invoice has one instead of a description.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub description_hash: Option<sha256::Hash>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub payee_pub_key: Option<HexBytes>,
+	/// The expiry delta in seconds, relative to the timestamp.
+	pub expiry_seconds: u64,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub expiry_time: Option<DateTime<Local>>,
+	pub is_expired: bool,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub min_final_cltv_expiry: Option<u64>,
 	#[serde(skip_serializing_if = "Vec::is_empty")]
@@ -113,7 +120,13 @@ impl GetInfo<InvoiceInfo> for Bolt11Invoice {
 				Bolt11InvoiceDescriptionRef::Direct(s) => s.clone().into_inner().0,
 				Bolt11InvoiceDescriptionRef::Hash(h) => h.0.to_string(),
 			},
+			description_hash: match self.description() {
+				Bolt11InvoiceDescriptionRef::Direct(_) => None,
+				Bolt11InvoiceDescriptionRef::Hash(h) => Some(h.0),
+			},
 			payee_pub_key: self.payee_pub_key().map(|pk| pk.serialize()[..].into()),
+			expiry_seconds: self.expiry_time().as_secs(),
+			is_expired: self.is_expired(),
 			expiry_time: self.expires_at().and_then(|d| {
 				let d = Duration::from_std(d).ok()?;
 				DateTime::from_timestamp(d.num_seconds(), 0).map(|t| t.with_timezone(&Local))
