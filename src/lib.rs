@@ -21,6 +21,7 @@ pub mod key;
 pub mod lightning;
 pub mod message;
 pub mod miniscript;
+pub mod pow;
 pub mod psbt;
 pub mod script;
 pub mod tx;
