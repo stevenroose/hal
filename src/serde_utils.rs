@@ -21,6 +21,33 @@ pub mod network_kind {
 			k => Err(D::Error::custom(format!("unknown network kind: {}", k))),
 		}
 	}
+
+	pub mod opt {
+		use super::*;
+
+		pub fn serialize<S: ::serde::Serializer>(
+			network: &Option<NetworkKind>,
+			s: S,
+		) -> Result<S::Ok, S::Error> {
+			match network {
+				Some(n) => super::serialize(n, s),
+				None => s.serialize_none(),
+			}
+		}
+
+		pub fn deserialize<'de, D: ::serde::Deserializer<'de>>(
+			d: D,
+		) -> Result<Option<NetworkKind>, D::Error> {
+			use serde::de::Error;
+
+			match <Option<&str>>::deserialize(d)? {
+				None => Ok(None),
+				Some("main") => Ok(Some(NetworkKind::Main)),
+				Some("test") => Ok(Some(NetworkKind::Test)),
+				Some(k) => Err(D::Error::custom(format!("unknown network kind: {}", k))),
+			}
+		}
+	}
 }
 
 /// Utility struct to serialize byte strings as hex.
