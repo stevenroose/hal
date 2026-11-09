@@ -20,8 +20,11 @@ path = "src/bin/hal/main.rs"
 required-features = ["cli"]
 
 [features]
-default = ["cli"]
+default = ["cli", "bitcoinconsensus"]
 cli = ["base64-compat", "clap", "fern", "log", "jobserver", "shell-escape"]
+# Enables the `tx verify` command, which uses libbitcoinconsensus and
+# thus requires a C++ compiler to build.
+bitcoinconsensus = ["bitcoin/bitcoinconsensus-std"]
 
 [dependencies]
 bitcoin = { version = "0.32.102", features = [ "std", "serde", "rand", "rand-std" ] }

@@ -18,6 +18,7 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 		.subcommand(cmd_create())
 		.subcommand(cmd_decode())
 		.subcommand(cmd_sighash())
+		.subcommands(cmd_verify())
 }
 
 pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
@@ -25,6 +26,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 		("create", Some(ref m)) => exec_create(&m),
 		("decode", Some(ref m)) => exec_decode(&m),
 		("sighash", Some(ref m)) => exec_sighash(&m),
+		#[cfg(feature = "bitcoinconsensus")]
+		("verify", Some(ref m)) => exec_verify(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -459,4 +462,83 @@ fn exec_sighash<'a>(args: &clap::ArgMatches<'a>) {
 		script_code: Some(script_code.into_bytes().into()),
 		leaf_hash: None,
 	});
+}
+
+/// The verify command, only available with the bitcoinconsensus feature.
+#[cfg(feature = "bitcoinconsensus")]
+fn cmd_verify<'a>() -> Vec<clap::App<'a, 'a>> {
+	vec![
+		cmd::subcommand("verify", "verify the scripts of a signed transaction with libbitcoinconsensus")
+			.arg(args::arg("raw-tx", "the raw transaction in hex").required(true))
+			.arg(args::opt("prevouts", "the outputs being spent, as comma-separated serialized \
+				txouts in hex, in input order")
+				.required(true))
+			.arg(args::opt("input-idx", "only verify the input with this index"))
+			.arg(args::opt("flags", "the script verification flags as a number; defaults to \
+				all flags supported by libbitcoinconsensus"))
+			.long_about(r#"
+Verify the scripts of a signed transaction using libbitcoinconsensus, given
+the outputs it spends.
+
+NB The libbitcoinconsensus bindings used (v0.105) don't support taproot
+verification, so transactions spending p2tr outputs fail verification.
+"#)
+	]
+}
+
+#[cfg(not(feature = "bitcoinconsensus"))]
+fn cmd_verify<'a>() -> Vec<clap::App<'a, 'a>> {
+	vec![]
+}
+
+#[cfg(feature = "bitcoinconsensus")]
+fn exec_verify<'a>(args: &clap::ArgMatches<'a>) {
+	use std::collections::HashMap;
+	use bitcoin::consensus::validation;
+
+	let hex_tx = args.value_of("raw-tx").need("no raw tx provided");
+	let raw_tx = hex::decode(hex_tx).need("could not decode raw tx");
+	let tx: Transaction = deserialize(&raw_tx).need("invalid tx format");
+
+	let prevouts = args.value_of("prevouts").need("no prevouts provided")
+		.split(",")
+		.map(|h| {
+			let raw = hex::decode(h).need("invalid prevout hex");
+			deserialize::<TxOut>(&raw).need("invalid prevout txout format")
+		})
+		.collect::<Vec<_>>();
+	if prevouts.len() != tx.input.len() {
+		exit!("expected {} prevouts, one for each input, got {}", tx.input.len(), prevouts.len());
+	}
+	let flags = args.value_of("flags").map(|f| f.parse::<u32>().need("invalid flags"));
+
+	let result = if let Some(idx) = args.value_of("input-idx") {
+		let idx = idx.parse::<usize>().need("invalid input index");
+		if idx >= tx.input.len() {
+			exit!("input index out of range: tx has {} inputs", tx.input.len());
+		}
+		let prevout = &prevouts[idx];
+		match flags {
+			Some(flags) => validation::verify_script_with_flags(
+				&prevout.script_pubkey, idx, prevout.value, &raw_tx, flags,
+			),
+			None => validation::verify_script(&prevout.script_pubkey, idx, prevout.value, &raw_tx),
+		}.map_err(|e| format!("input {}: {}", idx, e))
+	} else {
+		let spent = tx.input.iter().map(|i| i.previous_output).zip(prevouts.iter().cloned())
+			.collect::<HashMap<_, _>>();
+		let lookup = |outpoint: &OutPoint| spent.get(outpoint).cloned();
+		match flags {
+			Some(flags) => tx.verify_with_flags(lookup, flags),
+			None => tx.verify(lookup),
+		}.map_err(|e| e.to_string())
+	};
+
+	match result {
+		Ok(()) => println!("Transaction is valid."),
+		Err(e) => {
+			eprintln!("Transaction is invalid: {}", e);
+			std::process::exit(1);
+		},
+	}
 }
