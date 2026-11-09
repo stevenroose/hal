@@ -2,7 +2,7 @@ CHANGELOG
 =========
 
 
-# Unreleased
+# v0.12.0  --  2026-11-09
 
 - update bitcoin dependency to v0.32.102
 - update ark-lib dependency to v0.8.1
