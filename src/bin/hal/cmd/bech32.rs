@@ -23,11 +23,8 @@ pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 fn cmd_encode<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("encode", "encode bech32 format")
 		.arg(args::arg("hrp", "human-readable part").required(true))
-		.arg(args::arg(
-			"payload-hex",
-			"hex-encoded payload bytes, 8-bit values\nunless --no-convert is specified",
-		))
-		.arg(args::opt("legacy", "encode using legacy bech32, not bech32m"))
+		.arg(args::arg("payload-hex", "hex-encoded payload bytes"))
+		.arg(args::flag("legacy", "encode using legacy bech32, not bech32m"))
 }
 
 fn exec_encode<'a>(args: &clap::ArgMatches<'a>) {
