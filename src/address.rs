@@ -5,16 +5,24 @@ use bitcoin::{
 use secp256k1::XOnlyPublicKey;
 use serde::{Deserialize, Serialize};
 
-use crate::SECP;
+use crate::{HexBytes, SECP};
 use crate::tx;
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct AddressInfo {
 	#[serde(rename = "type")]
 	pub type_: Option<String>,
+	/// The networks this address is valid for.
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub valid_networks: Vec<Network>,
+	/// Whether spending from this address follows standardness rules.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub is_spend_standard: Option<bool>,
 	pub script_pub_key: tx::OutputScriptInfo,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub witness_program_version: Option<usize>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub witness_program: Option<HexBytes>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub pubkey_hash: Option<PubkeyHash>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -23,6 +31,9 @@ pub struct AddressInfo {
 	pub witness_pubkey_hash: Option<WPubkeyHash>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub witness_script_hash: Option<WScriptHash>,
+	/// The tweaked taproot output key for p2tr addresses.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub taproot_output_key: Option<XOnlyPublicKey>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Default, Deserialize, Serialize)]

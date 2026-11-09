@@ -4,7 +4,7 @@ use std::str::FromStr;
 use bitcoin::address::AddressData;
 use bitcoin::hashes::Hash;
 use bitcoin::hashes::hex::FromHex;
-use bitcoin::{Address, ScriptBuf, WPubkeyHash, WScriptHash};
+use bitcoin::{Address, AddressType, Network, ScriptBuf, WPubkeyHash, WScriptHash, XOnlyPublicKey};
 use clap;
 
 use hal;
@@ -134,9 +134,15 @@ fn cmd_inspect<'a>() -> clap::App<'a, 'a> {
 
 fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 	let address_str = args.value_of("address").need("no address provided");
-	let address = Address::from_str(address_str)
-		.need("invalid address format")
-		.assume_checked();
+	let unchecked = Address::from_str(address_str).need("invalid address format");
+	let valid_networks = [
+		Network::Bitcoin,
+		Network::Testnet,
+		Network::Testnet4,
+		Network::Signet,
+		Network::Regtest,
+	].iter().cloned().filter(|n| unchecked.is_valid_for_network(*n)).collect::<Vec<_>>();
+	let address = unchecked.assume_checked();
 	let script_pk = address.script_pubkey();
 
 	let mut info = hal::address::AddressInfo {
@@ -144,14 +150,18 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 			hex: Some(script_pk.to_bytes().into()),
 			asm: Some(script_pk.to_asm_string()),
 			address: None,
-			type_: None,
+			type_: Some(hal::tx::output_script_type(&script_pk).to_owned()),
 		},
 		type_: None,
+		valid_networks: valid_networks,
+		is_spend_standard: Some(address.is_spend_standard()),
 		pubkey_hash: None,
 		script_hash: None,
 		witness_pubkey_hash: None,
 		witness_script_hash: None,
 		witness_program_version: None,
+		witness_program: None,
+		taproot_output_key: None,
 	};
 
 	match address.to_address_data() {
@@ -164,24 +174,34 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 			info.script_hash = Some(script_hash);
 		},
 		AddressData::Segwit { witness_program } => {
-			let version = witness_program.version().to_num() as usize;
-			info.witness_program_version = Some(version);
+			info.witness_program_version = Some(witness_program.version().to_num() as usize);
 			let program = witness_program.program();
+			info.witness_program = Some(program.as_bytes().into());
 
-			if version == 0 {
-				if program.len() == 20 {
+			match address.address_type() {
+				Some(AddressType::P2wpkh) => {
 					info.type_ = Some("p2wpkh".to_owned());
 					info.witness_pubkey_hash =
 						Some(WPubkeyHash::from_slice(program.as_bytes()).need("size 20"));
-				} else if program.len() == 32 {
+				},
+				Some(AddressType::P2wsh) => {
 					info.type_ = Some("p2wsh".to_owned());
 					info.witness_script_hash =
 						Some(WScriptHash::from_slice(program.as_bytes()).need("size 32"));
-				} else {
-					info.type_ = Some("invalid-witness-program".to_owned());
-				}
-			} else {
-				info.type_ = Some("unknown-witness-program-version".to_owned());
+				},
+				Some(AddressType::P2tr) => {
+					info.type_ = Some("p2tr".to_owned());
+					info.taproot_output_key = Some(
+						XOnlyPublicKey::from_slice(program.as_bytes()).need("invalid x-only key"),
+					);
+				},
+				Some(AddressType::P2a) => {
+					info.type_ = Some("p2a".to_owned());
+				},
+				Some(other) => exit!("unexpected segwit address type: {}", other),
+				None => {
+					info.type_ = Some("unknown-witness-program-version".to_owned());
+				},
 			}
 		},
 		_ => exit!("unknown address type"),

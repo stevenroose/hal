@@ -176,7 +176,7 @@ pub fn output_script_type(script: &Script) -> &'static str {
 		// OP_1 <0x4e73>: pay-to-anchor
 		"p2a"
 	} else if script.is_witness_program() {
-		"unknown-witness-program"
+		"unknown-witness-program-version"
 	} else if script.is_multisig() {
 		"multisig"
 	} else {
