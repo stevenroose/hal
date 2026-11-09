@@ -38,7 +38,7 @@ fn exec_proof_create<'a>(args: &clap::ArgMatches<'a>) {
 		if let Some(block_res) = args.hex_consensus::<Block>("block") {
 			let block = block_res.need("invalid block");
 			block.txdata.iter().map(|tx| tx.compute_txid()).collect()
-		} else if let Some(txids) = args.value_of("block-txid") {
+		} else if let Some(txids) = args.value_of("block-txids") {
 			txids.split(",").map(|s| Txid::from_str(s).need("invalid block txid")).collect()
 		} else {
 			exit!("Need to provide either --block or --block-txids");
@@ -76,8 +76,7 @@ fn exec_proof_check<'a>(args: &clap::ArgMatches<'a>) {
 
 	let mut txids = Vec::new();
 	let mut idxs = Vec::new();
-	//TODO(stevenroose) make this into a need() when we update bitcoin dep
-	proof.extract_matches(&mut txids, &mut idxs).expect("invalid proof");
+	proof.extract_matches(&mut txids, &mut idxs).need("invalid proof");
 
 	if let Some(check_txids) = args.values_of("txid") {
 		let mut ok = true;
