@@ -3,21 +3,28 @@ use std::io::Write;
 use bitcoin::address::NetworkUnchecked;
 use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::blockdata::transaction;
+use bitcoin::hashes::Hash;
+use bitcoin::sighash::{Annex, Prevouts, SighashCache};
+use bitcoin::taproot::{LeafVersion, TapLeafHash};
 use bitcoin::{Address, Network, OutPoint, ScriptBuf, Transaction, TxIn, TxOut};
 
-use hal::tx::{InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, TransactionInfo};
+use hal::tx::{
+	InputInfo, InputScriptInfo, OutputInfo, OutputScriptInfo, SighashInfo, TransactionInfo,
+};
 use crate::prelude::*;
 
 pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("tx", "manipulate transactions")
 		.subcommand(cmd_create())
 		.subcommand(cmd_decode())
+		.subcommand(cmd_sighash())
 }
 
 pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 	match args.subcommand() {
 		("create", Some(ref m)) => exec_create(&m),
 		("decode", Some(ref m)) => exec_decode(&m),
+		("sighash", Some(ref m)) => exec_sighash(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -289,4 +296,167 @@ fn exec_decode<'a>(args: &clap::ArgMatches<'a>) {
 
 	let info = hal::GetInfo::get_info(&tx, args.network());
 	args.print_output(&info)
+}
+
+fn cmd_sighash<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("sighash", "calculate the signature hash of a transaction input")
+		.arg(args::arg("raw-tx", "the raw transaction in hex").required(true))
+		.arg(args::opt("input-idx", "the index of the input to calculate the sighash for")
+			.required(true))
+		.arg(args::opt("prevouts", "the outputs being spent, as comma-separated serialized \
+			txouts in hex, in input order; for taproot all of them are needed unless \
+			ANYONECANPAY is used, otherwise only the one being spent is used")
+			.required(true))
+		.arg(args::opt("sighash-type", "the sighash type, e.g. ALL, NONE|ANYONECANPAY or \
+			DEFAULT for taproot; defaults to ALL or DEFAULT for taproot"))
+		.arg(args::opt("redeem-script", "the redeem script in hex, for p2sh inputs"))
+		.arg(args::opt("witness-script", "the witness script in hex, for p2wsh inputs"))
+		.arg(args::opt("tapscript", "the leaf script in hex, for taproot script-path spends"))
+		.arg(args::opt("leaf-version", "the leaf version of the tapscript (default 0xc0)"))
+		.arg(args::opt("annex", "the taproot annex in hex, including the 0x50 prefix"))
+		.long_about(r#"
+Calculate the signature hash of a transaction input.
+
+The type of the output being spent determines the kind of signature hash:
+- p2pk, p2pkh and bare scripts: legacy, using the scriptPubkey as script code
+- p2sh: legacy, using the redeem script as script code; when the redeem
+  script is p2wpkh or p2wsh, the segwit v0 signature hash is calculated
+- p2wpkh and p2wsh: segwit v0 (BIP-143)
+- p2tr: taproot (BIP-341) key-path spend, or script-path spend when a
+  tapscript is given
+
+The resulting sighash is printed as raw bytes, so it can be passed directly
+to `hal key ecdsa-sign` or `hal key schnorr-sign` without --reverse.
+"#)
+}
+
+fn exec_sighash<'a>(args: &clap::ArgMatches<'a>) {
+	let hex_tx = args.value_of("raw-tx").need("no raw tx provided");
+	let raw_tx = hex::decode(hex_tx).need("could not decode raw tx");
+	let tx: Transaction = deserialize(&raw_tx).need("invalid tx format");
+
+	let idx = args.value_of("input-idx").need("no input index provided")
+		.parse::<usize>().need("invalid input index");
+	if idx >= tx.input.len() {
+		exit!("input index out of range: tx has {} inputs", tx.input.len());
+	}
+
+	let prevouts = args.value_of("prevouts").need("no prevouts provided")
+		.split(",")
+		.map(|h| {
+			let raw = hex::decode(h).need("invalid prevout hex");
+			deserialize::<TxOut>(&raw).need("invalid prevout txout format")
+		})
+		.collect::<Vec<_>>();
+
+	let opt_script = |name: &str| args.value_of(name).map(|h| {
+		ScriptBuf::from_bytes(hex::decode(h).need(&format!("invalid {} hex", name)))
+	});
+	let redeem_script = opt_script("redeem-script");
+	let witness_script = opt_script("witness-script");
+	let tapscript = opt_script("tapscript");
+
+	let mut cache = SighashCache::new(&tx);
+	let sht_str = args.value_of("sighash-type");
+
+	// Taproot.
+	if prevouts.len() == 1 && prevouts[0].script_pubkey.is_p2tr() || prevouts.len() > idx
+		&& prevouts.len() == tx.input.len() && prevouts[idx].script_pubkey.is_p2tr()
+	{
+		let sighash_type = match sht_str {
+			Some(s) => hal::tx::parse_tap_sighash_type(s).need("invalid taproot sighash type"),
+			None => bitcoin::TapSighashType::Default,
+		};
+		let prevouts = if prevouts.len() == tx.input.len() {
+			Prevouts::All(&prevouts)
+		} else if prevouts.len() == 1 {
+			Prevouts::One(idx, prevouts[0].clone())
+		} else {
+			exit!("for taproot, provide either all prevouts or only the one being spent");
+		};
+		let annex = args.value_of("annex").map(|h| hex::decode(h).need("invalid annex hex"));
+		let annex = annex.as_ref().map(|a| Annex::new(a).need("invalid annex"));
+		let leaf_hash = tapscript.as_ref().map(|script| {
+			let version = match args.value_of("leaf-version") {
+				Some(v) => {
+					let v = v.trim_start_matches("0x");
+					let v = u8::from_str_radix(v, 16).need("invalid leaf version hex");
+					LeafVersion::from_consensus(v).need("invalid leaf version")
+				},
+				None => LeafVersion::TapScript,
+			};
+			TapLeafHash::from_script(script, version)
+		});
+		let sighash = cache.taproot_signature_hash(
+			idx, &prevouts, annex, leaf_hash.map(|h| (h, 0xffffffff)), sighash_type,
+		).need("error calculating taproot sighash");
+		args.print_output(&SighashInfo {
+			sighash: sighash.to_byte_array()[..].into(),
+			type_: if leaf_hash.is_some() {
+				"taproot_script_spend".to_owned()
+			} else {
+				"taproot_key_spend".to_owned()
+			},
+			sighash_type: sighash_type.to_string(),
+			input_index: idx,
+			script_code: None,
+			leaf_hash: leaf_hash,
+		});
+		return;
+	}
+
+	// Legacy and segwit v0 only need the prevout being spent.
+	let prevout = if prevouts.len() == tx.input.len() {
+		&prevouts[idx]
+	} else if prevouts.len() == 1 {
+		&prevouts[0]
+	} else {
+		exit!("provide either all prevouts or only the one being spent");
+	};
+	let sighash_type = match sht_str {
+		Some(s) => hal::tx::parse_ecdsa_sighash_type(s).need("invalid ECDSA sighash type"),
+		None => bitcoin::EcdsaSighashType::All,
+	};
+
+	// Determine the script that is actually being executed.
+	let spk = &prevout.script_pubkey;
+	let executed: ScriptBuf = if spk.is_p2sh() {
+		let redeem = redeem_script.need("--redeem-script is required for p2sh inputs");
+		if redeem.to_p2sh() != *spk {
+			exit!("redeem script doesn't match the p2sh scriptPubkey");
+		}
+		redeem
+	} else {
+		spk.clone()
+	};
+
+	let (sighash, type_, script_code) = if executed.is_p2wpkh() {
+		let script_code = executed.p2wpkh_script_code().unwrap();
+		let sighash = cache.p2wpkh_signature_hash(idx, &executed, prevout.value, sighash_type)
+			.need("error calculating segwit v0 sighash");
+		(sighash.to_byte_array(), "segwit_v0", script_code)
+	} else if executed.is_p2wsh() {
+		let ws = witness_script.need("--witness-script is required for p2wsh inputs");
+		if ws.to_p2wsh() != executed {
+			exit!("witness script doesn't match the p2wsh scriptPubkey");
+		}
+		let sighash = cache.p2wsh_signature_hash(idx, &ws, prevout.value, sighash_type)
+			.need("error calculating segwit v0 sighash");
+		(sighash.to_byte_array(), "segwit_v0", ws)
+	} else if executed.is_witness_program() {
+		exit!("unsupported witness program version");
+	} else {
+		let sighash = cache.legacy_signature_hash(idx, &executed, sighash_type.to_u32())
+			.need("error calculating legacy sighash");
+		(sighash.to_byte_array(), "legacy", executed)
+	};
+
+	args.print_output(&SighashInfo {
+		sighash: sighash[..].into(),
+		type_: type_.to_owned(),
+		sighash_type: sighash_type.to_string(),
+		input_index: idx,
+		script_code: Some(script_code.into_bytes().into()),
+		leaf_hash: None,
+	});
 }

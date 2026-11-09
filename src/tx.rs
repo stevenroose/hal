@@ -1,12 +1,73 @@
 use bitcoin::consensus::encode::serialize;
-use bitcoin::taproot::{ControlBlock, TapNodeHash};
+use bitcoin::taproot::{ControlBlock, TapLeafHash, TapNodeHash};
 use bitcoin::{
-	address, relative, Address, Amount, Network, Script, Transaction, TxIn, TxOut, Txid, Witness,
-	Wtxid, XOnlyPublicKey,
+	address, relative, Address, Amount, EcdsaSighashType, Network, Script, TapSighashType,
+	Transaction, TxIn, TxOut, Txid, Witness, Wtxid, XOnlyPublicKey,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{GetInfo, HexBytes};
+
+/// Normalize a sighash type string: uppercase and without `SIGHASH_` prefixes.
+fn normalize_sighash_type(s: &str) -> String {
+	s.to_uppercase().replace("SIGHASH_", "")
+}
+
+/// Parse an ECDSA sighash type.
+///
+/// Accepts the short form (`ALL`, `NONE|ANYONECANPAY`) and the long form
+/// (`SIGHASH_ALL`, `SIGHASH_NONE|SIGHASH_ANYONECANPAY`), case insensitive.
+pub fn parse_ecdsa_sighash_type(s: &str) -> Option<EcdsaSighashType> {
+	Some(match normalize_sighash_type(s).as_str() {
+		"ALL" => EcdsaSighashType::All,
+		"NONE" => EcdsaSighashType::None,
+		"SINGLE" => EcdsaSighashType::Single,
+		"ALL|ANYONECANPAY" => EcdsaSighashType::AllPlusAnyoneCanPay,
+		"NONE|ANYONECANPAY" => EcdsaSighashType::NonePlusAnyoneCanPay,
+		"SINGLE|ANYONECANPAY" => EcdsaSighashType::SinglePlusAnyoneCanPay,
+		_ => return None,
+	})
+}
+
+/// Parse a taproot sighash type.
+///
+/// Accepts the short form (`DEFAULT`, `ALL`, `NONE|ANYONECANPAY`) and the
+/// long form (`SIGHASH_DEFAULT`, `SIGHASH_NONE|SIGHASH_ANYONECANPAY`), case
+/// insensitive.
+pub fn parse_tap_sighash_type(s: &str) -> Option<TapSighashType> {
+	Some(match normalize_sighash_type(s).as_str() {
+		"DEFAULT" => TapSighashType::Default,
+		"ALL" => TapSighashType::All,
+		"NONE" => TapSighashType::None,
+		"SINGLE" => TapSighashType::Single,
+		"ALL|ANYONECANPAY" => TapSighashType::AllPlusAnyoneCanPay,
+		"NONE|ANYONECANPAY" => TapSighashType::NonePlusAnyoneCanPay,
+		"SINGLE|ANYONECANPAY" => TapSighashType::SinglePlusAnyoneCanPay,
+		_ => return None,
+	})
+}
+
+/// The signature hash of a transaction input.
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+pub struct SighashInfo {
+	/// The signature hash as raw bytes, i.e. the message to sign.
+	///
+	/// Note that this is not reversed like Bitcoin Core displays
+	/// double-SHA256 hashes, so it can be passed directly to the
+	/// `key ecdsa-sign` and `key schnorr-sign` commands.
+	pub sighash: HexBytes,
+	/// The kind of signature hash: legacy, segwit_v0, taproot_key_spend
+	/// or taproot_script_spend.
+	#[serde(rename = "type")]
+	pub type_: String,
+	pub sighash_type: String,
+	pub input_index: usize,
+	/// The script code used for legacy and segwit v0 signature hashes.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub script_code: Option<HexBytes>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub leaf_hash: Option<TapLeafHash>,
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct InputScriptInfo {
