@@ -2,7 +2,7 @@ CHANGELOG
 =========
 
 
-# Unreleased
+# v0.12.2  --  2026-11-18
 
 - add `address vanity` command generating p2pkh, p2wpkh and p2tr vanity addresses,
   based on nakatoshi

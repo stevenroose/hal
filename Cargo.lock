@@ -419,7 +419,7 @@ dependencies = [
 
 [[package]]
 name = "hal"
-version = "0.12.1"
+version = "0.12.2"
 dependencies = [
  "ark-lib",
  "base64-compat",
