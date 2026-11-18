@@ -2,7 +2,7 @@ CHANGELOG
 =========
 
 
-# Unreleased
+# v0.12.3  --  2026-11-18
 
 - add `--raw-taproot` flag to `address vanity` for faster p2tr vanity addresses
   without a key tweak (for the `rawtr(KEY)` descriptor)
