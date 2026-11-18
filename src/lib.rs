@@ -25,6 +25,7 @@ pub mod pow;
 pub mod psbt;
 pub mod script;
 pub mod tx;
+pub mod vanity;
 mod serde_utils;
 pub use serde_utils::HexBytes;
 

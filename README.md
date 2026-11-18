@@ -16,6 +16,7 @@ $ cargo install --locked hal
 - address
 	- inspect: get information about addresses
 	- create: create addresses using public keys or scripts
+	- vanity: generate a vanity address starting with a given prefix
 
 - bech32
 	- decode: parse the elements of the Bech32 format

@@ -7,7 +7,7 @@ use bitcoin::hashes::hex::FromHex;
 use bitcoin::{Address, AddressType, Network, ScriptBuf, WPubkeyHash, WScriptHash, XOnlyPublicKey};
 use clap;
 
-use hal;
+use hal::{self, GetInfo};
 
 use crate::prelude::*;
 
@@ -31,12 +31,14 @@ pub fn subcommand<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand_group("address", "work with addresses")
 		.subcommand(cmd_create())
 		.subcommand(cmd_inspect())
+		.subcommand(cmd_vanity())
 }
 
 pub fn execute<'a>(args: &clap::ArgMatches<'a>) {
 	match args.subcommand() {
 		("create", Some(ref m)) => exec_create(&m),
 		("inspect", Some(ref m)) => exec_inspect(&m),
+		("vanity", Some(ref m)) => exec_vanity(&m),
 		(_, _) => unreachable!("clap prints help"),
 	};
 }
@@ -208,4 +210,57 @@ fn exec_inspect<'a>(args: &clap::ArgMatches<'a>) {
 	}
 
 	args.print_output(&info)
+}
+
+fn cmd_vanity<'a>() -> clap::App<'a, 'a> {
+	cmd::subcommand("vanity", "generate a vanity address starting with a given prefix\n\n\
+		The address type is derived from the prefix, so it has to start with what\n\
+		all addresses of that type start with, like 1 for p2pkh, bc1q for p2wpkh\n\
+		and bc1p for p2tr on mainnet. Searching for p2tr addresses is a lot slower.\n\n\
+		Unless a network flag is given, the network is derived from the prefix too.\n\
+		Testnet prefixes (tb1, m, n) are taken to be for testnet, use --signet for signet.")
+		.arg(args::arg("prefix", "the address prefix to look for, multiple can be given")
+			.required(true).multiple(true))
+		.arg(args::flag(
+			"case-sensitive",
+			"match p2pkh prefixes case-sensitively (segwit addresses are always lowercase)",
+		))
+		.arg(args::flag("uncompressed", "use an uncompressed public key (only for p2pkh)"))
+		.arg(args::opt("threads", "number of threads to use (default: number of CPUs)"))
+		.arg(args::flag("keep-going", "keep searching and print every address that is found"))
+}
+
+fn exec_vanity<'a>(args: &clap::ArgMatches<'a>) {
+	let prefixes = args.values_of("prefix").need("no prefix provided")
+		.map(|p| p.to_owned()).collect::<Vec<_>>();
+	let search = hal::vanity::VanitySearch::new(
+		prefixes,
+		args.is_present("case-sensitive"),
+		!args.is_present("uncompressed"),
+		args.explicit_network(),
+	).need("invalid vanity search");
+	let network = search.network();
+
+	let threads = match args.value_of("threads") {
+		Some(t) => t.parse::<usize>().need("invalid number of threads"),
+		None => std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1),
+	};
+	let keep_going = args.is_present("keep-going");
+
+	eprintln!("Searching for {} {} address using {} threads...",
+		network, search.address_type().as_str(), threads,
+	);
+	search.search(threads, |found| {
+		let info = hal::vanity::VanityAddressInfo {
+			address: found.address.as_unchecked().clone(),
+			attempts: found.attempts,
+			key: found.private_key.get_info(network),
+		};
+		args.print_output(&info);
+		if keep_going {
+			// Separate the outputs.
+			println!();
+		}
+		keep_going
+	});
 }

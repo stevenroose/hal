@@ -34,6 +34,8 @@ lightning-invoice = { version = "0.33.2", features = [ "std" ] }
 miniscript = { version = "12.3.0", features = ["compiler"] }
 ark-lib = "0.8.1"
 psbt-v2 = "0.3.0"
+# Field arithmetic for the vanity address generator.
+k256 = { version = "0.13", default-features = false, features = ["arithmetic", "expose-field"] }
 # Newer than the version rust-bitcoin uses, for taproot support.
 bitcoinconsensus = { version = "0.106.0", optional = true }
 
