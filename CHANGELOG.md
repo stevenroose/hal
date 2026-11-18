@@ -2,6 +2,11 @@ CHANGELOG
 =========
 
 
+# Unreleased
+
+- add `address vanity` command generating p2pkh, p2wpkh and p2tr vanity addresses,
+  based on nakatoshi
+
 # v0.12.1  --  2026-11-09
 
 - add `tx sighash` command to calculate legacy, segwit v0 and taproot signature hashes
