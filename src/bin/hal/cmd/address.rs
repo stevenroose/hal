@@ -216,7 +216,8 @@ fn cmd_vanity<'a>() -> clap::App<'a, 'a> {
 	cmd::subcommand("vanity", "generate a vanity address starting with a given prefix\n\n\
 		The address type is derived from the prefix, so it has to start with what\n\
 		all addresses of that type start with, like 1 for p2pkh, bc1q for p2wpkh\n\
-		and bc1p for p2tr on mainnet. Searching for p2tr addresses is a lot slower.\n\n\
+		and bc1p for p2tr on mainnet. Searching for p2tr addresses is a lot slower,\n\
+		unless --raw-taproot is used.\n\n\
 		Unless a network flag is given, the network is derived from the prefix too.\n\
 		Testnet prefixes (tb1, m, n) are taken to be for testnet, use --signet for signet.")
 		.arg(args::arg("prefix", "the address prefix to look for, multiple can be given")
@@ -226,6 +227,11 @@ fn cmd_vanity<'a>() -> clap::App<'a, 'a> {
 			"match p2pkh prefixes case-sensitively (segwit addresses are always lowercase)",
 		))
 		.arg(args::flag("uncompressed", "use an uncompressed public key (only for p2pkh)"))
+		.arg(args::flag(
+			"raw-taproot",
+			"use the public key as the p2tr output key without tweaking it, which is a lot \
+			faster; the address is that of the rawtr(KEY) descriptor, not of tr(KEY)",
+		))
 		.arg(args::opt("threads", "number of threads to use (default: number of CPUs)"))
 		.arg(args::flag("keep-going", "keep searching and print every address that is found"))
 }
@@ -239,6 +245,11 @@ fn exec_vanity<'a>(args: &clap::ArgMatches<'a>) {
 		!args.is_present("uncompressed"),
 		args.explicit_network(),
 	).need("invalid vanity search");
+	let search = if args.is_present("raw-taproot") {
+		search.with_raw_taproot().need("invalid vanity search")
+	} else {
+		search
+	};
 	let network = search.network();
 
 	let threads = match args.value_of("threads") {
@@ -247,8 +258,9 @@ fn exec_vanity<'a>(args: &clap::ArgMatches<'a>) {
 	};
 	let keep_going = args.is_present("keep-going");
 
-	eprintln!("Searching for {} {} address using {} threads...",
-		network, search.address_type().as_str(), threads,
+	eprintln!("Searching for {} {}{} address using {} threads...",
+		network, if search.raw_taproot() { "raw " } else { "" },
+		search.address_type().as_str(), threads,
 	);
 	search.search(threads, |found| {
 		let info = hal::vanity::VanityAddressInfo {

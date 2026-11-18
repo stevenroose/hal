@@ -16,6 +16,7 @@ use std::sync::{Mutex, OnceLock};
 
 use bitcoin::address::NetworkUnchecked;
 use bitcoin::hashes::{hash160, Hash, HashEngine};
+use bitcoin::key::TweakedPublicKey;
 use bitcoin::secp256k1::{self, Scalar, SecretKey};
 use bitcoin::taproot::TapTweakHash;
 use bitcoin::{Address, CompressedPublicKey, Network, NetworkKind, PrivateKey, ScriptBuf};
@@ -90,6 +91,8 @@ pub struct VanitySearch {
 	prefixes: Vec<String>,
 	case_sensitive: bool,
 	compressed: bool,
+	// For p2tr, use the public key as the output key, without tweaking it.
+	raw_taproot: bool,
 	address_type: VanityAddressType,
 	network: Network,
 	matcher: PrefixMatcher,
@@ -144,7 +147,27 @@ impl VanitySearch {
 		let case_sensitive = case_sensitive && address_type == VanityAddressType::P2pkh;
 
 		let matcher = PrefixMatcher::new(&prefixes, case_sensitive, address_type, network)?;
-		Ok(VanitySearch { prefixes, case_sensitive, compressed, address_type, network, matcher })
+		Ok(VanitySearch {
+			prefixes, case_sensitive, compressed, address_type, network, matcher,
+			raw_taproot: false,
+		})
+	}
+
+	/// Generate p2tr addresses that have the public key as their output key,
+	/// instead of the public key tweaked with its own hash (as in BIP 86).
+	///
+	/// This is a lot faster, as there is no tweak to calculate. These are
+	/// addresses of the `rawtr(KEY)` descriptor, not of `tr(KEY)`.
+	pub fn with_raw_taproot(mut self) -> Result<VanitySearch, String> {
+		if self.address_type != VanityAddressType::P2tr {
+			return Err("raw taproot is only for p2tr addresses".to_owned());
+		}
+		self.raw_taproot = true;
+		Ok(self)
+	}
+
+	pub fn raw_taproot(&self) -> bool {
+		self.raw_taproot
 	}
 
 	pub fn address_type(&self) -> VanityAddressType {
@@ -179,7 +202,8 @@ impl VanitySearch {
 		F: FnMut(VanityAddress) -> bool + Send,
 	{
 		let is_taproot = self.address_type == VanityAddressType::P2tr;
-		let mut keys = KeyWalker::new(self.compressed, is_taproot);
+		// Raw Taproot output keys are the public keys, there are no tweaks.
+		let mut keys = KeyWalker::new(self.compressed, is_taproot && !self.raw_taproot);
 
 		while !stop.load(Ordering::Relaxed) {
 			let batch_len = keys.next_batch();
@@ -189,7 +213,12 @@ impl VanitySearch {
 			'batch: for index in 0..batch_len {
 				if is_taproot {
 					attempts += 1;
-					if self.matcher.matches_output_key(&keys.output_key(index)) {
+					let output_key = if self.raw_taproot {
+						keys.x_only_key(index)
+					} else {
+						keys.output_key(index)
+					};
+					if self.matcher.matches_output_key(&output_key) {
 						matched = Some(index);
 						break 'batch;
 					}
@@ -256,7 +285,12 @@ impl VanitySearch {
 			VanityAddressType::P2tr => {
 				// The address can only be spent with the key, there are no scripts in it.
 				let (internal_key, _) = public_key.inner.x_only_public_key();
-				Address::p2tr(&SECP, internal_key, None, self.network)
+				if self.raw_taproot {
+					let output_key = TweakedPublicKey::dangerous_assume_tweaked(internal_key);
+					Address::p2tr_tweaked(output_key, self.network)
+				} else {
+					Address::p2tr(&SECP, internal_key, None, self.network)
+				}
 			},
 		};
 		(private_key, address)
@@ -767,6 +801,12 @@ impl KeyWalker {
 		output_keys.points[index].x.normalize().to_bytes().into()
 	}
 
+	/// The `x` of a point in the current batch, this is what a raw Taproot
+	/// address encodes. It is the same one for both secret keys of the point.
+	fn x_only_key(&self, index: usize) -> [u8; 32] {
+		self.points[index][..32].try_into().unwrap()
+	}
+
 	/// The secret keys of a point in the current batch. Which of the two
 	/// belongs to which of the hashes is not known.
 	fn secret_keys(&self, index: usize) -> [SecretKey; 2] {
@@ -1162,10 +1202,21 @@ mod tests {
 		address_type: VanityAddressType,
 		network: Network,
 	) -> Address {
+		search_address(secret_key, compressed, false, address_type, network)
+	}
+
+	fn search_address(
+		secret_key: SecretKey,
+		compressed: bool,
+		raw_taproot: bool,
+		address_type: VanityAddressType,
+		network: Network,
+	) -> Address {
 		let search = VanitySearch {
 			prefixes: vec![],
 			case_sensitive: false,
 			compressed,
+			raw_taproot,
 			address_type,
 			network,
 			matcher: PrefixMatcher::Bech32(vec![]),
@@ -1203,6 +1254,11 @@ mod tests {
 		let net = Some(Network::Bitcoin);
 		assert!(VanitySearch::new(vec!["bc1qq".into()], false, false, net).is_err());
 		assert!(VanitySearch::new(vec!["1q".into(), "bc1qq".into()], false, true, net).is_err());
+		let raw = |p: &str| VanitySearch::new(vec![p.to_owned()], false, true, net)
+			.unwrap().with_raw_taproot();
+		assert!(raw("bc1pq").is_ok());
+		assert!(raw("bc1qq").is_err());
+		assert!(raw("1q").is_err());
 	}
 
 	#[test]
@@ -1286,6 +1342,26 @@ mod tests {
 				}
 				// No key is tried twice.
 				assert!(seen.insert(output_key));
+			}
+		}
+	}
+
+	#[test]
+	fn walked_raw_taproot_keys_match_their_secret_key() {
+		let mut keys = KeyWalker::new(true, false);
+		let batch_len = keys.next_batch();
+		for index in 0..batch_len {
+			let output_key = keys.x_only_key(index);
+			// Both secret keys have the same address.
+			for secret_key in keys.secret_keys(index).iter() {
+				let addr = search_address(
+					*secret_key, true, true, VanityAddressType::P2tr, Network::Bitcoin,
+				);
+				let program = addr.witness_program().unwrap();
+				assert_eq!(program.program().as_bytes(), output_key);
+				// Not the same address as a tweaked one.
+				let tweaked = address(*secret_key, true, VanityAddressType::P2tr, Network::Bitcoin);
+				assert_ne!(addr, tweaked);
 			}
 		}
 	}
@@ -1467,6 +1543,29 @@ mod tests {
 				assert_eq!(addr, address(m.private_key.inner, true, search.address_type, *network).to_string());
 				assert!(m.attempts > 0);
 			}
+		}
+	}
+
+	#[test]
+	fn search_finds_raw_taproot_address() {
+		let search = VanitySearch::new(vec!["bc1pqq".to_owned()], false, true, None)
+			.unwrap().with_raw_taproot().unwrap();
+		let mut found = Vec::new();
+		search.search(2, |m| {
+			found.push(m);
+			found.len() < 3
+		});
+		assert_eq!(found.len(), 3);
+		for m in found {
+			let addr = m.address.to_string();
+			assert!(addr.starts_with("bc1pqq"), "{}", addr);
+			let expected = search_address(
+				m.private_key.inner, true, true, VanityAddressType::P2tr, Network::Bitcoin,
+			);
+			assert_eq!(addr, expected.to_string());
+			// The output key is the public key itself.
+			let (key, _) = m.private_key.inner.x_only_public_key(&SECP);
+			assert_eq!(m.address.witness_program().unwrap().program().as_bytes(), key.serialize());
 		}
 	}
 }
