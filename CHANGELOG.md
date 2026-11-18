@@ -2,6 +2,11 @@ CHANGELOG
 =========
 
 
+# Unreleased
+
+- add `--raw-taproot` flag to `address vanity` for faster p2tr vanity addresses
+  without a key tweak (for the `rawtr(KEY)` descriptor)
+
 # v0.12.2  --  2026-11-18
 
 - add `address vanity` command generating p2pkh, p2wpkh and p2tr vanity addresses,
